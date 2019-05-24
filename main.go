@@ -1,9 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/gorilla/handlers"
+
+	"bitbucket.org/antinvestor/service-file/openapi"
+	"bitbucket.org/antinvestor/service-file/service"
 	"bitbucket.org/antinvestor/service-file/utils"
 )
 
@@ -32,10 +38,16 @@ func main() {
 	if len(stdArgs) > 0 && stdArgs[0] == "migrate" {
 		logger.Info("Initiating migrations")
 
-		utils.PerformMigration(logger, database)
+		service.PerformMigration(logger, database)
 
 	} else {
 		logger.Info("Initiating the file service")
+
+		router := openapi.NewRouterV1(database, logger)
+
+		port := fmt.Sprintf(":%s", os.Getenv("PORT"))
+
+		logger.Fatal(http.ListenAndServe(port, handlers.RecoveryHandler()(router)))
 	}
 
 }
