@@ -4,7 +4,10 @@ import (
 	"log"
 	"os"
 
+	"bitbucket.org/antinvestor/service-file/service"
 	"bitbucket.org/antinvestor/service-file/utils"
+	"time"
+	"bitbucket.org/antinvestor/service-file/service/storage"
 )
 
 func main() {
@@ -32,10 +35,23 @@ func main() {
 	if len(stdArgs) > 0 && stdArgs[0] == "migrate" {
 		logger.Info("Initiating migrations")
 
-		utils.PerformMigration(logger, database)
+		service.PerformMigration(logger, database)
 
 	} else {
-		logger.Info("Initiating the file service")
+		logger.Infof("Initiating the file service at %v", time.Now())
+
+		storageProvider := os.Getenv("STORAGE_PROVIDER")
+
+		ctx := service.ContextV1{
+			Db:              database,
+			Logger:          logger,
+			ServerPort: os.Getenv("PORT"),
+			EncryptionPhrase: os.Getenv("ENCRYPTION_PHRASE"),
+			FileAccessServer: os.Getenv("FILE_ACCESS_SERVER_URL"),
+			StrorageProvider: storage.GetStorageProvider(storageProvider),
+		}
+
+		service.RunServer(&ctx)
 	}
 
 }

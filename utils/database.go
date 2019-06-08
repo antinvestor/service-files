@@ -16,6 +16,9 @@ func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 
 	dbDatasource := os.Getenv("DATABASE_URL")
 	dbDriver := os.Getenv("DATABASE_DRIVER")
+	if dbDriver == "" {
+		dbDriver = "postgres"
+	}
 
 	log.Debugf("Connecting using driver %v and source %v ", dbDriver, dbDatasource)
 

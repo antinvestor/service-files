@@ -1,4 +1,4 @@
-package utils
+package service
 
 import (
 	"fmt"
@@ -20,29 +20,6 @@ postgres=# grant all privileges on database ant_service to ant;
 
 */
 
-// AntMigration Our simple table holding all the migration data
-type AntMigration struct {
-	ID         uint   `gorm:"primary_key"`
-	Name       string `gorm:"type:varchar(50);unique_index"`
-	Patch      string `gorm:"type:text"`
-	AppliedAt  *time.Time
-	CreatedAt  time.Time
-	ModifiedAt time.Time
-	Version    uint32 `gorm:"DEFAULT 0"`
-}
-
-// BeforeCreate Ensures we update a migrations time stamps
-func (model *AntMigration) BeforeCreate(scope *gorm.Scope) error {
-	scope.SetColumn("CreatedAt", time.Now())
-	return scope.SetColumn("ModifiedAt", time.Now())
-}
-
-// BeforeUpdate Updates time stamp every time we update status of a migration
-func (model *AntMigration) BeforeUpdate(scope *gorm.Scope) error {
-	scope.SetColumn("Version", model.Version+1)
-	return scope.SetColumn("ModifiedAt", time.Now())
-}
-
 // PerformMigration finds missing migrations and records them in the database,
 // We use the fragmenta_metadata table to do this
 func PerformMigration(logger *logrus.Entry, db *gorm.DB) {
@@ -50,7 +27,7 @@ func PerformMigration(logger *logrus.Entry, db *gorm.DB) {
 	migrationsDirPath := "./migrations/0001"
 
 	// Migrate the schema
-	db.AutoMigrate(&AntMigration{})
+	db.AutoMigrate(&AntMigration{}, &File{}, &AuditFile{})
 
 	if err := scanForNewMigrations(logger, db, migrationsDirPath); err != nil {
 		logger.Warnf("Error scanning for new migrations : %v ", err)
@@ -84,7 +61,7 @@ func scanForNewMigrations(logger *logrus.Entry, db *gorm.DB, migrationsDirPath s
 		if db.Where("name = ?", filename).Find(&migration).RecordNotFound() {
 
 			if err != nil {
-				logger.Warn("Problem reading migration file content : %v", err)
+				logger.Warnf("Problem reading migration file content : %v", err)
 				continue
 			}
 			migration.Patch = string(migrationPatch)

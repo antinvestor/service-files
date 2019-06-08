@@ -1,6 +1,6 @@
 
 ARG service_name="boilerplate"
-ARG service_port="7000"
+ARG service_port="7513"
 
 FROM golang:1.12 as builder
 
