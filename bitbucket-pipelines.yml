@@ -49,6 +49,7 @@ pipelines:
           image: golang:1.12
           script:
             - go get github.com/golang/dep/cmd/dep
+            - which go
             - dep ensure --vendor-only
             - go test ./...
     
