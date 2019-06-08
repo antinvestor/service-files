@@ -7,7 +7,7 @@ pipelines:
         name: Service testing and build
         image: golang:1.12
         script:
-          - go get github.com/golang/dep/cmd/dep
+          - go get -u github.com/golang/dep/cmd/dep
           - dep ensure --vendor-only
           - go test ./...
 
@@ -18,7 +18,7 @@ pipelines:
           name: Service testing and build
           image: golang:1.12
           script:
-            - go get github.com/golang/dep/cmd/dep
+            - go get -u github.com/golang/dep/cmd/dep
             - dep ensure --vendor-only
             - go test ./...
 
@@ -47,7 +47,7 @@ pipelines:
           name: Service testing and build
           image: golang:1.12
           script:
-            - go get github.com/golang/dep/cmd/dep
+            - go get -u github.com/golang/dep/cmd/dep
             - dep ensure --vendor-only
             - go test ./...
     
