@@ -8,6 +8,9 @@ pipelines:
         image: golang:1.12
         script:
           - go get -u github.com/golang/dep/cmd/dep
+          - mkdir /go/src/bitbucket.org/antinvestor/service-file
+          - cp -r ./*  /go/src/bitbucket.org/antinvestor/service-file/
+          - cd /go/src/bitbucket.org/antinvestor/service-file
           - dep ensure --vendor-only
           - go test ./...
 
@@ -19,6 +22,9 @@ pipelines:
           image: golang:1.12
           script:
             - go get -u github.com/golang/dep/cmd/dep
+            - mkdir /go/src/bitbucket.org/antinvestor/service-file
+            - cp -r ./*  /go/src/bitbucket.org/antinvestor/service-file/
+            - cd /go/src/bitbucket.org/antinvestor/service-file
             - dep ensure --vendor-only
             - go test ./...
 
@@ -48,6 +54,9 @@ pipelines:
           image: golang:1.12
           script:
             - go get -u github.com/golang/dep/cmd/dep
+            - mkdir /go/src/bitbucket.org/antinvestor/service-file
+            - cp -r ./*  /go/src/bitbucket.org/antinvestor/service-file/
+            - cd /go/src/bitbucket.org/antinvestor/service-file
             - dep ensure --vendor-only
             - go test ./...
     
