@@ -1,16 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/gorilla/handlers"
-
-	"bitbucket.org/antinvestor/service-file/openapi"
 	"bitbucket.org/antinvestor/service-file/service"
 	"bitbucket.org/antinvestor/service-file/utils"
+	"time"
+	"bitbucket.org/antinvestor/service-file/service/storage"
 )
 
 func main() {
@@ -41,13 +38,20 @@ func main() {
 		service.PerformMigration(logger, database)
 
 	} else {
-		logger.Info("Initiating the file service")
+		logger.Infof("Initiating the file service at %v", time.Now())
 
-		router := openapi.NewRouterV1(database, logger)
+		storageProvider := os.Getenv("STORAGE_PROVIDER")
 
-		port := fmt.Sprintf(":%s", os.Getenv("PORT"))
+		ctx := service.ContextV1{
+			Db:              database,
+			Logger:          logger,
+			ServerPort: os.Getenv("PORT"),
+			EncryptionPhrase: os.Getenv("ENCRYPTION_PHRASE"),
+			FileAccessServer: os.Getenv("FILE_ACCESS_SERVER_URL"),
+			StrorageProvider: storage.GetStorageProvider(storageProvider),
+		}
 
-		logger.Fatal(http.ListenAndServe(port, handlers.RecoveryHandler()(router)))
+		service.RunServer(&ctx)
 	}
 
 }

@@ -61,7 +61,7 @@ func scanForNewMigrations(logger *logrus.Entry, db *gorm.DB, migrationsDirPath s
 		if db.Where("name = ?", filename).Find(&migration).RecordNotFound() {
 
 			if err != nil {
-				logger.Warn("Problem reading migration file content : %v", err)
+				logger.Warnf("Problem reading migration file content : %v", err)
 				continue
 			}
 			migration.Patch = string(migrationPatch)
