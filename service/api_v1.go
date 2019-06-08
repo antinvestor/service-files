@@ -68,7 +68,7 @@ func addHandler(ctx *ContextV1, router *mux.Router,
 			case Error:
 				// We can retrieve the status here and write out a specific
 				// HTTP status code.
-				ctx.Logger.Warn("request failed with  %d - %s", e.Status(), e)
+				ctx.Logger.Warnf("request failed with  %d - %s", e.Status(), e)
 				http.Error(w, e.Error(), e.Status())
 			default:
 
