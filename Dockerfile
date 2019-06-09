@@ -1,18 +1,14 @@
 
-ARG service_name="boilerplate"
+ARG service_name="file"
 ARG service_port="7513"
 
 FROM golang:1.12 as builder
 
 RUN go get github.com/golang/dep/cmd/dep
-
-ADD Gopkg.* ./
-RUN dep ensure --vendor-only
-
 WORKDIR /go/src/bitbucket.org/antinvestor/service-${service_name}
-
-# Copy the local package files to the container's workspace.
 ADD . .
+
+RUN dep ensure --vendor-only
 
 # Build the service command inside the container.
 RUN go install bitbucket.org/antinvestor/service-${service_name}
