@@ -42,16 +42,16 @@ func main() {
 
 		storageProvider := os.Getenv("STORAGE_PROVIDER")
 
-		ctx := service.ContextV1{
-			Db:              database,
+		env := service.Env{
 			Logger:          logger,
 			ServerPort: os.Getenv("PORT"),
 			EncryptionPhrase: os.Getenv("ENCRYPTION_PHRASE"),
 			FileAccessServer: os.Getenv("FILE_ACCESS_SERVER_URL"),
 			StrorageProvider: storage.GetStorageProvider(storageProvider),
 		}
+		env.SetDb(database)
 
-		service.RunServer(&ctx)
+		service.RunServer(&env)
 	}
 
 }

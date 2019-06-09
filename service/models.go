@@ -71,9 +71,9 @@ func (model *File) BeforeUpdate(scope *gorm.Scope) error {
 	return scope.SetColumn("ModifiedAt", time.Now())
 }
 
-func (model *File) ToApi(ctx *ContextV1) openapi.File  {
+func (model *File) ToApi(env *Env) openapi.File  {
 
-	fileUrl := fmt.Sprintf("%s/%s", ctx.FileAccessServer, model.FileID )
+	fileUrl := fmt.Sprintf("%s/%s", env.FileAccessServer, model.FileID )
 
 	return openapi.File{
 		Id: model.FileID,

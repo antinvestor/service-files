@@ -34,15 +34,15 @@ func (se StatusError) Status() int {
 }
 
 
-func RunServer(ctx *ContextV1) {
+func RunServer(env *Env) {
 
 	waitDuration := time.Second * 15
-	router := NewRouterV1(ctx)
+	router := NewRouterV1(env)
 
 
 
 	srv := &http.Server{
-		Addr: fmt.Sprintf("0.0.0.0:%s", ctx.ServerPort ),
+		Addr: fmt.Sprintf("0.0.0.0:%s", env.ServerPort ),
 		// Good practice to set timeouts to avoid Slowloris attacks.
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
@@ -53,7 +53,7 @@ func RunServer(ctx *ContextV1) {
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
-			ctx.Logger.Fatalf("Server stopped due to error %v", err)
+			env.Logger.Fatalf("Server stopped due to error %v", err)
 
 		}
 	}()
@@ -68,13 +68,13 @@ func RunServer(ctx *ContextV1) {
 
 
 	// Create a deadline to wait for.
-	ctx2, cancel := context.WithTimeout(context.Background(), waitDuration)
+	env2, cancel := context.WithTimeout(context.Background(), waitDuration)
 	defer cancel()
 	// Doesn't block if no connections, but will otherwise wait
 	// until the timeout deadline.
-	srv.Shutdown(ctx2)
+	srv.Shutdown(env2)
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
-	// <-ctx.Done() if your application should wait for other services
+	// <-env.Done() if your application should wait for other services
 	// to finalize based on context cancellation.
-	ctx.Logger.Infof("Service shutting down at : %v", time.Now())
+	env.Logger.Infof("Service shutting down at : %v", time.Now())
 }
