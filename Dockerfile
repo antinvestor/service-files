@@ -22,7 +22,7 @@ COPY --from=builder /go/src/bitbucket.org/antinvestor/service-file/migrations /
 WORKDIR /
 
 # Run the service command by default when the container starts.
-ENTRYPOINT /file
+ENTRYPOINT ["/file"]
 
 # Document the port that the service listens on by default.
 EXPOSE 7513
