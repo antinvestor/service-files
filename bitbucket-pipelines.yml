@@ -45,7 +45,7 @@ pipelines:
           script:
             - export IMAGE_NAME=eu.gcr.io/${GCLOUD_PROJECT}/${BITBUCKET_REPO_SLUG}-stag:${BITBUCKET_COMMIT}
             - echo $KUBECONFIG_STAG | base64 -d > kubeconfig-stag.yml
-            - kubectl --kubeconfig=kubeconfig-stag.yml --namespace=applications-stag set image deployment/${BITBUCKET_REPO_SLUG}-stag ${BITBUCKET_REPO_SLUG}-container=$IMAGE_NAME 
+            - kubectl --kubeconfig=kubeconfig-stag.yml --namespace=staging set image deployment/${BITBUCKET_REPO_SLUG} ${BITBUCKET_REPO_SLUG}-container=$IMAGE_NAME
                     
     master:   
     
@@ -76,5 +76,5 @@ pipelines:
           script:
             - export IMAGE_NAME=eu.gcr.io/${GCLOUD_PROJECT}/${BITBUCKET_REPO_SLUG}:${BITBUCKET_COMMIT}
             - echo $KUBECONFIG_PROD | base64 -d > kubeconfig-prod.yml
-            - kubectl --kubeconfig=kubeconfig-prod.yml --namespace=applications-prod set image deployment/${BITBUCKET_REPO_SLUG}-prod ${BITBUCKET_REPO_SLUG}-container=$IMAGE_NAME 
+            - kubectl --kubeconfig=kubeconfig-prod.yml --namespace=production set image deployment/${BITBUCKET_REPO_SLUG} ${BITBUCKET_REPO_SLUG}-container=$IMAGE_NAME
             

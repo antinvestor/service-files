@@ -53,7 +53,7 @@ func RunServer(env *Env) {
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
-			env.Logger.Fatalf("Server stopped due to error %v", err)
+			env.Logger.Fatalf("Service stopping due to error : %v", err)
 
 		}
 	}()

@@ -10,6 +10,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	otgorm "github.com/smacker/opentracing-gorm"
 	"fmt"
+	"time"
 )
 
 // ConfigureDatabase Database Access for environment is configured here
@@ -37,7 +38,13 @@ func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 
 	db, err := gorm.Open(dbDriver, dbDatasource)
 	if err != nil {
-		log.Warningf("Problem experienced while obtaining the database link :  %v ", err)
+		log.Warning(err)
+		log.Debug("Connection details include : %s", dbDatasource)
+		log.Info("Retrying to reconnect in 5 seconds")
+
+		time.Sleep(5 * time.Second)
+
+		return ConfigureDatabase(log)
 	}
 
 	otgorm.AddGormCallbacks(db)
