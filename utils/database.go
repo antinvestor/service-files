@@ -39,7 +39,7 @@ func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 	db, err := gorm.Open(dbDriver, dbDatasource)
 	if err != nil {
 		log.Warning(err)
-		log.Debug("Connection details include : %s", dbDatasource)
+		log.Debugf("Connection details include : %s", dbDatasource)
 		log.Info("Retrying to reconnect in 5 seconds")
 
 		time.Sleep(5 * time.Second)
