@@ -44,7 +44,7 @@ func main() {
 
 		env := service.Env{
 			Logger:          logger,
-			ServerPort: os.Getenv("PORT"),
+			ServerPort: os.Getenv("SERVER_PORT"),
 			EncryptionPhrase: os.Getenv("ENCRYPTION_PHRASE"),
 			FileAccessServer: os.Getenv("FILE_ACCESS_SERVER_URL"),
 			StrorageProvider: storage.GetStorageProvider(storageProvider),
