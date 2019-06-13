@@ -30,7 +30,7 @@ func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 		dbSecret := os.Getenv("DATABASE_SECRET")
 		dbPort := os.Getenv("DATABASE_PORT")
 
-		dbDatasource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", dbHost, dbPort, dbUserName, dbSecret, dbName)
+		dbDatasource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=require", dbHost, dbPort, dbUserName, dbSecret, dbName)
 
 	}
 
