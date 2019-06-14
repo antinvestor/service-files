@@ -31,6 +31,8 @@ func main() {
 		logger.Fatalf("Failed to configure Database: %v", err)
 	}
 
+	defer database.Close()
+
 	stdArgs := os.Args[1:]
 	if len(stdArgs) > 0 && stdArgs[0] == "migrate" {
 		logger.Info("Initiating migrations")

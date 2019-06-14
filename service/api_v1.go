@@ -20,37 +20,15 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 	"github.com/thedevsaddam/govalidator"
 	"errors"
 	"bytes"
 	"fmt"
 	"bitbucket.org/antinvestor/service-file/openapi"
 	"bitbucket.org/antinvestor/service-file/utils"
-	"bitbucket.org/antinvestor/service-file/service/storage"
 	"github.com/opentracing/opentracing-go"
-	otgorm "github.com/smacker/opentracing-gorm"
-	"context"
 	"github.com/opentracing/opentracing-go/ext"
 )
-
-// Env Context object supplied around the applications lifetime
-type Env struct {
-	db              *gorm.DB
-	Logger          *logrus.Entry
-	ServerPort	string
-	EncryptionPhrase string
-	FileAccessServer string
-	StrorageProvider storage.Provider
-}
-
-func (env *Env) SetDb(db *gorm.DB) {
-	env.db = db
-}
-
-func (env *Env) GetDb(ctx context.Context) *gorm.DB{
-	return otgorm.SetSpanToGorm(ctx, env.db)
-}
 
 // Logger -
 func Logger(inner http.Handler, name string, logger *logrus.Entry) http.Handler {

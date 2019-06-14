@@ -1,6 +1,10 @@
 package service
 
 import (
+	"bitbucket.org/antinvestor/service-file/service/storage"
+	"github.com/Sirupsen/logrus"
+	"github.com/jinzhu/gorm"
+	otgorm "github.com/smacker/opentracing-gorm"
 	"time"
 	"net/http"
 	"os"
@@ -34,6 +38,25 @@ func (se StatusError) Status() int {
 }
 
 
+// Env Context object supplied around the applications lifetime
+type Env struct {
+	db              *gorm.DB
+	Logger          *logrus.Entry
+	ServerPort	string
+	EncryptionPhrase string
+	FileAccessServer string
+	StrorageProvider storage.Provider
+}
+
+func (env *Env) SetDb(db *gorm.DB) {
+	env.db = db
+}
+
+func (env *Env) GetDb(ctx context.Context) *gorm.DB{
+	return otgorm.SetSpanToGorm(ctx, env.db)
+}
+
+//RunServer Starts a server and waits on it
 func RunServer(env *Env) {
 
 	waitDuration := time.Second * 15
@@ -57,7 +80,6 @@ func RunServer(env *Env) {
 
 		if err := srv.ListenAndServe(); err != nil {
 			env.Logger.Fatalf("Service stopping due to error : %v", err)
-
 		}
 	}()
 
