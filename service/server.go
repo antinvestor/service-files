@@ -52,6 +52,9 @@ func RunServer(env *Env) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
+
+		env.Logger.Infof("File service running on port : %v", env.ServerPort)
+
 		if err := srv.ListenAndServe(); err != nil {
 			env.Logger.Fatalf("Service stopping due to error : %v", err)
 
