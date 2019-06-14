@@ -1,14 +1,12 @@
 package utils
 
 import (
-	"os"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 
 	// Gorm relies on this dialect for initialization
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	otgorm "github.com/smacker/opentracing-gorm"
+	"github.com/smacker/opentracing-gorm"
 	"fmt"
 	"time"
 )
@@ -16,22 +14,18 @@ import (
 // ConfigureDatabase Database Access for environment is configured here
 func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 
-	dbDriver := os.Getenv("DATABASE_DRIVER")
-	if dbDriver == "" {
-		dbDriver = "postgres"
-	}
+	dbDriver := GetEnv("DATABASE_DRIVER","postgres")
 
-	dbDatasource := os.Getenv("DATABASE_URL")
+	dbDatasource := GetEnv("DATABASE_URL", "")
 	if(dbDatasource == ""){
 
-		dbHost := os.Getenv("DATABASE_HOST")
-		dbName := os.Getenv("DATABASE_NAME")
-		dbUserName := os.Getenv("DATABASE_USER_NAME")
-		dbSecret := os.Getenv("DATABASE_SECRET")
-		dbPort := os.Getenv("DATABASE_PORT")
+		dbHost := GetEnv("DATABASE_HOST", "127.0.0.1")
+		dbName := GetEnv("DATABASE_NAME", "service-file")
+		dbUserName := GetEnv("DATABASE_USER_NAME", "file")
+		dbSecret := GetEnv("DATABASE_SECRET", "files")
+		dbPort := GetEnv("DATABASE_PORT", "5432")
 
 		dbDatasource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", dbHost, dbPort, dbUserName, dbSecret, dbName)
-
 	}
 
 	log.Debugf("Connecting using driver %v and source %v ", dbDriver, dbDatasource)

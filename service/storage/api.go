@@ -1,6 +1,8 @@
 package storage
 
-import "os"
+import (
+	"bitbucket.org/antinvestor/service-file/utils"
+)
 
 type Provider interface {
 	Name() string
@@ -20,21 +22,21 @@ func GetStorageProvider(providerName string) Provider {
 
 		return &ProviderWasabi{
 			name:              "WASABI",
-			privateBucket:     os.Getenv("WASABI_PRIVATE_BUCKET"),
-			publicBucket:      os.Getenv("WASABI_PUBLIC_BUCKET"),
-			wasabiEndpoint:    os.Getenv("WASABI_ENDPOINT"),
-			wasabiRegion:      os.Getenv("WASABI_REGION"),
-			wasabiSecret:      os.Getenv("WASABI_SECRET"),
-			wasabiToken:       os.Getenv("WASABI_TOKEN"),
-			wasabiAccessKeyID: os.Getenv("WASABI_ACCESS_KEY_ID"),
+			privateBucket:     utils.GetEnv("WASABI_PRIVATE_BUCKET", ""),
+			publicBucket:      utils.GetEnv("WASABI_PUBLIC_BUCKET", ""),
+			wasabiEndpoint:    utils.GetEnv("WASABI_ENDPOINT", ""),
+			wasabiRegion:      utils.GetEnv("WASABI_REGION", ""),
+			wasabiSecret:      utils.GetEnv("WASABI_SECRET", ""),
+			wasabiToken:       utils.GetEnv("WASABI_TOKEN", ""),
+			wasabiAccessKeyID: utils.GetEnv("WASABI_ACCESS_KEY_ID", ""),
 		}
 
 	default:
 
 		return &ProviderLocal{
 			name:          "LOCAL",
-			privateBucket: os.Getenv("LOCAL_PRIVATE_DIRECTORY"),
-			publicBucket:  os.Getenv("LOCAL_PUBLIC_DIRECTORY"),
+			privateBucket: utils.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"),
+			publicBucket:  utils.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"),
 		}
 
 	}

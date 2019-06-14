@@ -40,13 +40,13 @@ func main() {
 	} else {
 		logger.Infof("Initiating the file service at %v", time.Now())
 
-		storageProvider := os.Getenv("STORAGE_PROVIDER")
+		storageProvider := utils.GetEnv("STORAGE_PROVIDER", "LOCAL")
 
 		env := service.Env{
 			Logger:          logger,
-			ServerPort: os.Getenv("SERVER_PORT"),
-			EncryptionPhrase: os.Getenv("ENCRYPTION_PHRASE"),
-			FileAccessServer: os.Getenv("FILE_ACCESS_SERVER_URL"),
+			ServerPort: utils.GetEnv("SERVER_PORT", "7513"),
+			EncryptionPhrase: utils.GetEnv("ENCRYPTION_PHRASE", "AES256Key-XihgT047PgfrbYZJB4Rf2K"),
+			FileAccessServer: utils.GetEnv("FILE_ACCESS_SERVER_URL", ""),
 			StrorageProvider: storage.GetStorageProvider(storageProvider),
 		}
 		env.SetDb(database)
