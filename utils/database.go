@@ -25,7 +25,7 @@ func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 		dbSecret := GetEnv("DATABASE_SECRET", "files")
 		dbPort := GetEnv("DATABASE_PORT", "5432")
 
-		dbDatasource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", dbHost, dbPort, dbUserName, dbSecret, dbName)
+		dbDatasource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s  sslmode=require", dbHost, dbPort, dbUserName, dbSecret, dbName)
 	}
 
 	log.Debugf("Connecting using driver %v and source %v ", dbDriver, dbDatasource)
