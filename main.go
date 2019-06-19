@@ -26,12 +26,17 @@ func main() {
 
 	defer closer.Close()
 
-	database, err := utils.ConfigureDatabase(logger)
+	database, err := utils.ConfigureDatabase(logger, false)
 	if err != nil {
-		logger.Fatalf("Failed to configure Database: %v", err)
+		logger.Warnf("Configuring write database has error: %v", err)
 	}
-
 	defer database.Close()
+
+	replicaDatabase, err := utils.ConfigureDatabase(logger, true)
+	if err != nil {
+		logger.Warnf("Configuring read only database has error: %v", err)
+	}
+	defer replicaDatabase.Close()
 
 	stdArgs := os.Args[1:]
 	if len(stdArgs) > 0 && stdArgs[0] == "migrate" {
@@ -51,7 +56,8 @@ func main() {
 			FileAccessServer: utils.GetEnv("FILE_ACCESS_SERVER_URL", ""),
 			StrorageProvider: storage.GetStorageProvider(storageProvider),
 		}
-		env.SetDb(database)
+		env.SetWriteDb(database)
+		env.SetReadDb(replicaDatabase)
 
 		service.RunServer(&env)
 	}

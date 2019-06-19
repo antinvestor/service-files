@@ -1,25 +1,28 @@
 package utils
 
 import (
+	"fmt"
+	// Gorm relies on this dialect for initialization
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
-
-	// Gorm relies on this dialect for initialization
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/smacker/opentracing-gorm"
-	"fmt"
-	"time"
+	otgorm "github.com/smacker/opentracing-gorm"
 )
 
 // ConfigureDatabase Database Access for environment is configured here
-func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
+func ConfigureDatabase(log *logrus.Entry, replica bool) (*gorm.DB, error) {
 
 	dbDriver := GetEnv("DATABASE_DRIVER","postgres")
 
 	dbDatasource := GetEnv("DATABASE_URL", "")
-	if(dbDatasource == ""){
+	if dbDatasource == "" {
 
 		dbHost := GetEnv("DATABASE_HOST", "127.0.0.1")
+		if replica{
+			dbHost = GetEnv("REPLICA_DATABASE_HOST", dbHost)
+		}
+
+
 		dbName := GetEnv("DATABASE_NAME", "service-file")
 		dbUserName := GetEnv("DATABASE_USER_NAME", "file")
 		dbSecret := GetEnv("DATABASE_SECRET", "files")
@@ -31,17 +34,9 @@ func ConfigureDatabase(log *logrus.Entry) (*gorm.DB, error) {
 	log.Debugf("Connecting using driver %v and source %v ", dbDriver, dbDatasource)
 
 	db, err := gorm.Open(dbDriver, dbDatasource)
-	if err != nil {
-		log.Warning(err)
-		log.Debugf("Connection details include : %s", dbDatasource)
-		log.Info("Retrying to reconnect in 5 seconds")
 
-		time.Sleep(5 * time.Second)
-
-		return ConfigureDatabase(log)
+	if db != nil {
+		otgorm.AddGormCallbacks(db)
 	}
-
-	otgorm.AddGormCallbacks(db)
-
 	return db, err
 }

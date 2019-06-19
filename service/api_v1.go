@@ -175,7 +175,7 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 	}
 
 
-	if err := env.GetDb(ctx).Create(&newFile).Error; err != nil {
+	if err := env.GeWtDb(ctx).Create(&newFile).Error; err != nil {
 		return  StatusError{500, err}
 	}
 
@@ -202,11 +202,11 @@ func DeleteFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 	}
 
 
-	if err := env.GetDb(ctx).First(&file).Error; err != nil {
+	if err := env.GetRDb(ctx).First(&file).Error; err != nil {
 		return  StatusError{500, err}
 	}
 
-	if err := env.GetDb(ctx).Delete(&file).Error; err != nil {
+	if err := env.GeWtDb(ctx).Delete(&file).Error; err != nil {
 		return  StatusError{500, err}
 	}
 
@@ -228,7 +228,7 @@ func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
 	}
 
 
-	if err := env.GetDb(ctx).First(&file).Error; err != nil {
+	if err := env.GetRDb(ctx).First(&file).Error; err != nil {
 		env.Logger.Warn(err)
 	}
 
@@ -249,7 +249,7 @@ func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
 			Action: "View",
 
 		}
-		env.GetDb(ctx).Create(&auditRecord)
+		env.GeWtDb(ctx).Create(&auditRecord)
 	}()
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name))
@@ -271,7 +271,7 @@ func FindFilesV1(env *Env, w http.ResponseWriter, r *http.Request) error{
 	page := r.FormValue("page")
 	limit := r.FormValue("limit")
 
-	tx := env.GetDb(ctx).Where("subscription_id = ?", subscriptionID)
+	tx := env.GetRDb(ctx).Where("subscription_id = ?", subscriptionID)
 
 	if groupID != ""{
 		tx = tx.Where("group_id = ?", groupID)
