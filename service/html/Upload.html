@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+         
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+    
+        <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    
+        <title>FileUpload</title>
+    </head>
+    <body>
+        <section class="section">
+            <div class="container">
+                <div class="columns">
+                    <div class="column is-one-quarter"></div>
+                    <div class="column is-half"> 
+
+        <div class="form-style-8">
+            <h2 class="title">Image Upload </h2>
+            <form method="post" action="http://localhost:7513/files" enctype="multipart/form-data">
+    
+                <div class="field">
+                    <label class="label">Name</label>
+                    <div class="control">
+                        <input class="input" type="text" name="name" placeholder="Name"/>
+                    </div>
+                </div>
+    
+                <div class="field">
+                    <label class="label">GroupID</label>
+                    <div class="control">
+                        <input class="input" type="text" name="group_id" placeholder="GroupID"/>
+                    </div>
+                </div>
+    
+                <div class="field">
+                    <label class="label">SubscriptionID</label>
+                    <div class="control">
+                        <input class="input" type="text" name="subscription_id" placeholder="SubscriptionID"/>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label">Image</label>
+                    <div class="control">
+                        <input type="file" name="fileObject" />
+                    </div>
+                </div>
+        
+                <div class="field">
+                    <label class="label">Public</label>
+                    <div class="control">
+                        <input  name="public" value="true" type="checkbox" checked/> If not be public Uncheck
+                    </div>
+                </div>
+                
+                <button class="button is-info" type="submit"> upload file ...</button>
+    
+            </form>
+        </div>
+    
+    </form> 
+    
+</div>
+
+</div>
+
+</div>
+</section>
+    </body>
+</html>

@@ -12,22 +12,24 @@ package service
 
 import (
 	"encoding/json"
+	template "html/template"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"bytes"
+	"errors"
+	"fmt"
+
+	"bitbucket.org/antinvestor/service-file/openapi"
+	"bitbucket.org/antinvestor/service-file/service/storage"
+	"bitbucket.org/antinvestor/service-file/utils"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"github.com/thedevsaddam/govalidator"
-	"errors"
-	"bytes"
-	"fmt"
-	"bitbucket.org/antinvestor/service-file/openapi"
-	"bitbucket.org/antinvestor/service-file/utils"
-	"bitbucket.org/antinvestor/service-file/service/storage"
 )
 
 // ContextV1 Context object supplied around the applications lifetime
@@ -98,6 +100,9 @@ func NewRouterV1(ctx *ContextV1) *mux.Router {
 	addHandler(ctx, router, FindFilesV1, "/files", "FindFiles", "GET")
 	addHandler(ctx, router, FindFileByIDV1, "/files/{id}", "FindFileById", "GET")
 	addHandler(ctx, router, DeleteFileV1, "/files/{id}", "DeleteFile", "DELETE")
+
+	addHandler(ctx, router, UploadFileV1, "/UploadFile", "UploadFile", "GET")
+	addHandler(ctx, router, FindFileV1, "/FindFile", "FindFile", "GET")
 
 	return router
 }
@@ -299,3 +304,30 @@ func FindFilesV1(ctx *ContextV1, w http.ResponseWriter, r *http.Request) error{
 	w.Write(response)
 	return nil
 }
+ 
+
+// Uploadtpl ff
+var Uploadtpl = template.Must(template.ParseGlob("service/html/*.html"))
+
+// UploadFileV1 ff
+func UploadFileV1(ctx *ContextV1, w http.ResponseWriter, r *http.Request) error {
+
+	err := Uploadtpl.ExecuteTemplate(w, "Upload.html", nil)
+
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("%s", err)))
+	}
+	return nil
+}
+
+// FindFileV1 ff
+func FindFileV1(ctx *ContextV1,w http.ResponseWriter, r *http.Request) error{
+
+	err := Uploadtpl.ExecuteTemplate(w, "findfile.html", nil)
+	
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("%s", err)))
+	}
+	return nil
+}
+ 
