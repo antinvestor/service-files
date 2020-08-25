@@ -1,7 +1,8 @@
 package storage
 
 import (
-	"bitbucket.org/antinvestor/service-file/utils"
+	"context"
+	"github.com/antinvestor/files/utils"
 )
 
 type Provider interface {
@@ -9,14 +10,22 @@ type Provider interface {
 	PrivateBucket() string
 	PublicBucket() string
 
-	Init() error
-	UploadFile(bucket string, pathName string, extension string, contents []byte) (string, error)
-	DownloadFile(bucket string, pathName string, extension string) ([]byte, error)
+	Init(ctx context.Context) (interface{}, error)
+	UploadFile(ctx context.Context, bucket string, pathName string, extension string, contents []byte) (string, error)
+	DownloadFile(ctx context.Context, bucket string, pathName string, extension string) ([]byte, error)
 }
 
 func GetStorageProvider(providerName string) Provider {
 
 	switch providerName {
+
+	case "GCS":
+		return &ProviderGCS{
+			name:          "GCS",
+			projectID:     utils.GetEnv("GCS_PROJECT_ID", ""),
+			privateBucket: utils.GetEnv("GCS_PRIVATE_BUCKET", ""),
+			publicBucket:  utils.GetEnv("GCS_PUBLIC_BUCKET", ""),
+		}
 
 	case "WASABI":
 

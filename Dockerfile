@@ -1,24 +1,17 @@
+FROM golang:1.14 as builder
 
-FROM golang:1.12 as builder
+# Add Maintainer Info
+LABEL maintainer="Bwire Peter <bwire517@gmail.com>"
 
-RUN go get github.com/golang/dep/cmd/dep
-WORKDIR /go/src/bitbucket.org/antinvestor/service-file
+WORKDIR /
 
-ADD Gopkg.* ./
-RUN dep ensure --vendor-only
-
-# Copy the local package files to the container's workspace.
 ADD . .
-
-RUN pwd
-# Build the service command inside the container.
-RUN go install .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o file_binary .
 
 FROM scratch
-COPY --from=builder /go/src/bitbucket.org/antinvestor/service-file/file_binary /file
-COPY --from=builder /go/src/bitbucket.org/antinvestor/service-file/migrations /
+COPY --from=builder /file_binary /file
+COPY --from=builder /migrations /migrations
 WORKDIR /
 
 # Run the service command by default when the container starts.

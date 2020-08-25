@@ -18,16 +18,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
-	"github.com/thedevsaddam/govalidator"
-	"errors"
 	"bytes"
+	"errors"
 	"fmt"
-	"bitbucket.org/antinvestor/service-file/openapi"
-	"bitbucket.org/antinvestor/service-file/utils"
+	"github.com/antinvestor/files/openapi"
+	"github.com/antinvestor/files/utils"
+	"github.com/gorilla/mux"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/sirupsen/logrus"
+	"github.com/thedevsaddam/govalidator"
 )
 
 // Logger -
@@ -143,6 +143,8 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 
 	// TODO: obtain the subscription id from authentication data
 	subscriptionID := r.FormValue("subscription_id")
+
+
 	groupID := r.FormValue("group_id")
 	public, _ := strconv.ParseBool(r.FormValue("public"))
 
@@ -153,7 +155,7 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 
 
 
-	bucket, result, err := FileUpload(env, span, public, subscriptionID, hash, extension, contents)
+	bucket, result, err := FileUpload(ctx, span.Context(), env, public, subscriptionID, hash, extension, contents)
 	if err != nil {
 		ext.Error.Set(span, true) // Tag the span as errored
 		span.LogKV("Error on file upload", err)
@@ -232,7 +234,7 @@ func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
 		env.Logger.Warn(err)
 	}
 
-	fileContent, err := FileDownload(env, span, file)
+	fileContent, err := FileDownload(ctx, span.Context(), env, file)
 	if err != nil {
 		ext.Error.Set(span, true) // Tag the span as errored
 		span.LogKV("Error on file download", err)

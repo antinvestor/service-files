@@ -1,8 +1,8 @@
 package service
 
 import (
-	"bitbucket.org/antinvestor/service-file/service/storage"
-	"github.com/Sirupsen/logrus"
+	"github.com/antinvestor/files/service/storage"
+	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	otgorm "github.com/smacker/opentracing-gorm"
 	"time"

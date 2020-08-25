@@ -1,22 +1,21 @@
 package main
 
 import (
-	"log"
 	"os"
 
-	"bitbucket.org/antinvestor/service-file/service"
-	"bitbucket.org/antinvestor/service-file/utils"
+	"github.com/antinvestor/files/service"
+	"github.com/antinvestor/files/service/storage"
+	"github.com/antinvestor/files/utils"
 	"time"
-	"bitbucket.org/antinvestor/service-file/service/storage"
 )
 
 func main() {
 
-	serviceName := "file"
+	serviceName := "files"
 
 	logger, err := utils.ConfigureLogging(serviceName)
 	if err != nil {
-		log.Fatal("Failed to configure logging: " + err.Error())
+		println("Failed to configure logging: " + err.Error())
 	}
 
 	closer, err := utils.ConfigureJuegler(serviceName)

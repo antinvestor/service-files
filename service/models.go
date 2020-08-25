@@ -5,7 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/rs/xid"
-	"bitbucket.org/antinvestor/service-file/openapi"
+	"github.com/antinvestor/files/openapi"
 	"fmt"
 )
 
