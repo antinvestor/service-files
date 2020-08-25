@@ -1,6 +1,10 @@
 package service
 
 import (
+	"github.com/antinvestor/files/service/storage"
+	"github.com/sirupsen/logrus"
+	"github.com/jinzhu/gorm"
+	otgorm "github.com/smacker/opentracing-gorm"
 	"time"
 	"net/http"
 	"os"
@@ -34,15 +38,45 @@ func (se StatusError) Status() int {
 }
 
 
-func RunServer(ctx *ContextV1) {
+// Env Context object supplied around the applications lifetime
+type Env struct {
+	wDb              *gorm.DB
+	rDb              *gorm.DB
+	Logger          *logrus.Entry
+	ServerPort	string
+	EncryptionPhrase string
+	FileAccessServer string
+	StrorageProvider storage.Provider
+}
+
+func (env *Env) SetWriteDb(db *gorm.DB) {
+	env.wDb = db
+}
+
+
+func (env *Env) SetReadDb(db *gorm.DB) {
+	env.rDb = db
+}
+
+func (env *Env) GeWtDb(ctx context.Context) *gorm.DB{
+	return otgorm.SetSpanToGorm(ctx, env.wDb)
+}
+
+
+func (env *Env) GetRDb(ctx context.Context) *gorm.DB{
+	return otgorm.SetSpanToGorm(ctx, env.rDb)
+}
+
+//RunServer Starts a server and waits on it
+func RunServer(env *Env) {
 
 	waitDuration := time.Second * 15
-	router := NewRouterV1(ctx)
+	router := NewRouterV1(env)
 
 
 
 	srv := &http.Server{
-		Addr: fmt.Sprintf("0.0.0.0:%s", ctx.ServerPort ),
+		Addr: fmt.Sprintf("0.0.0.0:%s", env.ServerPort ),
 		// Good practice to set timeouts to avoid Slowloris attacks.
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
@@ -52,9 +86,11 @@ func RunServer(ctx *ContextV1) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			ctx.Logger.Fatalf("Server stopped due to error %v", err)
 
+		env.Logger.Infof("File service running on port : %v", env.ServerPort)
+
+		if err := srv.ListenAndServe(); err != nil {
+			env.Logger.Fatalf("Service stopping due to error : %v", err)
 		}
 	}()
 
@@ -68,13 +104,13 @@ func RunServer(ctx *ContextV1) {
 
 
 	// Create a deadline to wait for.
-	ctx2, cancel := context.WithTimeout(context.Background(), waitDuration)
+	env2, cancel := context.WithTimeout(context.Background(), waitDuration)
 	defer cancel()
 	// Doesn't block if no connections, but will otherwise wait
 	// until the timeout deadline.
-	srv.Shutdown(ctx2)
+	srv.Shutdown(env2)
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
-	// <-ctx.Done() if your application should wait for other services
+	// <-env.Done() if your application should wait for other services
 	// to finalize based on context cancellation.
-	ctx.Logger.Infof("Service shutting down at : %v", time.Now())
+	env.Logger.Infof("Service shutting down at : %v", time.Now())
 }

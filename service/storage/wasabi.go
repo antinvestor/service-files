@@ -1,11 +1,13 @@
 package storage
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"bytes"
 	"io"
 )
 
@@ -34,7 +36,7 @@ func (provider *ProviderWasabi) PrivateBucket()string   {
 	return provider.privateBucket
 }
 
-func (provider *ProviderWasabi) Init() error {
+func (provider *ProviderWasabi) Init(ctx context.Context) (interface{}, error) {
 
 	if provider.wasabiSession == nil {
 		s3Config := &aws.Config{
@@ -46,26 +48,33 @@ func (provider *ProviderWasabi) Init() error {
 
 		sess, err := session.NewSession(s3Config)
 		if err != nil {
-			return  err
+			return  nil, err
 		}
 
 		provider.wasabiSession = sess
+
 	}
 
-	return nil
+	return provider.wasabiSession, nil
+
 }
 
-func (provider *ProviderWasabi) UploadFile(bucket string, pathName string, extension string, contents []byte) (string, error) {
+func (provider *ProviderWasabi) UploadFile(ctx context.Context, bucket string, pathName string, extension string, contents []byte) (string, error) {
 
 	bucketObject := aws.String(bucket)
 	key := aws.String(pathName)
 
-	err := provider.Init()
+	sessionObj, err := provider.Init(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	wasabiClient := s3.New(provider.wasabiSession)
+	s3session, ok := sessionObj.(*session.Session)
+	if !ok{
+		return "", errors.New("could not cast client object to S3 Object")
+	}
+
+	wasabiClient := s3.New(s3session)
 
 	// Upload a new object "wasabi-testobject" with the string "Wasabi Hot storage"
 	result, err := wasabiClient.PutObject(&s3.PutObjectInput{
@@ -82,17 +91,22 @@ func (provider *ProviderWasabi) UploadFile(bucket string, pathName string, exten
 
 }
 
-func (provider *ProviderWasabi) DownloadFile(bucket string, pathName string, extension string) ([]byte, error) {
+func (provider *ProviderWasabi) DownloadFile(ctx context.Context, bucket string, pathName string, extension string) ([]byte, error) {
 
 	bucketObject := aws.String(bucket)
 	key := aws.String(pathName)
 
-	err := provider.Init()
+	sessionObj, err := provider.Init(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	wasabiClient := s3.New(provider.wasabiSession)
+	s3session, ok := sessionObj.(*session.Session)
+	if !ok{
+		return nil, errors.New("could not cast client object to S3 Object")
+	}
+
+	wasabiClient := s3.New(s3session)
 
 	//Get Object
 	result, err := wasabiClient.GetObject(&s3.GetObjectInput{

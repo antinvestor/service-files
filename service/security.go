@@ -6,20 +6,19 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
-	"crypto/md5"
+	"crypto/sha256"
 )
 
 // CreateHash Generates a sha512 hash any supplied bytes
 func CreateHash(content []byte) string {
-	hasher := md5.New()
+	hasher := sha256.New()
 	hasher.Write(content)
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-// Encrypt - Encrypts any arbitrary byte data given a pass phrase
-func Encrypt(data []byte, passphrase string) ([]byte, error) {
-	passwordHash := CreateHash([]byte(passphrase))
-	block, err := aes.NewCipher([]byte(passwordHash))
+// Encrypt - Encrypts any arbitrary byte data given a 32 bit encryption Key
+func Encrypt(data []byte, encryptionKey string) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(encryptionKey))
 	if err != nil {
 		return nil, err
 	}
@@ -37,10 +36,10 @@ func Encrypt(data []byte, passphrase string) ([]byte, error) {
 	return ciphertext, nil
 }
 
-// Decrypt - Converts any encrypted data back to its original form given the exact supplied passphrase
-func Decrypt(data []byte, passphrase string) ([]byte, error) {
-	key := []byte(CreateHash([]byte(passphrase)))
-	block, err := aes.NewCipher(key)
+// Decrypt - Converts any encrypted data back to its original form
+// given the exact 32 bit encryptionKey used to encrypt the data
+func Decrypt(data []byte, encryptionKey string) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(encryptionKey))
 	if err != nil {
 		return nil, err
 	}

@@ -1,31 +1,21 @@
+FROM golang:1.14 as builder
 
-ARG service_name="boilerplate"
-ARG service_port="7513"
+# Add Maintainer Info
+LABEL maintainer="Bwire Peter <bwire517@gmail.com>"
 
-FROM golang:1.12 as builder
+WORKDIR /
 
-RUN go get github.com/golang/dep/cmd/dep
-
-ADD Gopkg.* ./
-RUN dep ensure --vendor-only
-
-WORKDIR /go/src/bitbucket.org/antinvestor/service-${service_name}
-
-# Copy the local package files to the container's workspace.
 ADD . .
 
-# Build the service command inside the container.
-RUN go install bitbucket.org/antinvestor/service-${service_name}
-
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o ${service_name}_binary .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o file_binary .
 
 FROM scratch
-COPY --from=builder /go/src/bitbucket.org/antinvestor/service-${service_name}/${service_name}_binary /${service_name}
-COPY --from=builder /go/src/bitbucket.org/antinvestor/service-${service_name}/migrations /
+COPY --from=builder /file_binary /file
+COPY --from=builder /migrations /migrations
 WORKDIR /
 
 # Run the service command by default when the container starts.
-ENTRYPOINT /${service_name}
+ENTRYPOINT ["/file"]
 
 # Document the port that the service listens on by default.
-EXPOSE ${service_port}
+EXPOSE 7513

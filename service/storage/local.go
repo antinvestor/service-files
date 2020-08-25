@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"io/ioutil"
@@ -26,12 +27,12 @@ func (provider *ProviderLocal) PrivateBucket()string   {
 }
 
 
-func (provider *ProviderLocal)Init() error   {
-	return nil
+func (provider *ProviderLocal)Init(ctx context.Context) (interface{}, error)   {
+	return nil, nil
 }
 
 
-func (provider *ProviderLocal)UploadFile(bucket string, pathName string,  extension string, contents []byte) (string,error)   {
+func (provider *ProviderLocal)UploadFile(ctx context.Context, bucket string, pathName string,  extension string, contents []byte) (string,error)   {
 
 	fullPathName := filepath.Join(bucket, pathName, extension)
 
@@ -41,7 +42,7 @@ func (provider *ProviderLocal)UploadFile(bucket string, pathName string,  extens
 	return "", ioutil.WriteFile(fullPathName, contents, 0644)
 }
 
-func (provider *ProviderLocal)DownloadFile(bucket string, pathName string,  extension string) ([]byte, error)   {
+func (provider *ProviderLocal)DownloadFile(ctx context.Context, bucket string, pathName string,  extension string) ([]byte, error)   {
 	fullPathName := filepath.Join(bucket, pathName, extension)
 	return ioutil.ReadFile(fullPathName)
 }

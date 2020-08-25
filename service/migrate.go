@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 )
 
@@ -83,7 +83,7 @@ func scanForNewMigrations(logger *logrus.Entry, db *gorm.DB, migrationsDirPath s
 
 func applyNewMigrations(logger *logrus.Entry, db *gorm.DB) error {
 
-	unAppliedMigrations := []AntMigration{}
+	var unAppliedMigrations []AntMigration
 	if err := db.Where("applied_at IS NULL").Find(&unAppliedMigrations).Error; err != nil {
 		return err
 	}
