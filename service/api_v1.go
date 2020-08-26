@@ -12,6 +12,7 @@ package service
 
 import (
 	"encoding/json"
+	"github.com/antinvestor/files/models"
 	template "html/template"
 	"io/ioutil"
 	"net/http"
@@ -163,7 +164,7 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 		return  StatusError{500, err}
 	}
 
-	newFile := File{
+	newFile := models.File{
 		Name:           header.Filename,
 		GroupID:        groupID,
 		SubscriptionID: subscriptionID,
@@ -182,7 +183,7 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 		return  StatusError{500, err}
 	}
 
-	response, _ := json.Marshal(newFile.ToApi(env))
+	response, _ := json.Marshal(newFile.ToApi(env.FileAccessServer))
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
@@ -200,7 +201,7 @@ func DeleteFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 
 	pathVars := mux.Vars(r)
 
-	file := File{
+	file := models.File{
 		FileID: pathVars["id"],
 	}
 
@@ -226,7 +227,7 @@ func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
 
 	pathVars := mux.Vars(r)
 
-	file := File{
+	file := models.File{
 		FileID: pathVars["id"],
 	}
 
@@ -245,7 +246,7 @@ func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
 
 	go func() {
 
-		auditRecord := AuditFile{
+		auditRecord := models.AuditFile{
 			FileID: file.FileID,
 			SubscriptionID: "Authenticated ID",
 			Source: utils.GetIp(r),
@@ -267,7 +268,7 @@ func FindFilesV1(env *Env, w http.ResponseWriter, r *http.Request) error{
 	span, ctx := opentracing.StartSpanFromContext(r.Context(), "FindFilesV1")
 	defer span.Finish()
 
-	var matchingFiles []File
+	var matchingFiles []models.File
 
 	subscriptionID := r.FormValue("subscription_id")
 	groupID := r.FormValue("group_id")
@@ -294,7 +295,7 @@ func FindFilesV1(env *Env, w http.ResponseWriter, r *http.Request) error{
 
 
 	for i, file := range matchingFiles{
-		apiFiles[i] = file.ToApi(env)
+		apiFiles[i] = file.ToApi(env.FileAccessServer)
 	}
 
 	response, _ := json.Marshal(apiFiles)

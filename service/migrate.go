@@ -2,13 +2,14 @@ package service
 
 import (
 	"fmt"
+	"github.com/antinvestor/files/models"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -27,7 +28,7 @@ func PerformMigration(logger *logrus.Entry, db *gorm.DB) {
 	migrationsDirPath := "./migrations/0001"
 
 	// Migrate the schema
-	db.AutoMigrate(&AntMigration{}, &File{}, &AuditFile{})
+	db.AutoMigrate(&models.Migration{}, &models.File{}, &models.AuditFile{})
 
 	if err := scanForNewMigrations(logger, db, migrationsDirPath); err != nil {
 		logger.Warnf("Error scanning for new migrations : %v ", err)
@@ -50,7 +51,7 @@ func scanForNewMigrations(logger *logrus.Entry, db *gorm.DB, migrationsDirPath s
 
 	for _, file := range files {
 
-		var migration AntMigration
+		var migration models.Migration
 
 		filename := filepath.Base(file)
 		filename = strings.Replace(filename, ".sql", "", 1)
@@ -83,7 +84,7 @@ func scanForNewMigrations(logger *logrus.Entry, db *gorm.DB, migrationsDirPath s
 
 func applyNewMigrations(logger *logrus.Entry, db *gorm.DB) error {
 
-	var unAppliedMigrations []AntMigration
+	var unAppliedMigrations []models.Migration
 	if err := db.Where("applied_at IS NULL").Find(&unAppliedMigrations).Error; err != nil {
 		return err
 	}

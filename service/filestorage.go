@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/antinvestor/files/models"
 	"github.com/opentracing/opentracing-go"
 	"path/filepath"
 )
@@ -31,7 +32,7 @@ func FileUpload(ctx context.Context, spanContext opentracing.SpanContext, env *E
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, spanContext opentracing.SpanContext, env *Env, file File) ([]byte, error) {
+func FileDownload(ctx context.Context, spanContext opentracing.SpanContext, env *Env, file models.File) ([]byte, error) {
 
 	traceName := fmt.Sprintf("File Download to %s", env.StrorageProvider.Name())
 	childSpan := opentracing.GlobalTracer().StartSpan(traceName, opentracing.ChildOf(spanContext))
