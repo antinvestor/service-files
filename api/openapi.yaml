@@ -148,9 +148,9 @@ paths:
       responses:
         200:
           content:
-            application/json:
               schema:
-                $ref: '#/components/schemas/File'
+                type: string
+                format: binary
           description: file response
         401:
           $ref: '#/components/responses/UnauthorizedError'

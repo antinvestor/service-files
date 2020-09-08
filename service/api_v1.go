@@ -13,7 +13,6 @@ package service
 import (
 	"encoding/json"
 	"github.com/antinvestor/files/models"
-	template "html/template"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -305,9 +304,5 @@ func FindFilesV1(env *Env, w http.ResponseWriter, r *http.Request) error{
 	w.Write(response)
 	return nil
 }
-
-
-// Uploadtpl ff
-var Uploadtpl = template.Must(template.ParseGlob("service/html/*.html"))
 
 
