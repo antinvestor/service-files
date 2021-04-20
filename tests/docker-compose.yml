@@ -1,0 +1,13 @@
+version: '3.2'
+
+services:
+
+  postgresd:
+    container_name: service_files_postgres
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=ant
+      - POSTGRES_PASSWORD=ant
+      - POSTGRES_DB=service_files
+    ports:
+      - 5423:5432

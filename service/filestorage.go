@@ -2,23 +2,17 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"github.com/antinvestor/files/config"
-	"github.com/antinvestor/files/models"
+	models2 "github.com/antinvestor/files/service/models"
 	"github.com/antinvestor/files/service/storage"
-	"github.com/opentracing/opentracing-go"
 	"github.com/pitabwire/frame"
 	"path/filepath"
 )
 
 // FileUpload - Abstract way to upload a file to any implemented storage provider
-func FileUpload(ctx context.Context, spanContext opentracing.SpanContext, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
+func FileUpload(ctx context.Context, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
 
 	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
-
-	traceName := fmt.Sprintf("File Upload to %s", storageProvider.Name())
-	childSpan := opentracing.GlobalTracer().StartSpan(traceName, opentracing.ChildOf(spanContext))
-	defer childSpan.Finish()
 
 	filePathName := filepath.Join(subscriptionID, hash)
 
@@ -38,13 +32,9 @@ func FileUpload(ctx context.Context, spanContext opentracing.SpanContext, isPubl
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, spanContext opentracing.SpanContext, file models.File) ([]byte, error) {
+func FileDownload(ctx context.Context, file models2.File) ([]byte, error) {
 
 	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
-
-	traceName := fmt.Sprintf("File Download to %s", storageProvider.Name())
-	childSpan := opentracing.GlobalTracer().StartSpan(traceName, opentracing.ChildOf(spanContext))
-	defer childSpan.Finish()
 
 	storageBucket := storageProvider.PrivateBucket()
 	if file.Public {

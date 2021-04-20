@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/pitabwire/frame"
+	"gocloud.dev/blob"
 )
 
 type Provider interface {
@@ -10,44 +11,55 @@ type Provider interface {
 	PrivateBucket() string
 	PublicBucket() string
 
-	Init(ctx context.Context) (interface{}, error)
+	Setup(ctx context.Context) error
+	Init(ctx context.Context, bucketName string) (*blob.Bucket, error)
 	UploadFile(ctx context.Context, bucket string, pathName string, extension string, contents []byte) (string, error)
 	DownloadFile(ctx context.Context, bucket string, pathName string, extension string) ([]byte, error)
 }
 
-func GetStorageProvider(providerName string) Provider {
+func GetStorageProvider(ctx context.Context, providerName string) (Provider, error) {
 
+	var provider Provider
 	switch providerName {
 
 	case "GCS":
-		return &ProviderGCS{
-			name:          "GCS",
-			projectID:     frame.GetEnv("GCS_PROJECT_ID", ""),
-			privateBucket: frame.GetEnv("GCS_PRIVATE_BUCKET", ""),
-			publicBucket:  frame.GetEnv("GCS_PUBLIC_BUCKET", ""),
+		provider = &ProviderGCS{
+			ProviderLocal: ProviderLocal{
+				name:          "GCS",
+				privateBucket: frame.GetEnv("GCS_PRIVATE_BUCKET", ""),
+				publicBucket:  frame.GetEnv("GCS_PUBLIC_BUCKET", ""),
+			},
 		}
+
+		break
 
 	case "WASABI":
 
-		return &ProviderWasabi{
-			name:              "WASABI",
-			privateBucket:     frame.GetEnv("WASABI_PRIVATE_BUCKET", ""),
-			publicBucket:      frame.GetEnv("WASABI_PUBLIC_BUCKET", ""),
+		provider = &ProviderWasabi{
+			ProviderLocal: ProviderLocal{
+				name:          "WASABI",
+				privateBucket: frame.GetEnv("WASABI_PRIVATE_BUCKET", ""),
+				publicBucket:  frame.GetEnv("WASABI_PUBLIC_BUCKET", ""),
+			},
 			wasabiEndpoint:    frame.GetEnv("WASABI_ENDPOINT", ""),
 			wasabiRegion:      frame.GetEnv("WASABI_REGION", ""),
 			wasabiSecret:      frame.GetEnv("WASABI_SECRET", ""),
 			wasabiToken:       frame.GetEnv("WASABI_TOKEN", ""),
 			wasabiAccessKeyID: frame.GetEnv("WASABI_ACCESS_KEY_ID", ""),
 		}
-
+		break
 	default:
 
-		return &ProviderLocal{
+		provider = &ProviderLocal{
 			name:          "LOCAL",
 			privateBucket: frame.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"),
 			publicBucket:  frame.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"),
 		}
+		break
 
 	}
+
+	err := provider.Setup(ctx)
+	return provider, err
 
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/antinvestor/files/config"
-	"github.com/antinvestor/files/models"
 	"github.com/antinvestor/files/service"
-	"github.com/gorilla/csrf"
+	models2 "github.com/antinvestor/files/service/models"
+	"github.com/antinvestor/files/service/storage"
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
 	"log"
@@ -20,11 +20,17 @@ func main() {
 
 	ctx := context.Background()
 
+	storageProviderName := frame.GetEnv("STORAGE_PROVIDER", "LOCAL")
+	storageProvider, err := storage.GetStorageProvider(ctx, storageProviderName)
+	if err != nil {
+		log.Fatalf("main -- Could not setup or access storage because : %v", err)
+	}
+
 	var serviceOptions []frame.Option
 
 	sysService := frame.NewService(serviceName)
 
-	datasource := frame.GetEnv(config.EnvDatabaseUrl, "postgres://ant:@nt@localhost/service_files")
+	datasource := frame.GetEnv(config.EnvDatabaseUrl, "postgres://ant:@nt@localhost:5423/service_files")
 	mainDb := frame.Datastore(ctx, datasource, false)
 	serviceOptions = append(serviceOptions, mainDb)
 
@@ -32,14 +38,9 @@ func main() {
 	readDb := frame.Datastore(ctx, readOnlydatasource, true)
 	serviceOptions = append(serviceOptions, readDb)
 
-	csrfSecret := frame.GetEnv(config.EnvCsrfSecret,
-		"\\xf80105efab6d863fd8fc243d269094469e2277e8f12e5a0a9f401e88494f7b4b")
-
 	authServiceHandlers := handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(
-		csrf.Protect(
-			[]byte(csrfSecret),
-			csrf.Secure(false),
-		)(service.NewRouterV1(sysService)))
+		service.NewRouterV1(sysService, storageProvider),
+	)
 
 	defaultServer := frame.HttpHandler(authServiceHandlers)
 	serviceOptions = append(serviceOptions, defaultServer)
@@ -56,7 +57,7 @@ func main() {
 
 		migrationPath := frame.GetEnv(config.EnvMigrationPath, "./migrations/0001")
 		err := sysService.MigrateDatastore(ctx, migrationPath,
-			&models.File{}, &models.AuditFile{})
+			&models2.File{}, &models2.AuditFile{})
 		if err != nil {
 			log.Printf("main -- Could not migrate successfully because : %v", err)
 		}

@@ -12,17 +12,14 @@ package service
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/antinvestor/files/config"
-	"github.com/antinvestor/files/models"
 	"github.com/antinvestor/files/openapi"
+	models2 "github.com/antinvestor/files/service/models"
 	"github.com/antinvestor/files/service/storage"
 	"github.com/gorilla/mux"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 	"github.com/pitabwire/frame"
 	"github.com/thedevsaddam/govalidator"
 	"io/ioutil"
@@ -32,65 +29,13 @@ import (
 	"strings"
 )
 
-func addHandler(service *frame.Service, storageProvider storage.Provider, router *mux.Router,
-	f func(w http.ResponseWriter, r *http.Request) error, path string, name string, method string) {
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		r = r.WithContext(frame.ToContext(r.Context(), service))
-		r = r.WithContext(context.WithValue(r.Context(), config.CtxBundleKey, service.Bundle()))
-		r = r.WithContext(context.WithValue(r.Context(), config.CtxStorageProviderKey, storageProvider))
-
-		err := f(w, r)
-		if err != nil {
-			switch e := err.(type) {
-			case Error:
-				// We can retrieve the status here and write out a specific
-				// HTTP status code.
-				log.Printf("request failed with  %d - %v", e.Status(), e)
-				http.Error(w, e.Error(), e.Status())
-			default:
-
-				log.Printf(" request failed with - %v", e)
-				// Any error types we don't specifically look out for default
-				// to serving a HTTP 500
-				http.Error(w, http.StatusText(http.StatusInternalServerError),
-					http.StatusInternalServerError)
-			}
-		}
-
-	})
-
-	router.Methods(method).
-		Path(path).
-		Name(name).
-		Handler(handler)
-
-}
-
-// NewRouterV1 -
-func NewRouterV1(service *frame.Service) *mux.Router {
-
-	storageProviderName := frame.GetEnv("STORAGE_PROVIDER", "LOCAL")
-	storageProvider := storage.GetStorageProvider(storageProviderName)
-
-	router := mux.NewRouter().StrictSlash(true)
-
-	addHandler(service, storageProvider, router, AddFileV1, "/files", "AddFile", "POST")
-	addHandler(service, storageProvider, router, FindFilesV1, "/files", "FindFiles", "GET")
-	addHandler(service, storageProvider, router, FindFileByIDV1, "/files/{id}", "FindFileById", "GET")
-	addHandler(service, storageProvider, router, DeleteFileV1, "/files/{id}", "DeleteFile", "DELETE")
-
-	return router
-}
 
 // AddFileV1 -
 func AddFileV1(w http.ResponseWriter, r *http.Request) error {
 
-	service := frame.FromContext(r.Context())
+	ctx := r.Context()
+	service := frame.FromContext(ctx)
 
-	span, ctx := opentracing.StartSpanFromContext(r.Context(), "AddFileV1")
-	defer span.Finish()
 
 	rules := govalidator.MapData{
 		"group_id":        []string{"required", "max:30"},
@@ -144,16 +89,14 @@ func AddFileV1(w http.ResponseWriter, r *http.Request) error {
 	extParts := strings.Split(header.Filename, ".")
 	extension := extParts[len(extParts)-1]
 
-	bucket, result, err := FileUpload(ctx, span.Context(), public, subscriptionID, hash, extension, contents)
+	bucket, result, err := FileUpload(ctx, public, subscriptionID, hash, extension, contents)
 	if err != nil {
-		ext.Error.Set(span, true) // Tag the span as errored
-		span.LogKV("Error on file upload", err)
 		return StatusError{500, err}
 	}
 
 	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
 
-	newFile := models.File{
+	newFile := models2.File{
 		Name:           header.Filename,
 		GroupID:        groupID,
 		SubscriptionID: subscriptionID,
@@ -187,15 +130,12 @@ func AddFileV1(w http.ResponseWriter, r *http.Request) error {
 
 // DeleteFileV1 -
 func DeleteFileV1(w http.ResponseWriter, r *http.Request) error {
-
-	service := frame.FromContext(r.Context())
-
-	span, ctx := opentracing.StartSpanFromContext(r.Context(), "DeleteFileV1")
-	defer span.Finish()
+	ctx := r.Context()
+	service := frame.FromContext(ctx)
 
 	pathVars := mux.Vars(r)
 
-	file := models.File{}
+	file := models2.File{}
 
 	if err := service.DB(ctx, true).First(&file, pathVars["id"]).Error; err != nil {
 		return StatusError{500, err}
@@ -212,31 +152,25 @@ func DeleteFileV1(w http.ResponseWriter, r *http.Request) error {
 
 // FindFileByIDV1 -
 func FindFileByIDV1(w http.ResponseWriter, r *http.Request) error {
-
-	service := frame.FromContext(r.Context())
-
-	span, ctx := opentracing.StartSpanFromContext(r.Context(), "FindFileByIDV1")
-	defer span.Finish()
+	ctx := r.Context()
+	service := frame.FromContext(ctx)
 
 	pathVars := mux.Vars(r)
 
-	file := models.File{}
+	file := models2.File{}
 
 	if err := service.DB(ctx, true).First(&file, pathVars["id"]).Error; err != nil {
 		log.Printf("Could not find entry : %v", err)
 	}
 
-	fileContent, err := FileDownload(ctx, span.Context(), file)
+	fileContent, err := FileDownload(ctx, file)
 	if err != nil {
-		ext.Error.Set(span, true) // Tag the span as errored
-		span.LogKV("Error on file download", err)
-
 		return StatusError{500, err}
 	}
 
 	go func() {
 
-		auditRecord := models.AuditFile{
+		auditRecord := models2.AuditFile{
 			FileID:         file.ID,
 			SubscriptionID: "Authenticated ID",
 			Source:         frame.GetIp(r),
@@ -253,13 +187,10 @@ func FindFileByIDV1(w http.ResponseWriter, r *http.Request) error {
 
 // FindFilesV1 -
 func FindFilesV1(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
+	service := frame.FromContext(ctx)
 
-	service := frame.FromContext(r.Context())
-
-	span, ctx := opentracing.StartSpanFromContext(r.Context(), "FindFilesV1")
-	defer span.Finish()
-
-	var matchingFiles []models.File
+	var matchingFiles []models2.File
 
 	subscriptionID := r.FormValue("subscription_id")
 	groupID := r.FormValue("group_id")
