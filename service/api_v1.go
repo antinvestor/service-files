@@ -11,59 +11,47 @@
 package service
 
 import (
-	"encoding/json"
-	"github.com/antinvestor/files/models"
-	"io/ioutil"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
-
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/antinvestor/files/config"
+	"github.com/antinvestor/files/models"
 	"github.com/antinvestor/files/openapi"
-	"github.com/antinvestor/files/utils"
+	"github.com/antinvestor/files/service/storage"
 	"github.com/gorilla/mux"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/sirupsen/logrus"
+	"github.com/pitabwire/frame"
 	"github.com/thedevsaddam/govalidator"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
-// Logger -
-func Logger(inner http.Handler, name string, logger *logrus.Entry) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		inner.ServeHTTP(w, r)
-
-		logger.Printf(
-			"%s %s %s %s",
-			r.Method,
-			r.RequestURI,
-			name,
-			time.Since(start),
-		)
-	})
-}
-
-func addHandler(env *Env, router *mux.Router,
-	f func(env *Env, w http.ResponseWriter, r *http.Request) error , path string, name string, method string) {
+func addHandler(service *frame.Service, storageProvider storage.Provider, router *mux.Router,
+	f func(w http.ResponseWriter, r *http.Request) error, path string, name string, method string) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		err := f(env, w, r)
+		r = r.WithContext(frame.ToContext(r.Context(), service))
+		r = r.WithContext(context.WithValue(r.Context(), config.CtxBundleKey, service.Bundle()))
+		r = r.WithContext(context.WithValue(r.Context(), config.CtxStorageProviderKey, storageProvider))
+
+		err := f(w, r)
 		if err != nil {
 			switch e := err.(type) {
 			case Error:
 				// We can retrieve the status here and write out a specific
 				// HTTP status code.
-				env.Logger.Warnf("request failed with  %d - %s", e.Status(), e)
+				log.Printf("request failed with  %d - %v", e.Status(), e)
 				http.Error(w, e.Error(), e.Status())
 			default:
 
-				env.Logger.Error(e)
+				log.Printf(" request failed with - %v", e)
 				// Any error types we don't specifically look out for default
 				// to serving a HTTP 500
 				http.Error(w, http.StatusText(http.StatusInternalServerError),
@@ -72,33 +60,37 @@ func addHandler(env *Env, router *mux.Router,
 		}
 
 	})
-	loggedHandler := Logger(handler, name, env.Logger)
 
 	router.Methods(method).
 		Path(path).
 		Name(name).
-		Handler(loggedHandler)
+		Handler(handler)
 
 }
 
 // NewRouterV1 -
-func NewRouterV1(env *Env) *mux.Router {
+func NewRouterV1(service *frame.Service) *mux.Router {
+
+	storageProviderName := frame.GetEnv("STORAGE_PROVIDER", "LOCAL")
+	storageProvider := storage.GetStorageProvider(storageProviderName)
+
 	router := mux.NewRouter().StrictSlash(true)
 
-	addHandler(env, router, AddFileV1, "/files", "AddFile", "POST")
-	addHandler(env, router, FindFilesV1, "/files", "FindFiles", "GET")
-	addHandler(env, router, FindFileByIDV1, "/files/{id}", "FindFileById", "GET")
-	addHandler(env, router, DeleteFileV1, "/files/{id}", "DeleteFile", "DELETE")
+	addHandler(service, storageProvider, router, AddFileV1, "/files", "AddFile", "POST")
+	addHandler(service, storageProvider, router, FindFilesV1, "/files", "FindFiles", "GET")
+	addHandler(service, storageProvider, router, FindFileByIDV1, "/files/{id}", "FindFileById", "GET")
+	addHandler(service, storageProvider, router, DeleteFileV1, "/files/{id}", "DeleteFile", "DELETE")
 
 	return router
 }
 
 // AddFileV1 -
-func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
+func AddFileV1(w http.ResponseWriter, r *http.Request) error {
+
+	service := frame.FromContext(r.Context())
 
 	span, ctx := opentracing.StartSpanFromContext(r.Context(), "AddFileV1")
 	defer span.Finish()
-
 
 	rules := govalidator.MapData{
 		"group_id":        []string{"required", "max:30"},
@@ -124,19 +116,18 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 	e := validator.Validate()
 	if len(e) != 0 {
 		err, _ := json.Marshal(e)
-		return  StatusError{400, errors.New(string(err))}
+		return StatusError{400, errors.New(string(err))}
 	}
 	if err := r.ParseMultipartForm(262144); err != nil {
-		return  StatusError{400, err}
+		return StatusError{400, err}
 	}
 
 	file, header, err := r.FormFile("fileObject")
 	if err != nil {
-		return  StatusError{400, err}
+		return StatusError{400, err}
 	}
 
 	contents, _ := ioutil.ReadAll(file)
-
 
 	// Use the net/http package's handy DectectContentType function. Always returns a valid
 	// content-type by returning "application/octet-stream" if no others seemed to match.
@@ -144,7 +135,6 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 
 	// TODO: obtain the subscription id from authentication data
 	subscriptionID := r.FormValue("subscription_id")
-
 
 	groupID := r.FormValue("group_id")
 	public, _ := strconv.ParseBool(r.FormValue("public"))
@@ -154,14 +144,14 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 	extParts := strings.Split(header.Filename, ".")
 	extension := extParts[len(extParts)-1]
 
-
-
-	bucket, result, err := FileUpload(ctx, span.Context(), env, public, subscriptionID, hash, extension, contents)
+	bucket, result, err := FileUpload(ctx, span.Context(), public, subscriptionID, hash, extension, contents)
 	if err != nil {
 		ext.Error.Set(span, true) // Tag the span as errored
 		span.LogKV("Error on file upload", err)
-		return  StatusError{500, err}
+		return StatusError{500, err}
 	}
+
+	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
 
 	newFile := models.File{
 		Name:           header.Filename,
@@ -173,44 +163,46 @@ func AddFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 		Ext:            extension,
 		Size:           header.Size,
 		BucketName:     bucket,
-		Provider:       env.StrorageProvider.Name(),
-		UploadResult: result,
+		Provider:       storageProvider.Name(),
+		UploadResult:   result,
 	}
 
-
-	if err := env.GeWtDb(ctx).Create(&newFile).Error; err != nil {
-		return  StatusError{500, err}
+	if err := service.DB(ctx, false).Create(&newFile).Error; err != nil {
+		return StatusError{500, err}
 	}
 
-	response, _ := json.Marshal(newFile.ToApi(env.FileAccessServer))
+	fileAccessServer := frame.GetEnv("FILE_ACCESS_SERVER_URL", "")
+
+	response, _ := json.Marshal(newFile.ToApi(fileAccessServer))
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		return StatusError{500, err}
+	}
 	return nil
 
 }
 
 // DeleteFileV1 -
-func DeleteFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
+func DeleteFileV1(w http.ResponseWriter, r *http.Request) error {
+
+	service := frame.FromContext(r.Context())
 
 	span, ctx := opentracing.StartSpanFromContext(r.Context(), "DeleteFileV1")
 	defer span.Finish()
 
-
 	pathVars := mux.Vars(r)
 
-	file := models.File{
-		FileID: pathVars["id"],
+	file := models.File{}
+
+	if err := service.DB(ctx, true).First(&file, pathVars["id"]).Error; err != nil {
+		return StatusError{500, err}
 	}
 
-
-	if err := env.GetRDb(ctx).First(&file).Error; err != nil {
-		return  StatusError{500, err}
-	}
-
-	if err := env.GeWtDb(ctx).Delete(&file).Error; err != nil {
-		return  StatusError{500, err}
+	if err := service.DB(ctx, false).Delete(&file, pathVars["id"]).Error; err != nil {
+		return StatusError{500, err}
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -219,40 +211,38 @@ func DeleteFileV1(env *Env, w http.ResponseWriter, r *http.Request) error {
 }
 
 // FindFileByIDV1 -
-func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
+func FindFileByIDV1(w http.ResponseWriter, r *http.Request) error {
+
+	service := frame.FromContext(r.Context())
 
 	span, ctx := opentracing.StartSpanFromContext(r.Context(), "FindFileByIDV1")
 	defer span.Finish()
 
 	pathVars := mux.Vars(r)
 
-	file := models.File{
-		FileID: pathVars["id"],
+	file := models.File{}
+
+	if err := service.DB(ctx, true).First(&file, pathVars["id"]).Error; err != nil {
+		log.Printf("Could not find entry : %v", err)
 	}
 
-
-	if err := env.GetRDb(ctx).First(&file).Error; err != nil {
-		env.Logger.Warn(err)
-	}
-
-	fileContent, err := FileDownload(ctx, span.Context(), env, file)
+	fileContent, err := FileDownload(ctx, span.Context(), file)
 	if err != nil {
 		ext.Error.Set(span, true) // Tag the span as errored
 		span.LogKV("Error on file download", err)
 
-		return  StatusError{500, err}
+		return StatusError{500, err}
 	}
 
 	go func() {
 
 		auditRecord := models.AuditFile{
-			FileID: file.FileID,
+			FileID:         file.ID,
 			SubscriptionID: "Authenticated ID",
-			Source: utils.GetIp(r),
-			Action: "View",
-
+			Source:         frame.GetIp(r),
+			Action:         "View",
 		}
-		env.GeWtDb(ctx).Create(&auditRecord)
+		service.DB(ctx, false).Create(&auditRecord)
 	}()
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name))
@@ -262,7 +252,9 @@ func FindFileByIDV1(env *Env, w http.ResponseWriter, r *http.Request)error {
 }
 
 // FindFilesV1 -
-func FindFilesV1(env *Env, w http.ResponseWriter, r *http.Request) error{
+func FindFilesV1(w http.ResponseWriter, r *http.Request) error {
+
+	service := frame.FromContext(r.Context())
 
 	span, ctx := opentracing.StartSpanFromContext(r.Context(), "FindFilesV1")
 	defer span.Finish()
@@ -271,38 +263,44 @@ func FindFilesV1(env *Env, w http.ResponseWriter, r *http.Request) error{
 
 	subscriptionID := r.FormValue("subscription_id")
 	groupID := r.FormValue("group_id")
-	page := r.FormValue("page")
-	limit := r.FormValue("limit")
+	pageStr := r.FormValue("page")
+	limitStr := r.FormValue("limit")
 
-	tx := env.GetRDb(ctx).Where("subscription_id = ?", subscriptionID)
+	tx := service.DB(ctx, true).Where("subscription_id = ?", subscriptionID)
 
-	if groupID != ""{
+	if groupID != "" {
 		tx = tx.Where("group_id = ?", groupID)
 	}
 
-	if page != ""{
-		tx = tx.Offset(page)
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		page = 0
 	}
+	tx = tx.Offset(page)
 
-	if limit != ""{
-		tx = tx.Limit(limit)
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 30
 	}
+	tx = tx.Limit(limit)
 
 	tx.Find(&matchingFiles)
 
 	apiFiles := make([]openapi.File, len(matchingFiles))
 
+	fileAccessServer := frame.GetEnv("FILE_ACCESS_SERVER_URL", "")
+	for i, file := range matchingFiles {
 
-	for i, file := range matchingFiles{
-		apiFiles[i] = file.ToApi(env.FileAccessServer)
+		apiFiles[i] = file.ToApi(fileAccessServer)
 	}
 
 	response, _ := json.Marshal(apiFiles)
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		return StatusError{500, err}
+	}
 	return nil
 }
-
-

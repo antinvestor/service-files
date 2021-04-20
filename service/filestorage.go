@@ -3,49 +3,57 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/models"
+	"github.com/antinvestor/files/service/storage"
 	"github.com/opentracing/opentracing-go"
+	"github.com/pitabwire/frame"
 	"path/filepath"
 )
 
 // FileUpload - Abstract way to upload a file to any implemented storage provider
-func FileUpload(ctx context.Context, spanContext opentracing.SpanContext, env *Env, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
+func FileUpload(ctx context.Context, spanContext opentracing.SpanContext, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
 
-	traceName := fmt.Sprintf("File Upload to %s", env.StrorageProvider.Name())
+	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
+
+	traceName := fmt.Sprintf("File Upload to %s", storageProvider.Name())
 	childSpan := opentracing.GlobalTracer().StartSpan(traceName, opentracing.ChildOf(spanContext))
 	defer childSpan.Finish()
 
 	filePathName := filepath.Join(subscriptionID, hash)
 
 	if !isPublic {
-		hashedContent, err := Encrypt(contents, env.EncryptionPhrase)
+		encryptionPhrase := frame.GetEnv("ENCRYPTION_PHRASE", "AES256Key-XihgT047PgfrbYZJB4Rf2K")
+		hashedContent, err := Encrypt(contents, encryptionPhrase)
 		if err != nil {
-			return env.StrorageProvider.PrivateBucket(), "", err
+			return storageProvider.PrivateBucket(), "", err
 		}
 
-		result, err := env.StrorageProvider.UploadFile(ctx, env.StrorageProvider.PrivateBucket(), filePathName, extension, hashedContent)
-		return env.StrorageProvider.PrivateBucket(), result, err
+		result, err := storageProvider.UploadFile(ctx, storageProvider.PrivateBucket(), filePathName, extension, hashedContent)
+		return storageProvider.PrivateBucket(), result, err
 	}
 
-	result, err = env.StrorageProvider.UploadFile(ctx, env.StrorageProvider.PublicBucket(), filePathName, extension, contents)
-	return env.StrorageProvider.PublicBucket(), result, err
+	result, err = storageProvider.UploadFile(ctx, storageProvider.PublicBucket(), filePathName, extension, contents)
+	return storageProvider.PublicBucket(), result, err
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, spanContext opentracing.SpanContext, env *Env, file models.File) ([]byte, error) {
+func FileDownload(ctx context.Context, spanContext opentracing.SpanContext, file models.File) ([]byte, error) {
 
-	traceName := fmt.Sprintf("File Download to %s", env.StrorageProvider.Name())
+	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
+
+	traceName := fmt.Sprintf("File Download to %s", storageProvider.Name())
 	childSpan := opentracing.GlobalTracer().StartSpan(traceName, opentracing.ChildOf(spanContext))
 	defer childSpan.Finish()
 
-	storageBucket := env.StrorageProvider.PrivateBucket()
+	storageBucket := storageProvider.PrivateBucket()
 	if file.Public {
-		storageBucket = env.StrorageProvider.PublicBucket()
+		storageBucket = storageProvider.PublicBucket()
 	}
 
 	filePathName := filepath.Join(file.SubscriptionID, file.Hash)
 
-	contents, err := env.StrorageProvider.DownloadFile(ctx, storageBucket, filePathName, file.Ext)
+	contents, err := storageProvider.DownloadFile(ctx, storageBucket, filePathName, file.Ext)
 	if err != nil {
 		return nil, err
 	}
@@ -54,5 +62,6 @@ func FileDownload(ctx context.Context, spanContext opentracing.SpanContext, env 
 		return contents, nil
 	}
 
-	return Decrypt(contents, env.EncryptionPhrase)
+	encryptionPhrase := frame.GetEnv("ENCRYPTION_PHRASE", "AES256Key-XihgT047PgfrbYZJB4Rf2K")
+	return Decrypt(contents, encryptionPhrase)
 }

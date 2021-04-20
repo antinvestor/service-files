@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	"github.com/antinvestor/files/utils"
+	"github.com/pitabwire/frame"
 )
 
 type Provider interface {
@@ -22,30 +22,30 @@ func GetStorageProvider(providerName string) Provider {
 	case "GCS":
 		return &ProviderGCS{
 			name:          "GCS",
-			projectID:     utils.GetEnv("GCS_PROJECT_ID", ""),
-			privateBucket: utils.GetEnv("GCS_PRIVATE_BUCKET", ""),
-			publicBucket:  utils.GetEnv("GCS_PUBLIC_BUCKET", ""),
+			projectID:     frame.GetEnv("GCS_PROJECT_ID", ""),
+			privateBucket: frame.GetEnv("GCS_PRIVATE_BUCKET", ""),
+			publicBucket:  frame.GetEnv("GCS_PUBLIC_BUCKET", ""),
 		}
 
 	case "WASABI":
 
 		return &ProviderWasabi{
 			name:              "WASABI",
-			privateBucket:     utils.GetEnv("WASABI_PRIVATE_BUCKET", ""),
-			publicBucket:      utils.GetEnv("WASABI_PUBLIC_BUCKET", ""),
-			wasabiEndpoint:    utils.GetEnv("WASABI_ENDPOINT", ""),
-			wasabiRegion:      utils.GetEnv("WASABI_REGION", ""),
-			wasabiSecret:      utils.GetEnv("WASABI_SECRET", ""),
-			wasabiToken:       utils.GetEnv("WASABI_TOKEN", ""),
-			wasabiAccessKeyID: utils.GetEnv("WASABI_ACCESS_KEY_ID", ""),
+			privateBucket:     frame.GetEnv("WASABI_PRIVATE_BUCKET", ""),
+			publicBucket:      frame.GetEnv("WASABI_PUBLIC_BUCKET", ""),
+			wasabiEndpoint:    frame.GetEnv("WASABI_ENDPOINT", ""),
+			wasabiRegion:      frame.GetEnv("WASABI_REGION", ""),
+			wasabiSecret:      frame.GetEnv("WASABI_SECRET", ""),
+			wasabiToken:       frame.GetEnv("WASABI_TOKEN", ""),
+			wasabiAccessKeyID: frame.GetEnv("WASABI_ACCESS_KEY_ID", ""),
 		}
 
 	default:
 
 		return &ProviderLocal{
 			name:          "LOCAL",
-			privateBucket: utils.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"),
-			publicBucket:  utils.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"),
+			privateBucket: frame.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"),
+			publicBucket:  frame.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"),
 		}
 
 	}

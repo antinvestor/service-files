@@ -2,9 +2,9 @@ package storage
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"io/ioutil"
 )
 
 type ProviderLocal struct {
@@ -37,9 +37,13 @@ func (provider *ProviderLocal)UploadFile(ctx context.Context, bucket string, pat
 	fullPathName := filepath.Join(bucket, pathName, extension)
 
 	//Ensure parent directories exist
-	os.MkdirAll(filepath.Dir(fullPathName), 0755)
+	err := os.MkdirAll(filepath.Dir(fullPathName), 0755)
+	if err != nil {
+		return "", err
+	}
 
-	return "", ioutil.WriteFile(fullPathName, contents, 0644)
+	err = ioutil.WriteFile(fullPathName, contents, 0644)
+	return fullPathName, err
 }
 
 func (provider *ProviderLocal)DownloadFile(ctx context.Context, bucket string, pathName string,  extension string) ([]byte, error)   {
