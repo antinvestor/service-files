@@ -11,5 +11,5 @@ One requires :
         `docker run --rm   -v ${PWD}:/local openapitools/openapi-generator-cli generate   -i /local/api/service/file/v1/file.yaml   -g go   -o /local/service-file-client`
 
     - To regenerate the server you need to run the command
-        `docker run --rm   -v ${PWD}:/local openapitools/openapi-generator-cli generate   -i /local/api/service/file/v1/file.yaml   -g go-server --package-name openapi --additional-properties=sourceFolder=openapi  -o /local/service-file`
+        `docker run --rm   -v ${PWD}:/local -e GO_POST_PROCESS_FILE="/usr/local/bin/gofmt -w" openapitools/openapi-generator-cli generate  -i /local/apis/common/service/file/v1/file.yaml   -g go-server --package-name openapi --additional-properties=sourceFolder=openapi  -o /local/service-file`
     

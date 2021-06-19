@@ -11,29 +11,148 @@
 package openapi
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/antinvestor/files/service/business"
+	"github.com/antinvestor/files/service/models"
 	"net/http"
+	"strings"
+
+	"github.com/gorilla/mux"
 )
 
+// A DefaultApiController binds http requests to an api service and writes the service results to the http response
+type DefaultApiController struct {
+	service DefaultApiServicer
+}
+
+// NewDefaultApiController creates a default api controller
+func NewDefaultApiController(s DefaultApiServicer) Router {
+	return &DefaultApiController{service: s}
+}
+
+// Routes returns all of the api route for the DefaultApiController
+func (c *DefaultApiController) Routes() Routes {
+	return Routes{ 
+		{
+			"AddFile",
+			strings.ToUpper("Post"),
+			"/files/",
+			c.AddFile,
+		},
+		{
+			"DeleteFile",
+			strings.ToUpper("Delete"),
+			"/files/{id}",
+			c.DeleteFile,
+		},
+		{
+			"FindFileById",
+			strings.ToUpper("Get"),
+			"/files/{id}",
+			c.FindFileById,
+		},
+		{
+			"FindFiles",
+			strings.ToUpper("Get"),
+			"/files/",
+			c.FindFiles,
+		},
+	}
+}
+
 // AddFile - 
-func AddFile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+func (c *DefaultApiController) AddFile(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		badRequest := http.StatusBadRequest
+		EncodeJSONResponse(err.Error(), &badRequest, w)
+		return
+	}
+				groupId := r.FormValue("group_id")
+				accessId := r.FormValue("access_id")
+				publicStr := r.FormValue("public")
+
+	public, err := parseBoolParameter(publicStr)
+	if err != nil {
+		return
+	}
+				name := r.FormValue("name")
+
+	_, fileHeader, err := r.FormFile("fileObject")
+	result, err := c.service.AddFile(r.Context(), groupId, accessId, public, name, fileHeader)
+
+	// If an error occurred, encode the error with the status code
+	if err != nil {
+		EncodeJSONResponse(err.Error(), &result.Code, w)
+		return
+	}
+	// If no error, encode the body and the result code
+	EncodeJSONResponse(result.Body, &result.Code, w)
+
 }
 
 // DeleteFile - 
-func DeleteFile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+func (c *DefaultApiController) DeleteFile(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id := params["id"]
+	
+	result, err := c.service.DeleteFile(r.Context(), id)
+	// If an error occurred, encode the error with the status code
+	if err != nil {
+		EncodeJSONResponse(err.Error(), &result.Code, w)
+		return
+	}
+	// If no error, encode the body and the result code
+	EncodeJSONResponse(result.Body, &result.Code, w)
+
 }
 
 // FindFileById - 
-func FindFileById(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+func (c *DefaultApiController) FindFileById(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id := params["id"]
+	
+	result, err := c.service.FindFileById(r.Context(), id)
+	// If an error occurred, encode the error with the status code
+	if err != nil {
+		EncodeJSONResponse(err.Error(), &result.Code, w)
+		return
+	}
+
+	file := result.Body.(*models.File)
+	fileContent, err := business.FileDownload(r.Context(), file)
+	if err != nil {
+		EncodeJSONResponse(err.Error(), &result.Code, w)
+		return
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name))
+	w.Header().Set("Content-Type", file.Mimetype)
+	http.ServeContent(w, r, file.Name, file.CreatedAt, bytes.NewReader(fileContent))
 }
 
 // FindFiles - 
-func FindFiles(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+func (c *DefaultApiController) FindFiles(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	subscriptionId := query.Get("subscription_id")
+	groupId := query.Get("group_id")
+	limit, err := parseInt32Parameter(query.Get("limit"), false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	page, err := parseInt32Parameter(query.Get("page"), false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	result, err := c.service.FindFiles(r.Context(), subscriptionId, groupId, limit, page)
+	// If an error occurred, encode the error with the status code
+	if err != nil {
+		EncodeJSONResponse(err.Error(), &result.Code, w)
+		return
+	}
+	// If no error, encode the body and the result code
+	EncodeJSONResponse(result.Body, &result.Code, w)
+
 }

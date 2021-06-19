@@ -1,10 +1,11 @@
-package service
+package business
 
 import (
 	"context"
 	"github.com/antinvestor/files/config"
-	models2 "github.com/antinvestor/files/service/models"
-	"github.com/antinvestor/files/service/storage"
+	"github.com/antinvestor/files/service/business/storage"
+	"github.com/antinvestor/files/service/models"
+	"github.com/antinvestor/files/service/utils"
 	"github.com/pitabwire/frame"
 	"path/filepath"
 )
@@ -17,8 +18,8 @@ func FileUpload(ctx context.Context, isPublic bool, subscriptionID string, hash 
 	filePathName := filepath.Join(subscriptionID, hash)
 
 	if !isPublic {
-		encryptionPhrase := frame.GetEnv("ENCRYPTION_PHRASE", "AES256Key-XihgT047PgfrbYZJB4Rf2K")
-		hashedContent, err := Encrypt(contents, encryptionPhrase)
+		encryptionPhrase := frame.GetEnv(config.EnvStorageEncryptionPhrase, "AES256Key-XihgT047PgfrbYZJB4Rf2K")
+		hashedContent, err := utils.Encrypt(contents, encryptionPhrase)
 		if err != nil {
 			return storageProvider.PrivateBucket(), "", err
 		}
@@ -32,7 +33,7 @@ func FileUpload(ctx context.Context, isPublic bool, subscriptionID string, hash 
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, file models2.File) ([]byte, error) {
+func FileDownload(ctx context.Context, file *models.File) ([]byte, error) {
 
 	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
 
@@ -41,7 +42,7 @@ func FileDownload(ctx context.Context, file models2.File) ([]byte, error) {
 		storageBucket = storageProvider.PublicBucket()
 	}
 
-	filePathName := filepath.Join(file.SubscriptionID, file.Hash)
+	filePathName := filepath.Join(file.AccessID, file.Hash)
 
 	contents, err := storageProvider.DownloadFile(ctx, storageBucket, filePathName, file.Ext)
 	if err != nil {
@@ -52,6 +53,6 @@ func FileDownload(ctx context.Context, file models2.File) ([]byte, error) {
 		return contents, nil
 	}
 
-	encryptionPhrase := frame.GetEnv("ENCRYPTION_PHRASE", "AES256Key-XihgT047PgfrbYZJB4Rf2K")
-	return Decrypt(contents, encryptionPhrase)
+	encryptionPhrase := frame.GetEnv(config.EnvStorageEncryptionPhrase, "AES256Key-XihgT047PgfrbYZJB4Rf2K")
+	return utils.Decrypt(contents, encryptionPhrase)
 }

@@ -10,17 +10,10 @@
 
 package openapi
 
-type File struct {
-
-	Id string `json:"id,omitempty"`
-
-	GroupId string `json:"group_id,omitempty"`
-
-	AccessId string `json:"access_id,omitempty"`
-
-	Public bool `json:"public,omitempty"`
-
-	Name string `json:"name"`
-
-	Url string `json:"url,omitempty"`
+//Response return a ImplResponse struct filled
+func Response(code int, body interface{}) ImplResponse {
+	return ImplResponse {
+		Code: code,
+		Body: body,
+	}
 }

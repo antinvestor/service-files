@@ -10,17 +10,8 @@
 
 package openapi
 
-type File struct {
-
-	Id string `json:"id,omitempty"`
-
-	GroupId string `json:"group_id,omitempty"`
-
-	AccessId string `json:"access_id,omitempty"`
-
-	Public bool `json:"public,omitempty"`
-
-	Name string `json:"name"`
-
-	Url string `json:"url,omitempty"`
+//Implementation response defines an error code with the associated body
+type ImplResponse struct {
+	Code int
+	Body interface{}
 }
