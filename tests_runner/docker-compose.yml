@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  file_db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=profile
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=profiledatabase
+    ports:
+      - 5425:5432
+
+
+  file_migration:
+    build: ../
+    depends_on:
+      - file_db
+    environment:
+      - LOG_LEVEL=debug
+      - DO_MIGRATION=true
+      - DATABASE_URL=postgres://file:secret@file_db:5432/filedatabase?sslmode=disable
+    restart: on-failure
