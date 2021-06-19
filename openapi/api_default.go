@@ -13,8 +13,6 @@ package openapi
 import (
 	"bytes"
 	"fmt"
-	"github.com/antinvestor/files/service/business"
-	"github.com/antinvestor/files/service/models"
 	"net/http"
 	"strings"
 
@@ -119,16 +117,11 @@ func (c *DefaultApiController) FindFileById(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	file := result.Body.(*models.File)
-	fileContent, err := business.FileDownload(r.Context(), file)
-	if err != nil {
-		EncodeJSONResponse(err.Error(), &result.Code, w)
-		return
-	}
+	download := result.Body.(*downloadObject)
 
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name))
-	w.Header().Set("Content-Type", file.Mimetype)
-	http.ServeContent(w, r, file.Name, file.CreatedAt, bytes.NewReader(fileContent))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", download.file.Name))
+	w.Header().Set("Content-Type", download.file.Mimetype)
+	http.ServeContent(w, r, download.file.Name, download.file.CreatedAt, bytes.NewReader(download.content))
 }
 
 // FindFiles - 

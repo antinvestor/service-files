@@ -12,6 +12,7 @@ package openapi
 
 import (
 	"context"
+	"fmt"
 	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/service/business"
 	"github.com/antinvestor/files/service/business/storage"
@@ -25,19 +26,38 @@ import (
 	"strings"
 )
 
+type downloadObject struct {
+	file    *models.File
+	content []byte
+}
+
 // ApiV1Service is a service that implents the logic for the DefaultApiServicer
 // This service should implement the business logic for every endpoint for the DefaultApi API.
 type ApiV1Service struct {
 	service *frame.Service
-	storage storage.Provider
+	Storage storage.Provider
 }
 
 // NewApiV1Service creates a v1 api service
 func NewApiV1Service(service *frame.Service, storageProvider storage.Provider) DefaultApiServicer {
-	return &ApiV1Service{service: service, storage: storageProvider}
+	return &ApiV1Service{service: service, Storage: storageProvider}
 }
 
-// AddFile - 
+func FileToApi(fileAccessServer string, file *models.File) File {
+
+	fileUrl := fmt.Sprintf("%s/%s", fileAccessServer, file.ID)
+
+	return File{
+		Id:       file.ID,
+		Name:     file.Name,
+		Public:   file.Public,
+		GroupId:  file.GroupID,
+		AccessId: file.AccessID,
+		Url:      fileUrl,
+	}
+}
+
+// AddFile -
 func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileHeader *multipart.FileHeader) (ImplResponse, error) {
 
 	authClaim := frame.ClaimsFromContext(ctx)
@@ -66,7 +86,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 	extParts := strings.Split(fileHeader.Filename, ".")
 	extension := extParts[len(extParts)-1]
 
-	bucket, result, err := business.FileUpload(ctx, public, accessId, hash, extension, contents)
+	bucket, result, err := business.FileUpload(ctx, a.Storage, public, accessId, hash, extension, contents)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -81,7 +101,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 		Ext:          extension,
 		Size:         fileHeader.Size,
 		BucketName:   bucket,
-		Provider:     a.storage.Name(),
+		Provider:     a.Storage.Name(),
 		UploadResult: result,
 	}
 
@@ -93,7 +113,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 	}
 
 	fileAccessServer := frame.GetEnv(config.EnvFileAccessServerUrl, "")
-	responseFile := business.FileToApi(fileAccessServer, &newFile)
+	responseFile := FileToApi(fileAccessServer, &newFile)
 
 	return Response(http.StatusCreated, responseFile), nil
 }
@@ -141,7 +161,12 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	return Response(http.StatusOK, file), nil
+	fileContent, err := business.FileDownload(ctx, a.Storage, file)
+	if err != nil {
+		return Response(http.StatusInternalServerError, nil), err
+	}
+
+	return Response(http.StatusOK, &downloadObject{file: file, content: fileContent}), nil
 }
 
 // FindFiles - 
@@ -157,7 +182,7 @@ func (a *ApiV1Service) FindFiles(ctx context.Context, subscriptionId string, gro
 
 	fileAccessServer := frame.GetEnv(config.EnvFileAccessServerUrl, "")
 	for i, file := range matchingFiles {
-		apiFiles[i] = business.FileToApi(fileAccessServer, file)
+		apiFiles[i] = FileToApi(fileAccessServer, file)
 	}
 
 	return Response(http.StatusOK, apiFiles), nil

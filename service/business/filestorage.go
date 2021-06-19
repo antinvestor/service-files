@@ -11,9 +11,7 @@ import (
 )
 
 // FileUpload - Abstract way to upload a file to any implemented storage provider
-func FileUpload(ctx context.Context, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
-
-	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
+func FileUpload(ctx context.Context, storageProvider storage.Provider, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
 
 	filePathName := filepath.Join(subscriptionID, hash)
 
@@ -33,9 +31,7 @@ func FileUpload(ctx context.Context, isPublic bool, subscriptionID string, hash 
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, file *models.File) ([]byte, error) {
-
-	storageProvider := ctx.Value(config.CtxStorageProviderKey).(storage.Provider)
+func FileDownload(ctx context.Context, storageProvider storage.Provider, file *models.File) ([]byte, error) {
 
 	storageBucket := storageProvider.PrivateBucket()
 	if file.Public {
