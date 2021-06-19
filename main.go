@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/openapi"
-	storage2 "github.com/antinvestor/files/service/business/storage"
-	models2 "github.com/antinvestor/files/service/models"
+	"github.com/antinvestor/files/service/business/storage"
+	"github.com/antinvestor/files/service/models"
 	"github.com/antinvestor/files/service/queue"
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
@@ -39,7 +39,7 @@ func main() {
 
 		migrationPath := frame.GetEnv(config.EnvMigrationPath, "./migrations/0001")
 		err := sysService.MigrateDatastore(ctx, migrationPath,
-			&models2.File{}, &models2.FileAudit{})
+			&models.File{}, &models.FileAudit{})
 		if err != nil {
 			log.Fatalf("main -- Could not migrate successfully because : %v", err)
 		}
@@ -50,7 +50,7 @@ func main() {
 	var serviceOptions []frame.Option
 
 	storageProviderName := frame.GetEnv(config.EnvStorageProvider, "LOCAL")
-	storageProvider, err := storage2.GetStorageProvider(ctx, storageProviderName)
+	storageProvider, err := storage.GetStorageProvider(ctx, storageProviderName)
 	if err != nil {
 		log.Fatalf("main -- Could not setup or access storage because : %v", err)
 	}

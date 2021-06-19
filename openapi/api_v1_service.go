@@ -21,8 +21,8 @@ import (
 	"github.com/antinvestor/files/service/utils"
 	"github.com/pitabwire/frame"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -58,21 +58,19 @@ func FileToApi(fileAccessServer string, file *models.File) File {
 }
 
 // AddFile -
-func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileHeader *multipart.FileHeader) (ImplResponse, error) {
+func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileObject *os.File) (ImplResponse, error) {
 
 	authClaim := frame.ClaimsFromContext(ctx)
 	if authClaim != nil && authClaim.AccessID != "" {
 		accessId = authClaim.AccessID
 	}
 
-	formFile, err := fileHeader.Open()
+	fiStat, err := fileObject.Stat()
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	defer formFile.Close()
-
-	contents, err := ioutil.ReadAll(formFile)
+	contents, err := ioutil.ReadAll(fileObject)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -83,7 +81,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 
 	hash := utils.CreateHash(contents)
 
-	extParts := strings.Split(fileHeader.Filename, ".")
+	extParts := strings.Split(name, ".")
 	extension := extParts[len(extParts)-1]
 
 	bucket, result, err := business.FileUpload(ctx, a.Storage, public, accessId, hash, extension, contents)
@@ -92,14 +90,14 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 	}
 
 	newFile := models.File{
-		Name:         fileHeader.Filename,
+		Name:         name,
 		GroupID:      groupId,
 		AccessID:     accessId,
 		Public:       public,
 		Hash:         hash,
 		Mimetype:     contentType,
 		Ext:          extension,
-		Size:         fileHeader.Size,
+		Size:         fiStat.Size(),
 		BucketName:   bucket,
 		Provider:     a.Storage.Name(),
 		UploadResult: result,
@@ -114,6 +112,11 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 
 	fileAccessServer := frame.GetEnv(config.EnvFileAccessServerUrl, "")
 	responseFile := FileToApi(fileAccessServer, &newFile)
+
+	err = os.Remove(fileObject.Name())
+	if err != nil {
+		return Response(http.StatusInternalServerError, nil), err
+	}
 
 	return Response(http.StatusCreated, responseFile), nil
 }

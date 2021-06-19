@@ -5,9 +5,9 @@ services:
     image: postgres:13
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=profile
+      - POSTGRES_USER=file
       - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=profiledatabase
+      - POSTGRES_DB=filedatabase
     ports:
       - 5425:5432
 

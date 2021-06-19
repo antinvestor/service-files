@@ -4,6 +4,9 @@ FROM golang:1.16 as builder
 LABEL maintainer="Bwire Peter <bwire517@gmail.com>"
 
 WORKDIR /
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
 
 ADD . .
 

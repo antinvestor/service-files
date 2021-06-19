@@ -1,9 +1,9 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
@@ -14,7 +14,10 @@ func TestProviderLocal_UploadFile(t *testing.T) {
 	ctx := context.Background()
 
 	provider, err := GetStorageProvider(ctx, "LOCAL")
-	assert.NoError(t, err, "A file provider should not have issues instantiating")
+	if err != nil {
+		t.Errorf("A file provider has issues instantiating : %v", err)
+	}
+
 
 	bucketName := "/tmp/test"
 
@@ -23,11 +26,17 @@ func TestProviderLocal_UploadFile(t *testing.T) {
 	fileContent := []byte("Testing messages randomly")
 
 	_, err = provider.UploadFile(ctx, bucketName , fileName,"txt", fileContent )
-	assert.NoError(t, err, "File upload shouldn't have issues")
+	if err != nil {
+		t.Errorf(" Upload file experienced issues : %v", err)
+	}
 
 	content, err := provider.DownloadFile(ctx, bucketName, fileName, "txt")
-	assert.NoError(t, err, "Error obtaining the contents of our file")
+	if err != nil {
+		t.Errorf(" Download file experienced issues : %v", err)
+	}
 
-	assert.Equal(t,fileContent, content, "The contents of our file are not matching" )
+	if !bytes.Equal( fileContent, content) {
+		t.Error("The contents of our file are not matching")
+	}
 
 }

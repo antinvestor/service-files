@@ -13,8 +13,8 @@ package openapi
 import (
 	"context"
 	"errors"
-	"mime/multipart"
 	"net/http"
+	"os"
 )
 
 // DefaultApiService is a service that implents the logic for the DefaultApiServicer
@@ -29,7 +29,7 @@ func NewDefaultApiService() DefaultApiServicer {
 }
 
 // AddFile - 
-func (s *DefaultApiService) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileHeader *multipart.FileHeader) (ImplResponse, error) {
+func (s *DefaultApiService) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileObject *os.File) (ImplResponse, error) {
 	// TODO - update AddFile with the required logic for this service method.
 	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
 

@@ -12,8 +12,8 @@ package openapi
 
 import (
 	"context"
-	"mime/multipart"
 	"net/http"
+	"os"
 )
 
 
@@ -34,7 +34,7 @@ type DefaultApiRouter interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file 
 // and updated with the logic required for the API.
 type DefaultApiServicer interface { 
-	AddFile(context.Context, string, string, bool, string, *multipart.FileHeader) (ImplResponse, error)
+	AddFile(context.Context, string, string, bool, string, *os.File) (ImplResponse, error)
 	DeleteFile(context.Context, string) (ImplResponse, error)
 	FindFileById(context.Context, string) (ImplResponse, error)
 	FindFiles(context.Context, string, string, int32, int32) (ImplResponse, error)
