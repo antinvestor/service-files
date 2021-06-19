@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/openapi"
-	"github.com/antinvestor/files/service"
 	storage2 "github.com/antinvestor/files/service/business/storage"
 	models2 "github.com/antinvestor/files/service/models"
 	"github.com/antinvestor/files/service/queue"
@@ -61,11 +60,12 @@ func main() {
 
 
 	apiService := openapi.NewApiV1Service(sysService, storageProvider)
+	apiController := openapi.NewDefaultApiController(apiService)
+	router := openapi.NewRouter(apiController)
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
-		frame.AuthenticationMiddleware(
-			openapi.NewDefaultApiController(apiService), jwtAudience, jwtIssuer))
+		frame.AuthenticationMiddleware( router, jwtAudience, jwtIssuer))
 
 	defaultServer := frame.HttpHandler(authServiceHandlers)
 	serviceOptions = append(serviceOptions, defaultServer)
