@@ -17,7 +17,7 @@ import (
 
 func main() {
 
-	serviceName := "files"
+	serviceName := "service_files"
 
 	ctx := context.Background()
 
