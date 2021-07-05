@@ -52,11 +52,12 @@ func TestApiV1Service_AddFile(t *testing.T) {
 
 	f, ok := response.Body.(File)
 	if !ok{
-		t.Errorf("Could not add file because : %v", err)
+		t.Errorf("response body is not instance of file")
 	}
 
 	if f.Name != "testing.txt" {
 		t.Error("The file names don't match")
 	}
+
 }
 
