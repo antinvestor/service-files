@@ -103,7 +103,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 		UploadResult: result,
 	}
 
-	newFile.GenID()
+	newFile.GenID(ctx)
 
 	err = a.service.Publish(ctx, config.QueueFileSyncName, newFile)
 	if err != nil {
@@ -157,7 +157,7 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 		Source:   "frame.GetIp(r)",
 		Action:   "View",
 	}
-	auditRecord.GenID()
+	auditRecord.GenID(ctx)
 
 	err = a.service.Publish(ctx, config.QueueFileAuditSyncName, auditRecord)
 	if err != nil {
