@@ -6,7 +6,7 @@ LABEL maintainer="Bwire Peter <bwire517@gmail.com>"
 WORKDIR /
 COPY go.mod .
 COPY go.sum .
-RUN go mod download
+RUN go env -w GOFLAGS=-mod=mod && go mod download
 
 ADD . .
 
