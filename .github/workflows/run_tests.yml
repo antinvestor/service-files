@@ -36,6 +36,9 @@ jobs:
       - name: Display the docker-compose stack logs
         run: docker-compose -f "tests_runner/docker-compose.yml" logs
 
+      - name: Download all service dependencies
+        run: go mod download
+
       - name: Test files service
         run: go test  ./...
 
