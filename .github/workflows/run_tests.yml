@@ -36,8 +36,8 @@ jobs:
       - name: Display the docker-compose stack logs
         run: docker-compose -f "tests_runner/docker-compose.yml" logs
 
-      - name: Download all service dependencies
-        run: go mod download
+      - name: Workaround for go1.16 https://github.com/golang/go/issues/44129#issuecomment-854975677
+        run: go env -w GOFLAGS=-mod=mod
 
       - name: Test files service
         run: go test  ./...
