@@ -59,11 +59,11 @@ func (c *DefaultApiController) Routes() Routes {
 	}
 }
 
-// AddFile - 
+// AddFile -
 func (c *DefaultApiController) AddFile(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		badRequest := http.StatusBadRequest
-		EncodeJSONResponse(err.Error(), &badRequest, w)
+		EncodeJSONResponse(err.Error(), &badRequest, w) //nolint:errcheck
 		return
 	}
 	groupId := r.FormValue("group_id")
@@ -79,21 +79,21 @@ func (c *DefaultApiController) AddFile(w http.ResponseWriter, r *http.Request) {
 	fileObject, err := ReadFormFileToTempFile(r, "fileObject")
 	if err != nil {
 		badRequest := http.StatusBadRequest
-		EncodeJSONResponse(err.Error(), &badRequest, w)
+		EncodeJSONResponse(err.Error(), &badRequest, w) //nolint:errcheck
 		return
 	}
 	result, err := c.service.AddFile(r.Context(), groupId, accessId, public, name, fileObject)
 	// If an error occurred, encode the error with the status code
 	if err != nil {
-		EncodeJSONResponse(err.Error(), &result.Code, w)
+		EncodeJSONResponse(err.Error(), &result.Code, w) //nolint:errcheck
 		return
 	}
 	// If no error, encode the body and the result code
-	EncodeJSONResponse(result.Body, &result.Code, w)
+	EncodeJSONResponse(result.Body, &result.Code, w) //nolint:errcheck
 
 }
 
-// DeleteFile - 
+// DeleteFile -
 func (c *DefaultApiController) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id := params["id"]
@@ -101,15 +101,15 @@ func (c *DefaultApiController) DeleteFile(w http.ResponseWriter, r *http.Request
 	result, err := c.service.DeleteFile(r.Context(), id)
 	// If an error occurred, encode the error with the status code
 	if err != nil {
-		EncodeJSONResponse(err.Error(), &result.Code, w)
+		EncodeJSONResponse(err.Error(), &result.Code, w) //nolint:errcheck
 		return
 	}
 	// If no error, encode the body and the result code
-	EncodeJSONResponse(result.Body, &result.Code, w)
+	EncodeJSONResponse(result.Body, &result.Code, w) //nolint:errcheck
 
 }
 
-// FindFileById - 
+// FindFileById -
 func (c *DefaultApiController) FindFileById(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id := params["id"]
@@ -117,7 +117,7 @@ func (c *DefaultApiController) FindFileById(w http.ResponseWriter, r *http.Reque
 	result, err := c.service.FindFileById(r.Context(), id)
 	// If an error occurred, encode the error with the status code
 	if err != nil {
-		EncodeJSONResponse(err.Error(), &result.Code, w)
+		EncodeJSONResponse(err.Error(), &result.Code, w) //nolint:errcheck
 		return
 	}
 
@@ -128,7 +128,7 @@ func (c *DefaultApiController) FindFileById(w http.ResponseWriter, r *http.Reque
 	http.ServeContent(w, r, download.file.Name, download.file.CreatedAt, bytes.NewReader(download.content))
 }
 
-// FindFiles - 
+// FindFiles -
 func (c *DefaultApiController) FindFiles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	subscriptionId := query.Get("subscription_id")
@@ -136,22 +136,22 @@ func (c *DefaultApiController) FindFiles(w http.ResponseWriter, r *http.Request)
 	limit, err := parseInt32Parameter(query.Get("limit"), false)
 	if err != nil {
 		badRequest := http.StatusBadRequest
-		EncodeJSONResponse(err.Error(), &badRequest, w)
+		EncodeJSONResponse(err.Error(), &badRequest, w) //nolint:errcheck
 		return
 	}
 	page, err := parseInt32Parameter(query.Get("page"), false)
 	if err != nil {
 		badRequest := http.StatusBadRequest
-		EncodeJSONResponse(err.Error(), &badRequest, w)
+		EncodeJSONResponse(err.Error(), &badRequest, w) //nolint:errcheck
 		return
 	}
 	result, err := c.service.FindFiles(r.Context(), subscriptionId, groupId, limit, page)
 	// If an error occurred, encode the error with the status code
 	if err != nil {
-		EncodeJSONResponse(err.Error(), &result.Code, w)
+		EncodeJSONResponse(err.Error(), &result.Code, w) //nolint:errcheck
 		return
 	}
 	// If no error, encode the body and the result code
-	EncodeJSONResponse(result.Body, &result.Code, w)
+	EncodeJSONResponse(result.Body, &result.Code, w) //nolint:errcheck
 
 }

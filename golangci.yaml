@@ -1,3 +1,6 @@
+run:
+  skip-dirs:
+    - openapi
 linters-settings:
   govet:
     check-shadowing: true

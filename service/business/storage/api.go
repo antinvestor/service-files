@@ -18,10 +18,8 @@ type Provider interface {
 }
 
 func GetStorageProvider(ctx context.Context, providerName string) (Provider, error) {
-
 	var provider Provider
 	switch providerName {
-
 	case "GCS":
 		provider = &ProviderGCS{
 			ProviderLocal: ProviderLocal{
@@ -30,8 +28,6 @@ func GetStorageProvider(ctx context.Context, providerName string) (Provider, err
 				publicBucket:  frame.GetEnv("GCS_PUBLIC_BUCKET", ""),
 			},
 		}
-
-		break
 
 	case "WASABI":
 
@@ -47,7 +43,6 @@ func GetStorageProvider(ctx context.Context, providerName string) (Provider, err
 			wasabiToken:       frame.GetEnv("WASABI_TOKEN", ""),
 			wasabiAccessKeyID: frame.GetEnv("WASABI_ACCESS_KEY_ID", ""),
 		}
-		break
 	default:
 
 		provider = &ProviderLocal{
@@ -55,7 +50,6 @@ func GetStorageProvider(ctx context.Context, providerName string) (Provider, err
 			privateBucket: frame.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"),
 			publicBucket:  frame.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"),
 		}
-		break
 
 	}
 
