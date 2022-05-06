@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/aws/aws-sdk-go v1.44.9
 	github.com/gorilla/handlers v1.4.0
-	github.com/gorilla/mux v1.7.3
+	github.com/gorilla/mux v1.8.0
 	github.com/pitabwire/frame v1.7.12
 	gocloud.dev v0.25.0
 )
