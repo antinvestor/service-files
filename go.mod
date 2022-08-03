@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/pitabwire/frame v1.7.12
-	gocloud.dev v0.25.0
+	gocloud.dev v0.26.0
 )
 
 require (
