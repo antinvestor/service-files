@@ -1,8 +1,10 @@
-package openapi
+package openapi_test
 
 import (
 	"context"
+	"fmt"
 	"github.com/antinvestor/files/config"
+	"github.com/antinvestor/files/openapi"
 	"github.com/antinvestor/files/service/business/storage"
 	"github.com/pitabwire/frame"
 	"os"
@@ -42,21 +44,29 @@ func TestApiV1Service_AddFile(t *testing.T) {
 		return
 	}
 
-	testFile, err := os.Open("../tests_runner/sample3.txt")
+	path, _ := os.Getwd()
+	fileName := fmt.Sprintf("%s/testing_data.txt", path)
+
+	testFile, err := os.Create(fileName)
 	if err != nil {
-		path, _ := os.Getwd()
-		t.Errorf("Could not read test file in : %v because : %v", path, err)
+		t.Errorf("Could not create test file in : %v because : %v", path, err)
 		return
 	}
 
-	apiService := NewApiV1Service(srv, storageP)
+	_, err = testFile.WriteString("old\nfalcon\nsky\ncup\nforest\n")
+	if err != nil {
+		t.Errorf("Could not write to test file in : %v because : %v", fileName, err)
+		return
+	}
+
+	apiService := openapi.NewApiV1Service(srv, storageP)
 	response, err := apiService.AddFile(ctx, "access", "group", false, "testing.txt", testFile)
 	if err != nil {
 		t.Errorf("Could not add file because : %v", err)
 		return
 	}
 
-	f, ok := response.Body.(File)
+	f, ok := response.Body.(openapi.File)
 	if !ok {
 		t.Errorf("response body is not instance of file")
 	}
