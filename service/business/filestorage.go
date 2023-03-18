@@ -2,21 +2,19 @@ package business
 
 import (
 	"context"
-	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/service/business/storage"
 	"github.com/antinvestor/files/service/models"
 	"github.com/antinvestor/files/service/utils"
-	"github.com/pitabwire/frame"
 	"path/filepath"
 )
 
 // FileUpload - Abstract way to upload a file to any implemented storage provider
-func FileUpload(ctx context.Context, storageProvider storage.Provider, isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
+func FileUpload(ctx context.Context, storageProvider storage.Provider, encryptionPhrase string,
+	isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
 
 	filePathName := filepath.Join(subscriptionID, hash)
 
 	if !isPublic {
-		encryptionPhrase := frame.GetEnv(config.EnvStorageEncryptionPhrase, "AES256Key-XihgT047PgfrbYZJB4Rf2K")
 		hashedContent, err := utils.Encrypt(contents, encryptionPhrase)
 		if err != nil {
 			return storageProvider.PrivateBucket(), "", err
@@ -31,7 +29,7 @@ func FileUpload(ctx context.Context, storageProvider storage.Provider, isPublic 
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, storageProvider storage.Provider, file *models.File) ([]byte, error) {
+func FileDownload(ctx context.Context, storageProvider storage.Provider, encryptionPhrase string, file *models.File) ([]byte, error) {
 
 	storageBucket := storageProvider.PrivateBucket()
 	if file.Public {
@@ -49,6 +47,5 @@ func FileDownload(ctx context.Context, storageProvider storage.Provider, file *m
 		return contents, nil
 	}
 
-	encryptionPhrase := frame.GetEnv(config.EnvStorageEncryptionPhrase, "AES256Key-XihgT047PgfrbYZJB4Rf2K")
 	return utils.Decrypt(contents, encryptionPhrase)
 }

@@ -1,26 +1,21 @@
 package config
 
-const EnvServerPort = "PORT"
+import "github.com/pitabwire/frame"
 
-const EnvDatabaseUrl = "DATABASE_URL"
-const EnvReplicaDatabaseUrl = "REPLICA_DATABASE_URL"
+type FilesConfig struct {
+	frame.ConfigurationDefault
+	NotificationServiceURI string `default:"127.0.0.1:7020" envconfig:"NOTIFICATION_SERVICE_URI"`
 
-const EnvMigrate = "DO_MIGRATION"
-const EnvMigrationPath = "MIGRATION_PATH"
+	StorageProvider            string `default:"LOCAL" envconfig:"STORAGE_PROVIDER"`
+	EnvStorageEncryptionPhrase string `default:"AES256Key-XihgT047PgfrbYZJB4Rf2K" envconfig:"ENCRYPTION_PHRASE"`
 
-const EnvOauth2JwtVerifyAudience = "OAUTH2_JWT_VERIFY_AUDIENCE"
-const EnvOauth2JwtVerifyIssuer = "OAUTH2_JWT_VERIFY_ISSUER"
+	FileAccessServerUrl string `default:"" envconfig:"FILE_ACCESS_SERVER_URL"`
 
-const EnvStorageProvider = "STORAGE_PROVIDER"
-const EnvStorageEncryptionPhrase = "ENCRYPTION_PHRASE"
+	QueueFileSyncURL  string `default:"mem://file_model_sync" envconfig:"QUEUE_FILE_SYNC"`
+	QueueFileSyncName string `default:"file_model_sync" envconfig:"QUEUE_FILE_SYNC_NAME"`
 
+	QueueFileAuditSyncURL  string `default:"mem://file_audit_model_sync" envconfig:"QUEUE_FILE_AUDIT_SYNC"`
+	QueueFileAuditSyncName string `default:"file_audit_model_sync" envconfig:"QUEUE_FILE_AUDIT_SYNC_NAME"`
 
-const EnvFileAccessServerUrl = "FILE_ACCESS_SERVER_URL"
-
-const EnvQueueFileSync = "QUEUE_FILE_SYNC"
-const QueueFileSyncName = "file_model_sync"
-
-const EnvQueueFileAuditSync = "QUEUE_FILE_AUDIT_SYNC"
-const QueueFileAuditSyncName = "file_audit_model_sync"
-
-const EnvCsrfSecret = "CSRF_SECRET"
+	CsrfSecret string `default:"" envconfig:"CSRF_SECRET"`
+}

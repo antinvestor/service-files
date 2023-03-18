@@ -9,8 +9,8 @@ import (
 )
 
 type FileQueueHandler struct {
-	Service    *frame.Service
-	repo repository.FileRepository
+	Service *frame.Service
+	repo    repository.FileRepository
 }
 
 func (fq *FileQueueHandler) Handle(ctx context.Context, payload []byte) error {
@@ -25,15 +25,14 @@ func (fq *FileQueueHandler) Handle(ctx context.Context, payload []byte) error {
 
 }
 
-func NewFileQueueHandler(service *frame.Service) FileQueueHandler{
+func NewFileQueueHandler(service *frame.Service) FileQueueHandler {
 	fileRepo := repository.NewFileRepository(service)
 	return FileQueueHandler{service, fileRepo}
 }
 
-
 type FileAuditQueueHandler struct {
-	Service    *frame.Service
-	repo repository.FileAuditRepository
+	Service *frame.Service
+	repo    repository.FileAuditRepository
 }
 
 func (faq *FileAuditQueueHandler) Handle(ctx context.Context, payload []byte) error {
@@ -48,7 +47,7 @@ func (faq *FileAuditQueueHandler) Handle(ctx context.Context, payload []byte) er
 
 }
 
-func NewFileAuditQueueHandler(service *frame.Service) FileQueueHandler{
+func NewFileAuditQueueHandler(service *frame.Service) FileQueueHandler {
 	fileRepo := repository.NewFileRepository(service)
 	return FileQueueHandler{service, fileRepo}
 }

@@ -1,9 +1,9 @@
 package repository
 
 import (
-"context"
-"github.com/antinvestor/files/service/models"
-"github.com/pitabwire/frame"
+	"context"
+	"github.com/antinvestor/files/service/models"
+	"github.com/pitabwire/frame"
 )
 
 type FileAuditRepository interface {
@@ -12,11 +12,11 @@ type FileAuditRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
-func NewFileAuditRepository( service *frame.Service )  FileAuditRepository{
+func NewFileAuditRepository(service *frame.Service) FileAuditRepository {
 	fileAuditRepo := fileAuditRepository{
 		service: service,
 	}
-	return  &fileAuditRepo
+	return &fileAuditRepo
 }
 
 type fileAuditRepository struct {
@@ -33,11 +33,11 @@ func (far *fileAuditRepository) GetByID(ctx context.Context, id string) (*models
 	return file, nil
 }
 
-func (far *fileAuditRepository) Save(ctx context.Context, file *models.FileAudit) error{
+func (far *fileAuditRepository) Save(ctx context.Context, file *models.FileAudit) error {
 	return far.service.DB(ctx, false).Save(file).Error
 }
 
-func (far *fileAuditRepository) Delete(ctx context.Context, id string) error{
+func (far *fileAuditRepository) Delete(ctx context.Context, id string) error {
 
 	auditFile, err := far.GetByID(ctx, id)
 	if err != nil {
@@ -45,4 +45,3 @@ func (far *fileAuditRepository) Delete(ctx context.Context, id string) error{
 	}
 	return far.service.DB(ctx, false).Delete(auditFile).Error
 }
-

@@ -4,9 +4,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"crypto/sha256"
 )
 
 // CreateHash Generates a sha512 hash any supplied bytes

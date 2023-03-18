@@ -20,7 +20,7 @@ import (
 	"github.com/antinvestor/files/service/repository"
 	"github.com/antinvestor/files/service/utils"
 	"github.com/pitabwire/frame"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -65,12 +65,14 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 		accessId = authClaim.AccessID
 	}
 
+	cfg := a.service.Config().(*config.FilesConfig)
+
 	fiStat, err := fileObject.Stat()
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	contents, err := ioutil.ReadAll(fileObject)
+	contents, err := io.ReadAll(fileObject)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -84,7 +86,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 	extParts := strings.Split(name, ".")
 	extension := extParts[len(extParts)-1]
 
-	bucket, result, err := business.FileUpload(ctx, a.Storage, public, accessId, hash, extension, contents)
+	bucket, result, err := business.FileUpload(ctx, a.Storage, cfg.EnvStorageEncryptionPhrase, public, accessId, hash, extension, contents)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -105,13 +107,12 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 
 	newFile.GenID(ctx)
 
-	err = a.service.Publish(ctx, config.QueueFileSyncName, newFile)
+	err = a.service.Publish(ctx, cfg.QueueFileSyncName, newFile)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	fileAccessServer := frame.GetEnv(config.EnvFileAccessServerUrl, "")
-	responseFile := FileToApi(fileAccessServer, &newFile)
+	responseFile := FileToApi(cfg.FileAccessServerUrl, &newFile)
 
 	err = os.Remove(fileObject.Name())
 	if err != nil {
@@ -121,7 +122,7 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 	return Response(http.StatusCreated, responseFile), nil
 }
 
-// DeleteFile - 
+// DeleteFile -
 func (a *ApiV1Service) DeleteFile(ctx context.Context, id string) (ImplResponse, error) {
 
 	fileRepository := repository.NewFileRepository(a.service)
@@ -133,10 +134,11 @@ func (a *ApiV1Service) DeleteFile(ctx context.Context, id string) (ImplResponse,
 	return Response(http.StatusAccepted, nil), nil
 }
 
-// FindFileById - 
+// FindFileById -
 func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplResponse, error) {
 
 	authClaim := frame.ClaimsFromContext(ctx)
+	cfg := a.service.Config().(*config.FilesConfig)
 
 	accessId := ""
 	if authClaim != nil {
@@ -159,12 +161,12 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 	}
 	auditRecord.GenID(ctx)
 
-	err = a.service.Publish(ctx, config.QueueFileAuditSyncName, auditRecord)
+	err = a.service.Publish(ctx, cfg.QueueFileAuditSyncName, auditRecord)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	fileContent, err := business.FileDownload(ctx, a.Storage, file)
+	fileContent, err := business.FileDownload(ctx, a.Storage, cfg.EnvStorageEncryptionPhrase, file)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -172,9 +174,10 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 	return Response(http.StatusOK, &downloadObject{file: file, content: fileContent}), nil
 }
 
-// FindFiles - 
+// FindFiles -
 func (a *ApiV1Service) FindFiles(ctx context.Context, subscriptionId string, groupId string, page int32, limit int32) (ImplResponse, error) {
 
+	cfg := a.service.Config().(*config.FilesConfig)
 	fileRepository := repository.NewFileRepository(a.service)
 
 	matchingFiles, err := fileRepository.GetBySubscriptionAndGroup(ctx, subscriptionId, groupId, page, limit)
@@ -183,9 +186,8 @@ func (a *ApiV1Service) FindFiles(ctx context.Context, subscriptionId string, gro
 	}
 	apiFiles := make([]File, len(matchingFiles))
 
-	fileAccessServer := frame.GetEnv(config.EnvFileAccessServerUrl, "")
 	for i, file := range matchingFiles {
-		apiFiles[i] = FileToApi(fileAccessServer, file)
+		apiFiles[i] = FileToApi(cfg.FileAccessServerUrl, file)
 	}
 
 	return Response(http.StatusOK, apiFiles), nil

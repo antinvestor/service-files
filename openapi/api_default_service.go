@@ -18,7 +18,7 @@ import (
 )
 
 // DefaultApiService is a service that implents the logic for the DefaultApiServicer
-// This service should implement the business logic for every endpoint for the DefaultApi API. 
+// This service should implement the business logic for every endpoint for the DefaultApi API.
 // Include any external packages or services that will be required by this service.
 type DefaultApiService struct {
 }
@@ -28,7 +28,7 @@ func NewDefaultApiService() DefaultApiServicer {
 	return &DefaultApiService{}
 }
 
-// AddFile - 
+// AddFile -
 func (s *DefaultApiService) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileObject *os.File) (ImplResponse, error) {
 	// TODO - update AddFile with the required logic for this service method.
 	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
@@ -45,7 +45,7 @@ func (s *DefaultApiService) AddFile(ctx context.Context, groupId string, accessI
 	return Response(http.StatusNotImplemented, nil), errors.New("AddFile method not implemented")
 }
 
-// DeleteFile - 
+// DeleteFile -
 func (s *DefaultApiService) DeleteFile(ctx context.Context, id string) (ImplResponse, error) {
 	// TODO - update DeleteFile with the required logic for this service method.
 	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
@@ -62,7 +62,7 @@ func (s *DefaultApiService) DeleteFile(ctx context.Context, id string) (ImplResp
 	return Response(http.StatusNotImplemented, nil), errors.New("DeleteFile method not implemented")
 }
 
-// FindFileById - 
+// FindFileById -
 func (s *DefaultApiService) FindFileById(ctx context.Context, id string) (ImplResponse, error) {
 	// TODO - update FindFileById with the required logic for this service method.
 	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
@@ -79,7 +79,7 @@ func (s *DefaultApiService) FindFileById(ctx context.Context, id string) (ImplRe
 	return Response(http.StatusNotImplemented, nil), errors.New("FindFileById method not implemented")
 }
 
-// FindFiles - 
+// FindFiles -
 func (s *DefaultApiService) FindFiles(ctx context.Context, subscriptionId string, groupId string, limit int32, page int32) (ImplResponse, error) {
 	// TODO - update FindFiles with the required logic for this service method.
 	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
@@ -95,4 +95,3 @@ func (s *DefaultApiService) FindFiles(ctx context.Context, subscriptionId string
 
 	return Response(http.StatusNotImplemented, nil), errors.New("FindFiles method not implemented")
 }
-

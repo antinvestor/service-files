@@ -10,9 +10,7 @@ import (
 	"github.com/antinvestor/files/service/queue"
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
-	"log"
-	"os"
-	"strconv"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -21,24 +19,21 @@ func main() {
 
 	ctx := context.Background()
 
-	datasource := frame.GetEnv(config.EnvDatabaseUrl, "postgres://ant:@nt@localhost:5423/service_files")
-	mainDb := frame.Datastore(ctx, datasource, false)
-
-	readOnlydatasource := frame.GetEnv(config.EnvReplicaDatabaseUrl, datasource)
-	readDb := frame.Datastore(ctx, readOnlydatasource, true)
-
-	sysService := frame.NewService(serviceName, mainDb, readDb)
-
-	isMigration, err := strconv.ParseBool(frame.GetEnv(config.EnvMigrate, "false"))
+	var cfg config.FilesConfig
+	err := frame.ConfigProcess("", &cfg)
 	if err != nil {
-		isMigration = false
+		logrus.WithError(err).Fatal("could not process configs")
+		return
 	}
+	sysService := frame.NewService(serviceName, frame.Config(&cfg), frame.Datastore(ctx))
+	log := sysService.L()
 
-	stdArgs := os.Args[1:]
-	if (len(stdArgs) > 0 && stdArgs[0] == "migrate") || isMigration {
+	var serviceOptions []frame.Option
 
-		migrationPath := frame.GetEnv(config.EnvMigrationPath, "./migrations/0001")
-		err := sysService.MigrateDatastore(ctx, migrationPath,
+	if cfg.DoDatabaseMigrate() {
+
+		sysService.Init(serviceOptions...)
+		err := sysService.MigrateDatastore(ctx, cfg.GetDatabaseMigrationPath(),
 			&models.File{}, &models.FileAudit{})
 		if err != nil {
 			log.Fatalf("main -- Could not migrate successfully because : %v", err)
@@ -47,17 +42,15 @@ func main() {
 		return
 	}
 
-	var serviceOptions []frame.Option
-
-	storageProviderName := frame.GetEnv(config.EnvStorageProvider, "LOCAL")
-	storageProvider, err := storage.GetStorageProvider(ctx, storageProviderName)
+	storageProvider, err := storage.GetStorageProvider(ctx, cfg.StorageProvider)
 	if err != nil {
 		log.Fatalf("main -- Could not setup or access storage because : %v", err)
 	}
 
-	jwtAudience := frame.GetEnv(config.EnvOauth2JwtVerifyAudience, serviceName)
-	jwtIssuer := frame.GetEnv(config.EnvOauth2JwtVerifyIssuer, "")
-
+	jwtAudience := cfg.Oauth2JwtVerifyAudience
+	if jwtAudience == "" {
+		jwtAudience = serviceName
+	}
 
 	apiService := openapi.NewApiV1Service(sysService, storageProvider)
 	apiController := openapi.NewDefaultApiController(apiService)
@@ -65,28 +58,27 @@ func main() {
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
-		frame.AuthenticationMiddleware( router, jwtAudience, jwtIssuer))
+		sysService.AuthenticationMiddleware(router, jwtAudience, cfg.Oauth2JwtVerifyIssuer))
 
 	defaultServer := frame.HttpHandler(authServiceHandlers)
 	serviceOptions = append(serviceOptions, defaultServer)
 
-
 	fileSyncQueueHandler := queue.NewFileQueueHandler(sysService)
-	fileSyncQueueURL := frame.GetEnv(config.EnvQueueFileSync, fmt.Sprintf("mem://%s", config.QueueFileSyncName))
-	fileSyncQueue := frame.RegisterSubscriber(config.QueueFileSyncName, fileSyncQueueURL, 2, &fileSyncQueueHandler)
-	fileSyncQueueP := frame.RegisterPublisher(config.QueueFileSyncName, fileSyncQueueURL)
+	fileSyncQueue := frame.RegisterSubscriber(cfg.QueueFileSyncName, cfg.QueueFileSyncURL, 2, &fileSyncQueueHandler)
+	fileSyncQueueP := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
 	serviceOptions = append(serviceOptions, fileSyncQueue, fileSyncQueueP)
 
-
 	fileAuditSyncQueueHandler := queue.NewFileAuditQueueHandler(sysService)
-	fileAuditSyncQueueURL := frame.GetEnv(config.EnvQueueFileAuditSync, fmt.Sprintf("mem://%s", config.QueueFileAuditSyncName))
-	fileAuditSyncQueue := frame.RegisterSubscriber(config.QueueFileAuditSyncName, fileAuditSyncQueueURL, 2, &fileAuditSyncQueueHandler)
-	fileAuditSyncQueueP := frame.RegisterPublisher(config.QueueFileAuditSyncName, fileAuditSyncQueueURL)
+	fileAuditSyncQueue := frame.RegisterSubscriber(cfg.QueueFileAuditSyncName, cfg.QueueFileAuditSyncURL, 2, &fileAuditSyncQueueHandler)
+	fileAuditSyncQueueP := frame.RegisterPublisher(cfg.QueueFileAuditSyncName, cfg.QueueFileSyncURL)
 	serviceOptions = append(serviceOptions, fileAuditSyncQueue, fileAuditSyncQueueP)
 
 	sysService.Init(serviceOptions...)
 
-	serverPort := frame.GetEnv(config.EnvServerPort, "7513")
+	serverPort := cfg.ServerPort
+	if serverPort == "" {
+		serverPort = "7513"
+	}
 
 	log.Printf(" main -- Initiating server operations on : %s", serverPort)
 	err = sysService.Run(ctx, fmt.Sprintf(":%v", serverPort))

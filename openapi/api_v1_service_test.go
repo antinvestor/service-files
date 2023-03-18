@@ -2,7 +2,6 @@ package openapi
 
 import (
 	"context"
-	"fmt"
 	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/service/business/storage"
 	"github.com/pitabwire/frame"
@@ -10,26 +9,33 @@ import (
 	"testing"
 )
 
-const testDatastoreConnection = "postgres://file:secret@localhost:5425/filedatabase?sslmode=disable"
+func testService(ctx context.Context) (*frame.Service, error) {
 
-func testService(ctx context.Context) *frame.Service {
+	dbURL := frame.GetEnv("TEST_DATABASE_URL",
+		"postgres://ant:secret@localhost:5425/service_files?sslmode=disable")
+	mainDB := frame.DatastoreCon(ctx, dbURL, false)
 
-	dbUrl := frame.GetEnv(fmt.Sprintf("%s_TEST", config.EnvDatabaseUrl), testDatastoreConnection)
-	mainDb := frame.Datastore(ctx, dbUrl, false)
+	var cfg config.FilesConfig
+	err := frame.ConfigProcess("", &cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	fileQueueURL := fmt.Sprintf("mem://%s", config.QueueFileSyncName)
-	fileQueuePublisher := frame.RegisterPublisher(config.QueueFileSyncName, fileQueueURL)
+	fileQueuePublisher := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
 
-	service := frame.NewService("file tests", mainDb, fileQueuePublisher, frame.NoopHttpOptions())
+	service := frame.NewService("file tests", frame.Config(&cfg), mainDB, fileQueuePublisher, frame.NoopDriver())
 	_ = service.Run(ctx, "")
-	return service
+	return service, nil
 }
-
 
 func TestApiV1Service_AddFile(t *testing.T) {
 
 	ctx := context.Background()
-	srv := testService(ctx)
+	srv, err := testService(ctx)
+	if err != nil {
+		t.Errorf("Could not initialize service : %v", err)
+		return
+	}
 	storageP, err := storage.GetStorageProvider(ctx, "LOCAL")
 	if err != nil {
 		t.Errorf("Could not get storage provider because : %v", err)
@@ -51,7 +57,7 @@ func TestApiV1Service_AddFile(t *testing.T) {
 	}
 
 	f, ok := response.Body.(File)
-	if !ok{
+	if !ok {
 		t.Errorf("response body is not instance of file")
 	}
 
@@ -60,4 +66,3 @@ func TestApiV1Service_AddFile(t *testing.T) {
 	}
 
 }
-
