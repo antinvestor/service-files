@@ -70,7 +70,7 @@ func main() {
 
 	fileAuditSyncQueueHandler := queue.NewFileAuditQueueHandler(sysService)
 	fileAuditSyncQueue := frame.RegisterSubscriber(cfg.QueueFileAuditSyncName, cfg.QueueFileAuditSyncURL, 2, &fileAuditSyncQueueHandler)
-	fileAuditSyncQueueP := frame.RegisterPublisher(cfg.QueueFileAuditSyncName, cfg.QueueFileSyncURL)
+	fileAuditSyncQueueP := frame.RegisterPublisher(cfg.QueueFileAuditSyncName, cfg.QueueFileAuditSyncURL)
 	serviceOptions = append(serviceOptions, fileAuditSyncQueue, fileAuditSyncQueueP)
 
 	sysService.Init(serviceOptions...)

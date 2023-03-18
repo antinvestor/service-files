@@ -11,10 +11,10 @@ type FilesConfig struct {
 
 	FileAccessServerUrl string `default:"" envconfig:"FILE_ACCESS_SERVER_URL"`
 
-	QueueFileSyncURL  string `default:"mem://file_model_sync" envconfig:"QUEUE_FILE_SYNC"`
+	QueueFileSyncURL  string `default:"mem://file_model_sync" envconfig:"QUEUE_FILE_SYNC_URL"`
 	QueueFileSyncName string `default:"file_model_sync" envconfig:"QUEUE_FILE_SYNC_NAME"`
 
-	QueueFileAuditSyncURL  string `default:"mem://file_audit_model_sync" envconfig:"QUEUE_FILE_AUDIT_SYNC"`
+	QueueFileAuditSyncURL  string `default:"mem://file_audit_model_sync" envconfig:"QUEUE_FILE_AUDIT_SYNC_URL"`
 	QueueFileAuditSyncName string `default:"file_audit_model_sync" envconfig:"QUEUE_FILE_AUDIT_SYNC_NAME"`
 
 	CsrfSecret string `default:"" envconfig:"CSRF_SECRET"`
