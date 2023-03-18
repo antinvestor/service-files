@@ -1638,8 +1638,8 @@ github.com/performancecopilot/speed/v4 v4.0.0/go.mod h1:qxrSyuDGrTOWfV+uKRFhfxw6
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/pierrec/lz4 v1.0.2-0.20190131084431-473cd7ce01a1/go.mod h1:3/3N9NVKO0jef7pBehbT1qWhCMrIgbYNnFAZCqQ5LRc=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
-github.com/pitabwire/frame v1.8.11 h1:a5lwXw+ClZIC4gDwikmvkvQGOCZjviGob/M/qL1kUIU=
-github.com/pitabwire/frame v1.8.11/go.mod h1:DNpRS/toPBTddXQYsaxKQPUiKz+7HjUaOr/g6Hbf39g=
+github.com/pitabwire/frame v1.8.12 h1:m1V5JqivBgPP2ycTzRRxVfq3c9kRuqJAIxW44RE+vAA=
+github.com/pitabwire/frame v1.8.12/go.mod h1:DNpRS/toPBTddXQYsaxKQPUiKz+7HjUaOr/g6Hbf39g=
 github.com/pkg/browser v0.0.0-20210115035449-ce105d075bb4/go.mod h1:N6UoU20jOqggOuDwUaBQpluzLNDqif3kq9z2wpdYEfQ=
 github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8/go.mod h1:HKlIX3XHQyzLZPlr7++PzdhaXEj94dEiJgZDTsxEqUI=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
