@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -94,5 +94,5 @@ func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName stri
 	}
 	defer r.Close()
 
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
