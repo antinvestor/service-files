@@ -1,5 +1,8 @@
 # Files Service
 
+![project tests](https://github.com/antinvestor/service-files/actions/workflows/run_tests.yml/badge.svg) ![image release](https://github.com/antinvestor/service-files/actions/workflows/release.yml/badge.svg)
+
+
 This service is an openAPI 3.0 specification that defines how files are stored and accessed on ant investor products
 
 Files belonging to ants should be stored safely and be highly accessible around the world. 
