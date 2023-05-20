@@ -11,29 +11,28 @@ import (
 	"testing"
 )
 
-func testService(ctx context.Context) (*frame.Service, error) {
+func testService() (context.Context, *frame.Service, error) {
 
 	dbURL := frame.GetEnv("TEST_DATABASE_URL",
 		"postgres://ant:secret@localhost:5425/service_files?sslmode=disable")
-	mainDB := frame.DatastoreCon(ctx, dbURL, false)
+	mainDB := frame.DatastoreCon(dbURL, false)
 
 	var cfg config.FilesConfig
 	err := frame.ConfigProcess("", &cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	fileQueuePublisher := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
 
-	service := frame.NewService("file tests", frame.Config(&cfg), mainDB, fileQueuePublisher, frame.NoopDriver())
+	ctx, service := frame.NewService("file tests", frame.Config(&cfg), mainDB, fileQueuePublisher, frame.NoopDriver())
 	_ = service.Run(ctx, "")
-	return service, nil
+	return ctx, service, nil
 }
 
 func TestApiV1Service_AddFile(t *testing.T) {
 
-	ctx := context.Background()
-	srv, err := testService(ctx)
+	ctx, srv, err := testService()
 	if err != nil {
 		t.Errorf("Could not initialize service : %v", err)
 		return

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/openapi"
@@ -17,18 +16,18 @@ func main() {
 
 	serviceName := "service_files"
 
-	ctx := context.Background()
-
 	var cfg config.FilesConfig
 	err := frame.ConfigProcess("", &cfg)
 	if err != nil {
 		logrus.WithError(err).Fatal("could not process configs")
 		return
 	}
-	sysService := frame.NewService(serviceName, frame.Config(&cfg), frame.Datastore(ctx))
+	ctx, sysService := frame.NewService(serviceName, frame.Config(&cfg))
+	defer sysService.Stop(ctx)
+
 	log := sysService.L()
 
-	var serviceOptions []frame.Option
+	serviceOptions := []frame.Option{frame.Datastore(ctx)}
 
 	if cfg.DoDatabaseMigrate() {
 
