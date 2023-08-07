@@ -19,13 +19,13 @@ type FilesConfig struct {
 
 	CsrfSecret string `default:"" envconfig:"CSRF_SECRET"`
 
-	ProviderGcsPrivateBucket string `default:"" envconfig:"GCS_PRIVATE_BUCKET"`
-	ProviderGcsPublicBucket  string `default:"" envconfig:"GCS_PUBLIC_BUCKET"`
-	ProviderS3PrivateBucket  string `default:"" envconfig:"S3_PRIVATE_BUCKET"`
-	ProviderS3PublicBucket   string `default:"" envconfig:"S3_PUBLIC_BUCKET"`
-	ProviderS3Endpoint       string `default:"" envconfig:"S3_ENDPOINT"`
-	ProviderS3Region         string `default:"" envconfig:"S3_REGION"`
-	ProviderS3Secret         string `default:"" envconfig:"S3_SECRET"`
-	ProviderS3Token          string `default:"" envconfig:"S3_TOKEN"`
-	ProviderS3AccessKeyId    string `default:"" envconfig:"S3_ACCESS_KEY_ID"`
+	ProviderGcsPrivateBucket  string `default:"" envconfig:"GCS_PRIVATE_BUCKET"`
+	ProviderGcsPublicBucket   string `default:"" envconfig:"GCS_PUBLIC_BUCKET"`
+	ProviderS3PrivateBucket   string `default:"" envconfig:"S3_PRIVATE_BUCKET"`
+	ProviderS3PublicBucket    string `default:"" envconfig:"S3_PUBLIC_BUCKET"`
+	ProviderS3Endpoint        string `default:"" envconfig:"S3_ENDPOINT"`
+	ProviderS3Region          string `default:"" envconfig:"S3_REGION"`
+	ProviderS3AccessKeySecret string `default:"" envconfig:"S3_ACCESS_KEY_SECRET"`
+	ProviderS3SessionToken    string `default:"" envconfig:"S3_SESSION_TOKEN"`
+	ProviderS3AccessKeyId     string `default:"" envconfig:"S3_ACCESS_KEY_ID"`
 }

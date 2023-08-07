@@ -40,8 +40,8 @@ func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (Provid
 			},
 			s3Endpoint:    config.ProviderS3Endpoint,
 			s3Region:      config.ProviderS3Region,
-			s3Secret:      config.ProviderS3Secret,
-			s3Token:       config.ProviderS3Token,
+			s3Secret:      config.ProviderS3AccessKeySecret,
+			s3Token:       config.ProviderS3SessionToken,
 			s3AccessKeyID: config.ProviderS3AccessKeyId,
 		}
 	default:
