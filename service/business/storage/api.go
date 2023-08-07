@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"github.com/antinvestor/files/config"
 	"github.com/pitabwire/frame"
 	"gocloud.dev/blob"
 )
@@ -17,31 +18,31 @@ type Provider interface {
 	DownloadFile(ctx context.Context, bucket string, pathName string, extension string) ([]byte, error)
 }
 
-func GetStorageProvider(ctx context.Context, providerName string) (Provider, error) {
+func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (Provider, error) {
 	var provider Provider
-	switch providerName {
+	switch config.StorageProvider {
 	case "GCS":
 		provider = &ProviderGCS{
 			ProviderLocal: ProviderLocal{
 				name:          "GCS",
-				privateBucket: frame.GetEnv("GCS_PRIVATE_BUCKET", ""),
-				publicBucket:  frame.GetEnv("GCS_PUBLIC_BUCKET", ""),
+				privateBucket: config.ProviderGcsPrivateBucket,
+				publicBucket:  config.ProviderGcsPublicBucket,
 			},
 		}
 
 	case "WASABI":
 
-		provider = &ProviderWasabi{
+		provider = &ProviderS3{
 			ProviderLocal: ProviderLocal{
-				name:          "WASABI",
-				privateBucket: frame.GetEnv("WASABI_PRIVATE_BUCKET", ""),
-				publicBucket:  frame.GetEnv("WASABI_PUBLIC_BUCKET", ""),
+				name:          "S3",
+				privateBucket: config.ProviderS3PrivateBucket,
+				publicBucket:  config.ProviderS3PublicBucket,
 			},
-			wasabiEndpoint:    frame.GetEnv("WASABI_ENDPOINT", ""),
-			wasabiRegion:      frame.GetEnv("WASABI_REGION", ""),
-			wasabiSecret:      frame.GetEnv("WASABI_SECRET", ""),
-			wasabiToken:       frame.GetEnv("WASABI_TOKEN", ""),
-			wasabiAccessKeyID: frame.GetEnv("WASABI_ACCESS_KEY_ID", ""),
+			s3Endpoint:    config.ProviderS3Endpoint,
+			s3Region:      config.ProviderS3Region,
+			s3Secret:      config.ProviderS3Secret,
+			s3Token:       config.ProviderS3Token,
+			s3AccessKeyID: config.ProviderS3AccessKeyId,
 		}
 	default:
 

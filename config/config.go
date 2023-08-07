@@ -18,4 +18,14 @@ type FilesConfig struct {
 	QueueFileAuditSyncName string `default:"file_audit_model_sync" envconfig:"QUEUE_FILE_AUDIT_SYNC_NAME"`
 
 	CsrfSecret string `default:"" envconfig:"CSRF_SECRET"`
+
+	ProviderGcsPrivateBucket string `default:"" envconfig:"GCS_PRIVATE_BUCKET"`
+	ProviderGcsPublicBucket  string `default:"" envconfig:"GCS_PUBLIC_BUCKET"`
+	ProviderS3PrivateBucket  string `default:"" envconfig:"S3_PRIVATE_BUCKET"`
+	ProviderS3PublicBucket   string `default:"" envconfig:"S3_PUBLIC_BUCKET"`
+	ProviderS3Endpoint       string `default:"" envconfig:"S3_ENDPOINT"`
+	ProviderS3Region         string `default:"" envconfig:"S3_REGION"`
+	ProviderS3Secret         string `default:"" envconfig:"S3_SECRET"`
+	ProviderS3Token          string `default:"" envconfig:"S3_TOKEN"`
+	ProviderS3AccessKeyId    string `default:"" envconfig:"S3_ACCESS_KEY_ID"`
 }

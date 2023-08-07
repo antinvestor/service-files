@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func testService() (context.Context, *frame.Service, error) {
+func testService() (context.Context, *frame.Service, *config.FilesConfig, error) {
 
 	dbURL := frame.GetEnv("TEST_DATABASE_URL",
 		"postgres://ant:secret@localhost:5425/service_files?sslmode=disable")
@@ -20,24 +20,24 @@ func testService() (context.Context, *frame.Service, error) {
 	var cfg config.FilesConfig
 	err := frame.ConfigProcess("", &cfg)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	fileQueuePublisher := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
 
 	ctx, service := frame.NewService("file tests", frame.Config(&cfg), mainDB, fileQueuePublisher, frame.NoopDriver())
 	_ = service.Run(ctx, "")
-	return ctx, service, nil
+	return ctx, service, &cfg, nil
 }
 
 func TestApiV1Service_AddFile(t *testing.T) {
 
-	ctx, srv, err := testService()
+	ctx, srv, cfg, err := testService()
 	if err != nil {
 		t.Errorf("Could not initialize service : %v", err)
 		return
 	}
-	storageP, err := storage.GetStorageProvider(ctx, "LOCAL")
+	storageP, err := storage.GetStorageProvider(ctx, cfg)
 	if err != nil {
 		t.Errorf("Could not get storage provider because : %v", err)
 		return

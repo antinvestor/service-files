@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/antinvestor/files/config"
+	"github.com/pitabwire/frame"
 	"os"
 	"testing"
 	"time"
@@ -13,7 +15,13 @@ func TestProviderLocal_UploadFile(t *testing.T) {
 
 	ctx := context.Background()
 
-	provider, err := GetStorageProvider(ctx, "LOCAL")
+	var cfg config.FilesConfig
+	err := frame.ConfigProcess("", &cfg)
+	if err != nil {
+		t.Errorf("Could not get file config : %v", err)
+	}
+
+	provider, err := GetStorageProvider(ctx, &cfg)
 	if err != nil {
 		t.Errorf("A file provider has issues instantiating : %v", err)
 	}

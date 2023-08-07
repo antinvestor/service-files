@@ -41,7 +41,7 @@ func main() {
 		return
 	}
 
-	storageProvider, err := storage.GetStorageProvider(ctx, cfg.StorageProvider)
+	storageProvider, err := storage.GetStorageProvider(ctx, &cfg)
 	if err != nil {
 		log.Fatalf("main -- Could not setup or access storage because : %v", err)
 	}
