@@ -30,7 +30,7 @@ func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (Provid
 			},
 		}
 
-	case "WASABI":
+	case "S3":
 
 		provider = &ProviderS3{
 			ProviderLocal: ProviderLocal{
