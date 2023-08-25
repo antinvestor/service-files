@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/pitabwire/frame v1.15.7
 	github.com/sirupsen/logrus v1.9.3
-	gocloud.dev v0.33.0
+	gocloud.dev v0.34.0
 )
 
 require (
