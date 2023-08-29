@@ -3,12 +3,12 @@ module github.com/antinvestor/files
 go 1.20
 
 require (
-	github.com/aws/aws-sdk-go v1.44.327
+	github.com/aws/aws-sdk-go v1.44.333
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/pitabwire/frame v1.15.7
 	github.com/sirupsen/logrus v1.9.3
-	gocloud.dev v0.33.0
+	gocloud.dev v0.34.0
 )
 
 require (
