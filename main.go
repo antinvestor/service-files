@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/antinvestor/files/config"
 	"github.com/antinvestor/files/openapi"
 	"github.com/antinvestor/files/service/business/storage"
@@ -74,13 +73,11 @@ func main() {
 
 	sysService.Init(serviceOptions...)
 
-	serverPort := cfg.ServerPort
-	if serverPort == "" {
-		serverPort = "7513"
-	}
+	log.WithField("server http port", cfg.HttpServerPort).
+		WithField("server grpc port", cfg.GrpcServerPort).
+		Info(" Initiating server operations")
 
-	log.Printf(" main -- Initiating server operations on : %s", serverPort)
-	err = sysService.Run(ctx, fmt.Sprintf(":%v", serverPort))
+	err = sysService.Run(ctx, "")
 	if err != nil {
 		log.Fatalf("main -- Could not run Server : %v", err)
 	}
