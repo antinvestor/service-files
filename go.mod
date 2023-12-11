@@ -3,7 +3,7 @@ module github.com/antinvestor/files
 go 1.20
 
 require (
-	github.com/aws/aws-sdk-go v1.48.16
+	github.com/aws/aws-sdk-go v1.49.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/pitabwire/frame v1.15.10
