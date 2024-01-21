@@ -13,7 +13,7 @@ type FileQueueHandler struct {
 	repo    repository.FileRepository
 }
 
-func (fq *FileQueueHandler) Handle(ctx context.Context, payload []byte) error {
+func (fq *FileQueueHandler) Handle(ctx context.Context, _ map[string]string, payload []byte) error {
 
 	file := &models.File{}
 	err := json.Unmarshal(payload, file)
@@ -35,7 +35,7 @@ type FileAuditQueueHandler struct {
 	repo    repository.FileAuditRepository
 }
 
-func (faq *FileAuditQueueHandler) Handle(ctx context.Context, payload []byte) error {
+func (faq *FileAuditQueueHandler) Handle(ctx context.Context, _ map[string]string, payload []byte) error {
 
 	auditFile := &models.FileAudit{}
 	err := json.Unmarshal(payload, auditFile)
