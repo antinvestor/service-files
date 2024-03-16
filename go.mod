@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.51.1
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/pitabwire/frame v1.18.6
+	github.com/pitabwire/frame v1.19.0
 	github.com/sirupsen/logrus v1.9.3
 	gocloud.dev v0.37.0
 )
@@ -55,11 +55,11 @@ require (
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0 // indirect
 	github.com/improbable-eng/grpc-web v0.15.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgx/v5 v5.5.3 // indirect
+	github.com/jackc/pgx/v5 v5.5.5 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -97,7 +97,7 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gorm.io/datatypes v1.2.0 // indirect
 	gorm.io/driver/mysql v1.4.7 // indirect
-	gorm.io/driver/postgres v1.5.6 // indirect
+	gorm.io/driver/postgres v1.5.7 // indirect
 	gorm.io/gorm v1.25.7 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
