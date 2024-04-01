@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.51.11
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/pitabwire/frame v1.19.0
+	github.com/pitabwire/frame v1.19.5
 	github.com/sirupsen/logrus v1.9.3
 	gocloud.dev v0.37.0
 )
@@ -65,12 +65,12 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.17.6 // indirect
-	github.com/nats-io/nats.go v1.33.1 // indirect
+	github.com/klauspost/compress v1.17.7 // indirect
+	github.com/nats-io/nats.go v1.34.0 // indirect
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.4.0 // indirect
-	github.com/pitabwire/natspubsub v0.1.2 // indirect
+	github.com/pitabwire/natspubsub v0.1.3 // indirect
 	github.com/rs/cors v1.8.3 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -98,6 +98,6 @@ require (
 	gorm.io/datatypes v1.2.0 // indirect
 	gorm.io/driver/mysql v1.4.7 // indirect
 	gorm.io/driver/postgres v1.5.7 // indirect
-	gorm.io/gorm v1.25.7 // indirect
+	gorm.io/gorm v1.25.9 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
