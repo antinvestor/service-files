@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.6
 
 require (
-	github.com/aws/aws-sdk-go v1.51.19
+	github.com/aws/aws-sdk-go v1.51.20
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/pitabwire/frame v1.19.5
