@@ -2,7 +2,7 @@ module github.com/antinvestor/files
 
 go 1.21
 
-toolchain go1.21.6
+toolchain go1.22.2
 
 require (
 	github.com/aws/aws-sdk-go v1.51.25
