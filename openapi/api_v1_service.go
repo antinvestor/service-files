@@ -61,8 +61,8 @@ func FileToApi(fileAccessServer string, file *models.File) File {
 func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileObject *os.File) (ImplResponse, error) {
 
 	authClaim := frame.ClaimsFromContext(ctx)
-	if authClaim != nil && authClaim.AccessId() != "" {
-		accessId = authClaim.AccessId()
+	if authClaim != nil && authClaim.GetAccessId() != "" {
+		accessId = authClaim.GetAccessId()
 	}
 
 	cfg := a.service.Config().(*config.FilesConfig)
@@ -142,7 +142,7 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 
 	accessId := ""
 	if authClaim != nil {
-		accessId = authClaim.AccessId()
+		accessId = authClaim.GetAccessId()
 	}
 
 	fileRepository := repository.NewFileRepository(a.service)
