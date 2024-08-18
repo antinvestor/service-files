@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/pitabwire/frame v1.21.5
+	github.com/pitabwire/frame v1.21.6
 	github.com/sirupsen/logrus v1.9.3
 	gocloud.dev v0.37.0
 )
