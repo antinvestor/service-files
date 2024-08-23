@@ -443,6 +443,8 @@ github.com/openzipkin/zipkin-go v0.1.6/go.mod h1:QgAqvLzwWbR/WpD4A3cGpPtJrZXNIiJ
 github.com/openzipkin/zipkin-go v0.2.1/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnhQw8ySjnjRyN4=
 github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnhQw8ySjnjRyN4=
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
+github.com/panjf2000/ants/v2 v2.10.0 h1:zhRg1pQUtkyRiOFo2Sbqwjp0GfBNo9cUY2/Grpx1p+8=
+github.com/panjf2000/ants/v2 v2.10.0/go.mod h1:7ZxyxsqE4vvW0M7LSD8aI3cKwgFhBHbxnlN8mDqHa1I=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
@@ -462,6 +464,8 @@ github.com/pitabwire/frame v1.21.6 h1:xuvuopnh4wOcBIroeGhPIeRH7EVA6n/I/tIXoCPRdK
 github.com/pitabwire/frame v1.21.6/go.mod h1:4g7qVznT5OEWhNyYTX3DICOxRYxuDvDp3fhM4btN4SA=
 github.com/pitabwire/frame v1.22.0 h1:o6gQzzYr0ELXO+/v07/XycC4wog11QJqsJ8dE1aooDI=
 github.com/pitabwire/frame v1.22.0/go.mod h1:xuektlG+kPtcaDYgqrP8aMWafyrBfxfMP4IS6adi/wE=
+github.com/pitabwire/frame v1.23.2 h1:a+8y11nQEt9jAWjLXS1GA8T3rzeyK9xe5vQb98QnTUA=
+github.com/pitabwire/frame v1.23.2/go.mod h1:l9lS+FzkU6mX6POAHvTA7O7wy4xFOcm6Gq3QSJ31HWw=
 github.com/pitabwire/natspubsub v0.1.6 h1:eO3yAF60SEn7TroJ1FM4VxhZ+SKgMuoB22ACW/6pxh0=
 github.com/pitabwire/natspubsub v0.1.6/go.mod h1:49qz2HtIEn+5vmX+3SDRq3i0MpbwnzKbKUu+PTKGtkY=
 github.com/pitabwire/natspubsub v0.1.7 h1:Qz7cyuhmGHBopegG1zlB1lqif6sTlwni0uc954FZv30=
@@ -535,6 +539,7 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
