@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/antinvestor/files/config"
+	"github.com/antinvestor/service-files/config"
 	"github.com/pitabwire/frame"
 	"os"
 	"testing"

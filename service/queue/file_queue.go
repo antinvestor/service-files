@@ -3,8 +3,8 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"github.com/antinvestor/files/service/models"
-	"github.com/antinvestor/files/service/repository"
+	"github.com/antinvestor/service-files/service/models"
+	"github.com/antinvestor/service-files/service/repository"
 	"github.com/pitabwire/frame"
 )
 

@@ -1,38 +1,17 @@
 package openapi_test
 
 import (
-	"context"
 	"fmt"
-	"github.com/antinvestor/files/config"
-	"github.com/antinvestor/files/openapi"
-	"github.com/antinvestor/files/service/business/storage"
-	"github.com/pitabwire/frame"
+	"github.com/antinvestor/service-files/openapi"
+	"github.com/antinvestor/service-files/service/business/storage"
+	"github.com/antinvestor/service-files/testsutil"
 	"os"
 	"testing"
 )
 
-func testService() (context.Context, *frame.Service, *config.FilesConfig, error) {
-
-	dbURL := frame.GetEnv("TEST_DATABASE_URL",
-		"postgres://ant:secret@localhost:5425/service_files?sslmode=disable")
-	mainDB := frame.DatastoreCon(dbURL, false)
-
-	var cfg config.FilesConfig
-	err := frame.ConfigProcess("", &cfg)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	fileQueuePublisher := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
-
-	ctx, service := frame.NewService("file tests", frame.Config(&cfg), mainDB, fileQueuePublisher, frame.NoopDriver())
-	_ = service.Run(ctx, "")
-	return ctx, service, &cfg, nil
-}
-
 func TestApiV1Service_AddFile(t *testing.T) {
 
-	ctx, srv, cfg, err := testService()
+	ctx, srv, cfg, err := testsutil.GetTestService("AddFile")
 	if err != nil {
 		t.Errorf("Could not initialize service : %v", err)
 		return

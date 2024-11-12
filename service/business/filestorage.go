@@ -2,9 +2,9 @@ package business
 
 import (
 	"context"
-	"github.com/antinvestor/files/service/business/storage"
-	"github.com/antinvestor/files/service/models"
-	"github.com/antinvestor/files/service/utils"
+	"github.com/antinvestor/service-files/service/business/storage"
+	"github.com/antinvestor/service-files/service/models"
+	"github.com/antinvestor/service-files/service/utils"
 	"path/filepath"
 )
 

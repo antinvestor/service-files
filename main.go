@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/antinvestor/files/config"
-	"github.com/antinvestor/files/openapi"
-	"github.com/antinvestor/files/service/business/storage"
-	"github.com/antinvestor/files/service/models"
-	"github.com/antinvestor/files/service/queue"
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/openapi"
+	"github.com/antinvestor/service-files/service/business/storage"
+	"github.com/antinvestor/service-files/service/models"
+	"github.com/antinvestor/service-files/service/queue"
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
 	"github.com/sirupsen/logrus"

@@ -1,4 +1,4 @@
-module github.com/antinvestor/files
+module github.com/antinvestor/service-files
 
 go 1.23.0
 

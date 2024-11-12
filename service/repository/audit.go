@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"github.com/antinvestor/files/service/models"
+	"github.com/antinvestor/service-files/service/models"
 	"github.com/pitabwire/frame"
 )
 
