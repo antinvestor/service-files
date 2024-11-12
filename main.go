@@ -24,7 +24,7 @@ func main() {
 	ctx, sysService := frame.NewService(serviceName, frame.Config(&cfg))
 	defer sysService.Stop(ctx)
 
-	log := sysService.L()
+	log := sysService.L(ctx)
 
 	serviceOptions := []frame.Option{frame.Datastore(ctx)}
 
