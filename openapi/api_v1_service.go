@@ -15,9 +15,11 @@ import (
 	"fmt"
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/business"
-	"github.com/antinvestor/service-files/service/business/storage"
-	"github.com/antinvestor/service-files/service/models"
-	"github.com/antinvestor/service-files/service/repository"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
+	"github.com/antinvestor/service-files/service/events"
+	"github.com/antinvestor/service-files/service/storage/models"
+	"github.com/antinvestor/service-files/service/storage/repository"
+	"github.com/antinvestor/service-files/service/types"
 	"github.com/antinvestor/service-files/service/utils"
 	"github.com/pitabwire/frame"
 	"io"
@@ -27,7 +29,7 @@ import (
 )
 
 type downloadObject struct {
-	file    *models.File
+	file    *models.MediaMetadata
 	content []byte
 }
 
@@ -35,15 +37,15 @@ type downloadObject struct {
 // This service should implement the business logic for every endpoint for the DefaultApi API.
 type ApiV1Service struct {
 	service *frame.Service
-	Storage storage.Provider
+	Storage storage_provider.Provider
 }
 
 // NewApiV1Service creates a v1 api service
-func NewApiV1Service(service *frame.Service, storageProvider storage.Provider) DefaultApiServicer {
+func NewApiV1Service(service *frame.Service, storageProvider storage_provider.Provider) DefaultApiServicer {
 	return &ApiV1Service{service: service, Storage: storageProvider}
 }
 
-func FileToApi(fileAccessServer string, file *models.File) File {
+func FileToApi(fileAccessServer string, file *models.MediaMetadata) File {
 
 	fileUrl := fmt.Sprintf("%s/%s", fileAccessServer, file.ID)
 
@@ -51,7 +53,7 @@ func FileToApi(fileAccessServer string, file *models.File) File {
 		Id:       file.ID,
 		Name:     file.Name,
 		Public:   file.Public,
-		GroupId:  file.GroupID,
+		GroupId:  file.OwnerID,
 		AccessId: file.AccessID,
 		Url:      fileUrl,
 	}
@@ -59,11 +61,6 @@ func FileToApi(fileAccessServer string, file *models.File) File {
 
 // AddFile -
 func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId string, public bool, name string, fileObject *os.File) (ImplResponse, error) {
-
-	authClaim := frame.ClaimsFromContext(ctx)
-	if authClaim != nil && authClaim.GetAccessId() != "" {
-		accessId = authClaim.GetAccessId()
-	}
 
 	cfg := a.service.Config().(*config.FilesConfig)
 
@@ -91,28 +88,32 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	newFile := models.File{
-		Name:         name,
-		GroupID:      groupId,
-		AccessID:     accessId,
-		Public:       public,
-		Hash:         hash,
-		Mimetype:     contentType,
-		Ext:          extension,
-		Size:         fiStat.Size(),
-		BucketName:   bucket,
-		Provider:     a.Storage.Name(),
-		UploadResult: result,
+	properties := frame.DBPropertiesFromMap(map[string]string{
+		"res": result,
+	})
+
+	newMedia := models.MediaMetadata{
+		Name:       name,
+		OwnerID:    groupId,
+		Public:     public,
+		Hash:       hash,
+		Mimetype:   contentType,
+		Ext:        extension,
+		Size:       fiStat.Size(),
+		BucketName: bucket,
+		Provider:   a.Storage.Name(),
+		Properties: properties,
 	}
 
-	newFile.GenID(ctx)
+	newMedia.GenID(ctx)
 
-	err = a.service.Publish(ctx, cfg.QueueFileSyncName, newFile)
+	metadataSaveEvent := events.MediaMetadataSaveEvent{}
+	err = a.service.Emit(ctx, metadataSaveEvent.Name(), newMedia)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
-	responseFile := FileToApi(cfg.FileAccessServerUrl, &newFile)
+	responseFile := FileToApi(cfg.FileAccessServerUrl, &newMedia)
 
 	err = os.Remove(fileObject.Name())
 	if err != nil {
@@ -125,8 +126,8 @@ func (a *ApiV1Service) AddFile(ctx context.Context, groupId string, accessId str
 // DeleteFile -
 func (a *ApiV1Service) DeleteFile(ctx context.Context, id string) (ImplResponse, error) {
 
-	fileRepository := repository.NewFileRepository(a.service)
-	err := fileRepository.Delete(ctx, id)
+	fileRepository := repository.NewMediaRepository(a.service)
+	err := fileRepository.Delete(ctx, types.MediaID(id))
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -145,15 +146,15 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 		accessId = authClaim.GetAccessId()
 	}
 
-	fileRepository := repository.NewFileRepository(a.service)
-	file, err := fileRepository.GetByID(ctx, id)
+	fileRepository := repository.NewMediaRepository(a.service)
+	file, err := fileRepository.GetByID(ctx, types.MediaID(id))
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
 
 	//TODO: Assign source a trace ID or something that can be used later to get more information
 	//about this particular request
-	auditRecord := models.FileAudit{
+	auditRecord := models.MediaAudit{
 		FileID:   file.ID,
 		AccessID: accessId,
 		Source:   "frame.GetIp(r)",
@@ -161,7 +162,8 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 	}
 	auditRecord.GenID(ctx)
 
-	err = a.service.Publish(ctx, cfg.QueueFileAuditSyncName, auditRecord)
+	auditSaveEvent := events.MediaAuditSaveEvent{}
+	err = a.service.Emit(ctx, auditSaveEvent.Name(), auditRecord)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}
@@ -175,12 +177,12 @@ func (a *ApiV1Service) FindFileById(ctx context.Context, id string) (ImplRespons
 }
 
 // FindFiles -
-func (a *ApiV1Service) FindFiles(ctx context.Context, subscriptionId string, groupId string, page int32, limit int32) (ImplResponse, error) {
+func (a *ApiV1Service) FindFiles(ctx context.Context, ownerId string, query string, page int32, limit int32) (ImplResponse, error) {
 
 	cfg := a.service.Config().(*config.FilesConfig)
-	fileRepository := repository.NewFileRepository(a.service)
+	fileRepository := repository.NewMediaRepository(a.service)
 
-	matchingFiles, err := fileRepository.GetBySubscriptionAndGroup(ctx, subscriptionId, groupId, page, limit)
+	matchingFiles, err := fileRepository.GetByOwnerID(ctx, types.OwnerID(ownerId), query, page, limit)
 	if err != nil {
 		return Response(http.StatusInternalServerError, nil), err
 	}

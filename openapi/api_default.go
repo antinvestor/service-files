@@ -117,7 +117,10 @@ func (c *DefaultApiController) FindFileById(w http.ResponseWriter, r *http.Reque
 	result, err := c.service.FindFileById(r.Context(), id)
 	// If an error occurred, encode the error with the status code
 	if err != nil {
-		EncodeJSONResponse(err.Error(), &result.Code, w) //nolint:errcheck
+		err = EncodeJSONResponse(err.Error(), &result.Code, w)
+		if err != nil {
+			return
+		} //nolint:errcheck
 		return
 	}
 

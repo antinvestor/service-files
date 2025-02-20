@@ -3,9 +3,12 @@ package main
 import (
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/openapi"
-	"github.com/antinvestor/service-files/service/business/storage"
-	"github.com/antinvestor/service-files/service/models"
+	"github.com/antinvestor/service-files/service/business/routing"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
+	events2 "github.com/antinvestor/service-files/service/events"
 	"github.com/antinvestor/service-files/service/queue"
+	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/storage/models"
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
 	"github.com/sirupsen/logrus"
@@ -15,8 +18,7 @@ func main() {
 
 	serviceName := "service_files"
 
-	var cfg config.FilesConfig
-	err := frame.ConfigProcess("", &cfg)
+	cfg, err := frame.ConfigFromEnv[config.FilesConfig]()
 	if err != nil {
 		logrus.WithError(err).Fatal("could not process configs")
 		return
@@ -31,8 +33,23 @@ func main() {
 	if cfg.DoDatabaseMigrate() {
 
 		sysService.Init(serviceOptions...)
+
+		err = sysService.DB(ctx, false).Exec(`
+			CREATE EXTENSION IF NOT EXISTS pg_search;
+			CREATE EXTENSION IF NOT EXISTS pg_analytics;
+			CREATE EXTENSION IF NOT EXISTS pg_ivm;
+			CREATE EXTENSION IF NOT EXISTS vector;
+			CREATE EXTENSION IF NOT EXISTS postgis;
+			CREATE EXTENSION IF NOT EXISTS postgis_topology;
+			CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+			CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
+		`).Error
+		if err != nil {
+			log.Fatalf("main -- Failed to create extensions: %v", err)
+		}
+
 		err := sysService.MigrateDatastore(ctx, cfg.GetDatabaseMigrationPath(),
-			&models.File{}, &models.FileAudit{})
+			&models.MediaMetadata{}, &models.MediaAudit{})
 		if err != nil {
 			log.Fatalf("main -- Could not migrate successfully because : %v", err)
 		}
@@ -40,7 +57,7 @@ func main() {
 		return
 	}
 
-	storageProvider, err := storage.GetStorageProvider(ctx, &cfg)
+	storageProvider, err := storage_provider.GetStorageProvider(ctx, &cfg)
 	if err != nil {
 		log.Fatalf("main -- Could not setup or access storage because : %v", err)
 	}
@@ -54,6 +71,12 @@ func main() {
 	apiController := openapi.NewDefaultApiController(apiService)
 	router := openapi.NewRouter(apiController)
 
+	metadataStore, err := storage.NewMediaAPIDatasource(sysService)
+	if err != nil {
+		log.Fatalf("main -- failed to setup storage because : %v", err)
+	}
+	routing.SetupMatrixRoutes(&cfg, metadataStore, router)
+
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
 		sysService.AuthenticationMiddleware(router, jwtAudience, cfg.Oauth2JwtVerifyIssuer))
@@ -61,15 +84,17 @@ func main() {
 	defaultServer := frame.HttpHandler(authServiceHandlers)
 	serviceOptions = append(serviceOptions, defaultServer)
 
-	fileSyncQueueHandler := queue.NewFileQueueHandler(sysService)
-	fileSyncQueue := frame.RegisterSubscriber(cfg.QueueFileSyncName, cfg.QueueFileSyncURL, 2, &fileSyncQueueHandler)
-	fileSyncQueueP := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
-	serviceOptions = append(serviceOptions, fileSyncQueue, fileSyncQueueP)
+	events := frame.RegisterEvents(
+		events2.NewAuditSaveHandler(sysService),
+		events2.NewMetadataSaveHandler(sysService),
+	)
 
-	fileAuditSyncQueueHandler := queue.NewFileAuditQueueHandler(sysService)
-	fileAuditSyncQueue := frame.RegisterSubscriber(cfg.QueueFileAuditSyncName, cfg.QueueFileAuditSyncURL, 2, &fileAuditSyncQueueHandler)
-	fileAuditSyncQueueP := frame.RegisterPublisher(cfg.QueueFileAuditSyncName, cfg.QueueFileAuditSyncURL)
-	serviceOptions = append(serviceOptions, fileAuditSyncQueue, fileAuditSyncQueueP)
+	serviceOptions = append(serviceOptions, events)
+
+	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(sysService)
+	thumbnailGenerateQueue := frame.RegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, 2, &thumbnailQueueHandler)
+	thumbnailGeneratePublish := frame.RegisterPublisher(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL)
+	serviceOptions = append(serviceOptions, thumbnailGenerateQueue, thumbnailGeneratePublish)
 
 	sysService.Init(serviceOptions...)
 

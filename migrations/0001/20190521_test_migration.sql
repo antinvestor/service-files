@@ -1,7 +1,8 @@
 
 
--- We create a files database and its users by default using the following commands:
--- create database "service-file"; create user file with encrypted password 'files'; grant all privileges on database "service-file" to file;
-
-
-SELECT NOW()
+CREATE INDEX media_search_idx ON media_metadata
+    USING bm25 (id, parent_id, owner_id, name, ext, public, hash, properties, created_at)
+    WITH (
+    key_field='id',
+    json_fields = '{ "properties": {"fast": true}}'
+    );

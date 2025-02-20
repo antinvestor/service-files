@@ -1,9 +1,11 @@
 package openapi_test
 
 import (
+	"context"
 	"fmt"
+	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/openapi"
-	"github.com/antinvestor/service-files/service/business/storage"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
 	"github.com/antinvestor/service-files/testsutil"
 	"os"
 	"testing"
@@ -11,12 +13,16 @@ import (
 
 func TestApiV1Service_AddFile(t *testing.T) {
 
-	ctx, srv, cfg, err := testsutil.GetTestService("AddFile")
+	ctx, srv, cleanUpFunc, err := testsutil.GetTestService(context.TODO(), "AddFile")
 	if err != nil {
 		t.Errorf("Could not initialize service : %v", err)
 		return
 	}
-	storageP, err := storage.GetStorageProvider(ctx, cfg)
+	defer cleanUpFunc()
+
+	cfg := srv.Config().(*config.FilesConfig)
+
+	storageP, err := storage_provider.GetStorageProvider(ctx, cfg)
 	if err != nil {
 		t.Errorf("Could not get storage provider because : %v", err)
 		return

@@ -1,4 +1,4 @@
-package storage
+package storage_provider
 
 import (
 	"context"
@@ -11,8 +11,7 @@ func TestGetStorageProvider(t *testing.T) {
 
 	ctx := context.Background()
 
-	var cfg config.FilesConfig
-	err := frame.ConfigProcess("", &cfg)
+	cfg, err := frame.ConfigFromEnv[config.FilesConfig]()
 	if err != nil {
 		t.Errorf("Could not get file config : %v", err)
 	}

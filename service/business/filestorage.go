@@ -2,14 +2,14 @@ package business
 
 import (
 	"context"
-	"github.com/antinvestor/service-files/service/business/storage"
-	"github.com/antinvestor/service-files/service/models"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
+	"github.com/antinvestor/service-files/service/storage/models"
 	"github.com/antinvestor/service-files/service/utils"
 	"path/filepath"
 )
 
 // FileUpload - Abstract way to upload a file to any implemented storage provider
-func FileUpload(ctx context.Context, storageProvider storage.Provider, encryptionPhrase string,
+func FileUpload(ctx context.Context, storageProvider storage_provider.Provider, encryptionPhrase string,
 	isPublic bool, subscriptionID string, hash string, extension string, contents []byte) (bucket string, result string, err error) {
 
 	filePathName := filepath.Join(subscriptionID, hash)
@@ -29,7 +29,7 @@ func FileUpload(ctx context.Context, storageProvider storage.Provider, encryptio
 }
 
 // FileDownload - Abstract way to download a file from any implemented storage provider
-func FileDownload(ctx context.Context, storageProvider storage.Provider, encryptionPhrase string, file *models.File) ([]byte, error) {
+func FileDownload(ctx context.Context, storageProvider storage_provider.Provider, encryptionPhrase string, file *models.MediaMetadata) ([]byte, error) {
 
 	storageBucket := storageProvider.PrivateBucket()
 	if file.Public {

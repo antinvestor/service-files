@@ -3,26 +3,48 @@ package testsutil
 import (
 	"context"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/events"
+	"github.com/antinvestor/service-files/service/queue"
 	"github.com/pitabwire/frame"
 )
 
-func GetTestService(name string) (context.Context, *frame.Service, *config.FilesConfig, error) {
+func GetTestService(ctx context.Context, name string) (context.Context, *frame.Service, func(), error) {
 
-	ctx := context.Background()
-	dbURL := frame.GetEnv("TEST_DATABASE_URL",
-		"postgres://ant:secret@localhost:5425/service_files?sslmode=disable")
-	mainDB := frame.DatastoreConnection(ctx, dbURL, false)
+	cfg, err := frame.ConfigFromEnv[config.FilesConfig]()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return GetTestServiceWithConfig(ctx, name, &cfg)
+}
+func GetTestServiceWithConfig(ctx context.Context, name string, cfg *config.FilesConfig) (context.Context, *frame.Service, func(), error) {
 
-	var cfg config.FilesConfig
-	err := frame.ConfigProcess("", &cfg)
+	err := frame.ConfigFillFromEnv(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	ctx, srv := frame.NewServiceWithContext(ctx, name,
+		frame.Config(cfg),
+		frame.Datastore(ctx),
+		frame.NoopDriver())
+
+	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(srv)
+
+	thumbnailQueue := frame.RegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, 2, &thumbnailQueueHandler)
+	thumbnailQueuePublisher := frame.RegisterPublisher(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL)
+
+	serviceOptions := []frame.Option{
+		thumbnailQueue, thumbnailQueuePublisher,
+		frame.RegisterEvents(events.NewAuditSaveHandler(srv), events.NewMetadataSaveHandler(srv)),
+	}
+
+	srv.Init(serviceOptions...)
+
+	err = srv.Run(ctx, "")
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	fileQueuePublisher := frame.RegisterPublisher(cfg.QueueFileSyncName, cfg.QueueFileSyncURL)
-
-	ctx, service := frame.NewServiceWithContext(ctx, name, frame.Config(&cfg), fileQueuePublisher, mainDB, frame.NoopDriver())
-	service.Init()
-
-	return ctx, service, &cfg, nil
+	return ctx, srv, func() {
+		srv.Stop(ctx)
+	}, nil
 }
