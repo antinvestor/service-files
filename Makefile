@@ -1,12 +1,8 @@
 
-ENV_LOCAL_TEST=\
-  DATABASE_URL=postgres://ant:s3cr3t@localhost:5434/service_files?sslmode=disable \
-  POSTGRES_PASSWORD=secret \
-  POSTGRES_DB=service_files \
-  POSTGRES_HOST=files_db \
-  POSTGRES_USER=ant \
-  CONTACT_ENCRYPTION_KEY=ualgJEcb4GNXLn3jYV9TUGtgYrdTMg \
-  CONTACT_ENCRYPTION_SALT=VufLmnycUCgz
+.EXPORT_ALL_VARIABLES:
+
+DATABASE_URL = postgres://ant:s3cr3t@localhost:5434/service_files?sslmode=disable
+
 
 SERVICE		?= $(shell basename `go list`)
 VERSION		?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || cat $(PWD)/.version 2> /dev/null || echo v0)
@@ -42,7 +38,7 @@ docker-setup: ## sets up docker container images
 
 pg_wait:
 	@count=0; \
-	until  nc -z localhost 5425; do \
+	until  nc -z localhost 5434; do \
 	  if [ $$count -gt 30 ]; then echo "can't wait forever for pg"; exit 1; fi; \
 	    sleep 1; echo "waiting for postgresql" $$count; count=$$(($$count+1)); done; \
 	    sleep 5;
