@@ -2,9 +2,9 @@ package storage_provider
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/s3blob"
 )
@@ -17,26 +17,23 @@ type ProviderS3 struct {
 	s3Secret      string
 	s3Token       string
 	s3Region      string
-	s3Session     *session.Session
+	client        *s3.Client
 }
 
 func (provider *ProviderS3) Setup(_ context.Context) error {
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(provider.s3AccessKeyID, provider.s3Secret, provider.s3Token),
-		Endpoint:         aws.String(provider.s3Endpoint),
-		Region:           aws.String(provider.s3Region),
-		S3ForcePathStyle: aws.Bool(true),
+	s3Config := aws.Config{
+		Credentials:  credentials.NewStaticCredentialsProvider(provider.s3AccessKeyID, provider.s3Secret, provider.s3Token),
+		BaseEndpoint: aws.String(provider.s3Endpoint),
+		Region:       provider.s3Region,
 	}
 
-	sess, err := session.NewSession(s3Config)
-	if err != nil {
-		return err
-	}
+	provider.client = s3.NewFromConfig(s3Config, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
 
-	provider.s3Session = sess
 	return nil
 }
 
 func (provider *ProviderS3) Init(ctx context.Context, bucketName string) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, provider.s3Session, bucketName, nil)
+	return s3blob.OpenBucketV2(ctx, provider.client, bucketName, nil)
 }

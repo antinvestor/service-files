@@ -48,8 +48,8 @@ const mediaIDCharacters = "A-Za-z0-9_=-"
 var mediaIDRegex = regexp.MustCompile("^[" + mediaIDCharacters + "]+$")
 
 // Regular expressions to help us cope with Content-Disposition parsing
-var rfc2183 = regexp.MustCompile(`filename\=utf-8\"(.*)\"`)
-var rfc6266 = regexp.MustCompile(`filename\*\=utf-8\'\'(.*)`)
+//var rfc2183 = regexp.MustCompile(`filename=utf-8"(.*)"`)
+//var rfc6266 = regexp.MustCompile(`filename\*=utf-8''(.*)`)
 
 // downloadRequest metadata included in or derivable from a download or thumbnail request
 // https://matrix.org/docs/spec/client_server/r0.2.0.html#get-matrix-media-r0-download-servername-mediaid

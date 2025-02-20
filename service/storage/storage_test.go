@@ -2,52 +2,14 @@ package storage_test
 
 import (
 	"context"
-	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/events"
-	"github.com/antinvestor/service-files/service/queue"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/antinvestor/service-files/testsutil"
-	"github.com/pitabwire/frame"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
 
-func mustCreateService(t *testing.T) (context.Context, storage.Database, func()) {
-
-	ctx := context.TODO()
-	cfg, err := frame.ConfigFromEnv[config.FilesConfig]()
-	assert.NoError(t, err)
-
-	ctx, srv := frame.NewServiceWithContext(ctx, "profile tests",
-		frame.Config(&cfg),
-		frame.Datastore(ctx),
-		frame.NoopDriver())
-
-	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(srv)
-
-	thumbnailQueue := frame.RegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, 2, &thumbnailQueueHandler)
-	thumbnailQueuePublisher := frame.RegisterPublisher(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL)
-
-	serviceOptions := []frame.Option{
-		thumbnailQueue, thumbnailQueuePublisher,
-		frame.RegisterEvents(events.NewAuditSaveHandler(srv), events.NewMetadataSaveHandler(srv)),
-	}
-
-	srv.Init(serviceOptions...)
-
-	err = srv.Run(ctx, "")
-	assert.NoError(t, err)
-
-	db, err := storage.NewMediaAPIDatasource(srv)
-	if err != nil {
-		t.Fatalf("mustCreateService returned %s", err)
-	}
-	return ctx, db, func() {
-		srv.Stop(ctx)
-	}
-}
 func TestMediaRepository(t *testing.T) {
 
 	ctx, srv, cleanUpFunc, err := testsutil.GetTestService(context.TODO(), "media_repository")

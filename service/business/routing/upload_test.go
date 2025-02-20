@@ -28,7 +28,6 @@ func Test_uploadRequest_doUpload(t *testing.T) {
 		ownerId                   types.OwnerID
 		reqReader                 io.Reader
 		cfg                       *config.FilesConfig
-		db                        storage.Database
 		activeThumbnailGeneration *types.ActiveThumbnailGeneration
 	}
 
