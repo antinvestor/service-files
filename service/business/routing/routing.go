@@ -18,9 +18,10 @@ import (
 	"encoding/json"
 	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/business/storage_provider"
 	"github.com/antinvestor/service-files/service/storage"
+
 	"github.com/antinvestor/service-files/service/types"
+	"github.com/pitabwire/frame"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,10 +48,12 @@ type configResponse struct {
 // applied:
 // nolint: gocyclo
 func SetupMatrixRoutes(
-	cfg *config.FilesConfig,
+	service *frame.Service,
 	db storage.Database,
-	provider storage_provider.Provider,
+	provider storage.Provider,
 ) *mux.Router {
+
+	cfg := service.Config().(*config.FilesConfig)
 
 	matrixPathsRouter := mux.NewRouter().SkipClean(true)
 	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix).Subrouter().UseEncodedPath()
@@ -60,13 +63,9 @@ func SetupMatrixRoutes(
 
 	v1mux := ClientRouters.PathPrefix("/v1/media/").Subrouter()
 
-	activeThumbnailGeneration := &types.ActiveThumbnailGeneration{
-		PathToResult: map[string]*types.ThumbnailGenerationResult{},
-	}
-
 	uploadHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
-			return Upload(req, cfg, db, provider, activeThumbnailGeneration)
+			return Upload(req, service, db, provider)
 		})
 
 	configHandler := CreateHandler(
@@ -86,12 +85,12 @@ func SetupMatrixRoutes(
 
 	//TODO: Implement the endpoints for Create new mxc:// URIs and upload content to mxc:// URIs
 
-	downloadHandlerAuthed := makeDownloadAPI("download_client", cfg, db, provider, activeThumbnailGeneration)
+	downloadHandlerAuthed := makeDownloadAPI("download_client", cfg, db, provider)
 	v1mux.Handle("/config", configHandler).Methods(http.MethodGet, http.MethodOptions)
 	v1mux.Handle("/download/{serverName}/{mediaId}", downloadHandlerAuthed).Methods(http.MethodGet, http.MethodOptions)
 	v1mux.Handle("/download/{serverName}/{mediaId}/{downloadName}", downloadHandlerAuthed).Methods(http.MethodGet, http.MethodOptions)
 
-	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, provider, activeThumbnailGeneration)).Methods(http.MethodGet, http.MethodOptions)
+	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, provider)).Methods(http.MethodGet, http.MethodOptions)
 
 	return matrixPathsRouter
 }
@@ -100,8 +99,7 @@ func makeDownloadAPI(
 	name string,
 	cfg *config.FilesConfig,
 	db storage.Database,
-	provider storage_provider.Provider,
-	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
+	provider storage.Provider,
 ) http.HandlerFunc {
 
 	httpHandler := func(w http.ResponseWriter, req *http.Request) {
@@ -120,7 +118,7 @@ func makeDownloadAPI(
 		w.Header().Set("Cache-Control", "public,max-age=86400,s-maxage=86400")
 
 		Download(w, req, types.MediaID(vars["mediaId"]),
-			cfg, db, provider, activeThumbnailGeneration,
+			cfg, db, provider,
 			strings.HasPrefix(name, "thumbnail"), vars["downloadName"],
 		)
 	}

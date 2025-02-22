@@ -15,13 +15,23 @@
 package storage
 
 import (
-	"github.com/antinvestor/service-files/service/storage/implementation"
-	"github.com/antinvestor/service-files/service/storage/repository"
-	"github.com/pitabwire/frame"
+	"context"
+	"github.com/antinvestor/service-files/service/types"
 )
 
-// NewMediaAPIDatasource opens a database connection.
-func NewMediaAPIDatasource(srv *frame.Service) (Database, error) {
-	mediaRepo := repository.NewMediaRepository(srv)
-	return &implementation.Database{MediaRepository: mediaRepo}, nil
+type Database interface {
+	MediaRepository
+	ThumbnailsRepository
+}
+
+type MediaRepository interface {
+	StoreMediaMetadata(ctx context.Context, mediaMetadata *types.MediaMetadata) error
+	GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error)
+	GetMediaMetadataByHash(ctx context.Context, ownerID types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error)
+}
+
+type ThumbnailsRepository interface {
+	StoreThumbnail(ctx context.Context, thumbnailMetadata *types.ThumbnailMetadata) error
+	GetThumbnail(ctx context.Context, mediaID types.MediaID, width, height int, resizeMethod string) (*types.ThumbnailMetadata, error)
+	GetThumbnails(ctx context.Context, mediaID types.MediaID) ([]*types.ThumbnailMetadata, error)
 }

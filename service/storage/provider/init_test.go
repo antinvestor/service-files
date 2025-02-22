@@ -1,8 +1,9 @@
-package storage_provider
+package provider
 
 import (
 	"context"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage/provider/local"
 	"github.com/pitabwire/frame"
 	"testing"
 )
@@ -16,14 +17,14 @@ func TestGetStorageProvider(t *testing.T) {
 		t.Errorf("Could not get file config : %v", err)
 	}
 
-	provider, err := GetStorageProvider(ctx, &cfg)
+	storageProvider, err := GetStorageProvider(ctx, &cfg)
 	if err != nil {
-		t.Errorf("A file provider should has issues : %v", err)
+		t.Errorf("A file storageProvider should has issues : %v", err)
 	}
 
-	_, ok := provider.(*ProviderLocal)
+	_, ok := storageProvider.(*local.ProviderLocal)
 	if !ok {
-		t.Errorf("The provider is supposed to be a local instance only")
+		t.Errorf("The storageProvider is supposed to be a local instance only")
 	}
 
 }

@@ -15,6 +15,7 @@
 package types
 
 import (
+	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/config"
 	"sync"
 )
@@ -54,6 +55,7 @@ type MediaMetadata struct {
 	Base64Hash        Base64Hash
 	OwnerID           OwnerID
 	ThumbnailSize     *ThumbnailSize
+	ServerName        spec.ServerName
 	IsPublic          bool
 }
 

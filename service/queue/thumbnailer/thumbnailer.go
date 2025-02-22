@@ -21,7 +21,6 @@ import (
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
 	"math"
-	"os"
 	"path/filepath"
 	"sync"
 
@@ -39,13 +38,13 @@ type thumbnailFitness struct {
 // thumbnailTemplate is the filename template for thumbnails
 const thumbnailTemplate = "thumbnail-%vx%v-%v"
 
-// GetThumbnailPath returns the path to a thumbnail given the absolute src path and thumbnail size configuration
-func GetThumbnailPath(src types.Path, config types.ThumbnailSize) types.Path {
-	srcDir := filepath.Dir(string(src))
+// GetTempThumbnailPath returns the path to a thumbnail given the absolute src path and thumbnail size configuration
+func GetTempThumbnailPath(tempDir types.Path, config types.ThumbnailSize) (types.Path, error) {
+
 	return types.Path(filepath.Join(
-		srcDir,
+		string(tempDir),
 		fmt.Sprintf(thumbnailTemplate, config.Width, config.Height, config.ResizeMethod),
-	))
+	)), nil
 }
 
 // SelectThumbnail compares the (potentially) available thumbnails with the desired thumbnail and returns the best match
@@ -133,7 +132,6 @@ func broadcastGeneration(dst types.Path, activeThumbnailGeneration *types.Active
 
 func isThumbnailExists(
 	ctx context.Context,
-	dst types.Path,
 	config types.ThumbnailSize,
 	mediaMetadata *types.MediaMetadata,
 	db storage.Database,
@@ -149,12 +147,7 @@ func isThumbnailExists(
 	if thumbnailMetadata != nil {
 		return true, nil
 	}
-	// Note: The double-negative is intentional as os.IsExist(err) != !os.IsNotExist(err).
-	// The functions are error checkers to be used in different cases.
-	if _, err = os.Stat(string(dst)); !os.IsNotExist(err) {
-		// Thumbnail exists
-		return true, nil
-	}
+
 	return false, nil
 }
 

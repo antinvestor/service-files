@@ -1,8 +1,8 @@
-package storage_test
+package datastore_test
 
 import (
 	"context"
-	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/storage/datastore"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/antinvestor/service-files/testsutil"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ func TestMediaRepository(t *testing.T) {
 	assert.NoErrorf(t, err, "failed to get test service")
 	defer cleanUpFunc()
 
-	db, err := storage.NewMediaAPIDatasource(srv)
+	db, err := datastore.NewMediaDatabase(srv)
 	assert.NoErrorf(t, err, "failed to open media database")
 
 	t.Run("can insert media & query media", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestThumbnailsStorage(t *testing.T) {
 	assert.NoErrorf(t, err, "failed to get test service")
 	defer cleanUpFunc()
 
-	db, err := storage.NewMediaAPIDatasource(srv)
+	db, err := datastore.NewMediaDatabase(srv)
 	assert.NoErrorf(t, err, "failed to open media database")
 
 	t.Run("can insert thumbnails & query media", func(t *testing.T) {

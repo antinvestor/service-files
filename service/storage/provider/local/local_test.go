@@ -1,12 +1,14 @@
-package storage_provider
+package local_test
 
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage/provider"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/pitabwire/frame"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,9 +24,9 @@ func TestProviderLocal_UploadFile(t *testing.T) {
 		t.Errorf("Could not get file config : %v", err)
 	}
 
-	provider, err := GetStorageProvider(ctx, &cfg)
+	storageProvider, err := provider.GetStorageProvider(ctx, &cfg)
 	if err != nil {
-		t.Errorf("A file provider has issues instantiating : %v", err)
+		t.Errorf("A file storageProvider has issues instantiating : %v", err)
 	}
 
 	tmpFile, err := os.CreateTemp("", "example-*.txt")
@@ -54,15 +56,23 @@ func TestProviderLocal_UploadFile(t *testing.T) {
 	}
 	fileName := fmt.Sprintf("ts_%d.txt", time.Now().Nanosecond())
 
-	_, err = provider.UploadFile(ctx, bucketName, types.Path(tmpFile.Name()), types.Path(fileName))
+	_, err = storageProvider.UploadFile(ctx, bucketName, types.Path(tmpFile.Name()), types.Path(fileName))
 	if err != nil {
 		t.Errorf(" Upload file experienced issues : %v", err)
 	}
 
-	content, err := provider.DownloadFile(ctx, bucketName, types.Path(fileName))
+	reader, finisher, err := storageProvider.DownloadFile(ctx, bucketName, types.Path(fileName))
 	if err != nil {
 		t.Errorf(" Download file experienced issues : %v", err)
 	}
+	defer finisher()
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, reader)
+	if err != nil {
+		t.Errorf("Download file experienced issues: %v", err)
+	}
+	content := buf.Bytes()
 
 	if !bytes.Equal(data, content) {
 		t.Error("The contents of our file are not matching")

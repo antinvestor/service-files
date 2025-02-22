@@ -3,11 +3,12 @@ package main
 import (
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/business/routing"
-	"github.com/antinvestor/service-files/service/business/storage_provider"
 	events2 "github.com/antinvestor/service-files/service/events"
 	"github.com/antinvestor/service-files/service/queue"
-	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/storage/datastore"
 	"github.com/antinvestor/service-files/service/storage/models"
+	"github.com/antinvestor/service-files/service/storage/provider"
+
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
 	"github.com/sirupsen/logrus"
@@ -56,7 +57,7 @@ func main() {
 		return
 	}
 
-	storageProvider, err := storage_provider.GetStorageProvider(ctx, &cfg)
+	storageProvider, err := provider.GetStorageProvider(ctx, &cfg)
 	if err != nil {
 		log.Fatalf("main -- Could not setup or access storage because : %v", err)
 	}
@@ -66,12 +67,12 @@ func main() {
 		jwtAudience = serviceName
 	}
 
-	metadataStore, err := storage.NewMediaAPIDatasource(sysService)
+	metadataStore, err := datastore.NewMediaDatabase(sysService)
 	if err != nil {
 		log.Fatalf("main -- failed to setup storage because : %v", err)
 	}
 
-	router := routing.SetupMatrixRoutes(&cfg, metadataStore, storageProvider)
+	router := routing.SetupMatrixRoutes(sysService, metadataStore, storageProvider)
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
@@ -87,7 +88,7 @@ func main() {
 
 	serviceOptions = append(serviceOptions, events)
 
-	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(sysService)
+	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(sysService, metadataStore, storageProvider)
 	thumbnailGenerateQueue := frame.RegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, 2, &thumbnailQueueHandler)
 	thumbnailGeneratePublish := frame.RegisterPublisher(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL)
 	serviceOptions = append(serviceOptions, thumbnailGenerateQueue, thumbnailGeneratePublish)

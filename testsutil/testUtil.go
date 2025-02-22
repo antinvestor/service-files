@@ -5,6 +5,8 @@ import (
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/events"
 	"github.com/antinvestor/service-files/service/queue"
+	"github.com/antinvestor/service-files/service/storage/datastore"
+	"github.com/antinvestor/service-files/service/storage/provider"
 	"github.com/pitabwire/frame"
 )
 
@@ -34,7 +36,17 @@ func GetTestServiceWithConfig(ctx context.Context, name string, cfg *config.File
 		frame.Datastore(ctx),
 		frame.NoopDriver())
 
-	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(srv)
+	storageProvider, err := provider.GetStorageProvider(ctx, cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	metadataStore, err := datastore.NewMediaDatabase(srv)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(srv, metadataStore, storageProvider)
 
 	thumbnailQueue := frame.RegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, 2, &thumbnailQueueHandler)
 	thumbnailQueuePublisher := frame.RegisterPublisher(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL)

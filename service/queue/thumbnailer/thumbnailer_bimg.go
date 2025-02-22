@@ -122,29 +122,7 @@ func createThumbnail(
 
 	dst := GetThumbnailPath(src, config)
 
-	// Note: getActiveThumbnailGeneration uses mutexes and conditions from activeThumbnailGeneration
-	isActive, busy, err := getActiveThumbnailGeneration(dst, config, activeThumbnailGeneration, maxThumbnailGenerators, logger)
-	if err != nil {
-		return false, err
-	}
-	if busy {
-		return true, nil
-	}
-
-	if isActive {
-		// Note: This is an active request that MUST broadcastGeneration to wake up waiting goroutines!
-		// Note: broadcastGeneration uses mutexes and conditions from activeThumbnailGeneration
-		defer func() {
-			// Note: errorReturn is the named return variable so we wrap this in a closure to re-evaluate the arguments at defer-time
-			if err := recover(); err != nil {
-				broadcastGeneration(dst, activeThumbnailGeneration, config, err.(error), logger)
-				panic(err)
-			}
-			broadcastGeneration(dst, activeThumbnailGeneration, config, errorReturn, logger)
-		}()
-	}
-
-	exists, err := isThumbnailExists(ctx, dst, config, mediaMetadata, db, logger)
+	exists, err := isThumbnailExists(ctx, config, mediaMetadata, db, logger)
 	if err != nil || exists {
 		return false, err
 	}

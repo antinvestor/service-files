@@ -1,4 +1,4 @@
-package storage_provider
+package local
 
 import (
 	"context"
@@ -28,6 +28,14 @@ func (provider *ProviderLocal) PrivateBucket() string {
 	return provider.privateBucket
 }
 
+func (provider *ProviderLocal) GetBucket(isPublic bool) string {
+
+	if isPublic {
+		return provider.PublicBucket()
+	}
+	return provider.PrivateBucket()
+}
+
 func (provider *ProviderLocal) Setup(ctx context.Context) error {
 
 	err := os.MkdirAll(provider.privateBucket, 0755)
@@ -47,7 +55,7 @@ func (provider *ProviderLocal) Init(ctx context.Context, bucketName string) (*bl
 	return blob.OpenBucket(ctx, fmt.Sprintf("file://%s", bucketName))
 }
 
-func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string, sourcePath types.Path, destinationPath types.Path) (bool, error) {
+func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string, sourcePath types.Path, inBucketPath types.Path) (bool, error) {
 
 	bucket, err := provider.Init(ctx, bucketName)
 	if err != nil {
@@ -58,7 +66,7 @@ func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string
 	writeCtx, cancelWrite := context.WithCancel(ctx)
 	defer cancelWrite()
 
-	exits, err := bucket.Exists(writeCtx, string(destinationPath))
+	exits, err := bucket.Exists(writeCtx, string(inBucketPath))
 	if err != nil {
 		return false, err
 	}
@@ -68,7 +76,7 @@ func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string
 	}
 
 	// Open the key "foo.txt" for writing with the default options.
-	w, err := bucket.NewWriter(writeCtx, string(destinationPath), nil)
+	w, err := bucket.NewWriter(writeCtx, string(inBucketPath), nil)
 	if err != nil {
 		return false, err
 	}
@@ -89,19 +97,29 @@ func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string
 	return false, nil
 }
 
-func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName string, sourcePath types.Path) ([]byte, error) {
+func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName string, inBucketPath types.Path) (io.Reader, func(), error) {
 
 	bucket, err := provider.Init(ctx, bucketName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer bucket.Close()
 
-	r, err := bucket.NewReader(ctx, string(sourcePath), nil)
+	r, err := bucket.NewReader(ctx, string(inBucketPath), nil)
 	if err != nil {
-		return nil, err
+		_ = bucket.Close()
+		return nil, nil, err
 	}
-	defer r.Close()
 
-	return io.ReadAll(r)
+	return r, func() {
+		_ = r.Close() // Ignore errors on cleanup
+		_ = bucket.Close()
+	}, nil
+}
+
+func NewProvider(name, provateBucket, publicBucket string) *ProviderLocal {
+	return &ProviderLocal{
+		name:          name,
+		privateBucket: provateBucket,
+		publicBucket:  publicBucket,
+	}
 }

@@ -1,7 +1,8 @@
-package storage_provider
+package s3
 
 import (
 	"context"
+	"github.com/antinvestor/service-files/service/storage/provider/local"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -10,7 +11,7 @@ import (
 )
 
 type ProviderS3 struct {
-	ProviderLocal
+	*local.ProviderLocal
 
 	s3Endpoint    string
 	s3AccessKeyID string
@@ -36,4 +37,16 @@ func (provider *ProviderS3) Setup(_ context.Context) error {
 
 func (provider *ProviderS3) Init(ctx context.Context, bucketName string) (*blob.Bucket, error) {
 	return s3blob.OpenBucketV2(ctx, provider.client, bucketName, nil)
+}
+
+func NewProvider(name, privateBucket, publicBucket, s3Endpoint, s3Region, s3Secret, s3Token, s3AccessKeyID string) *ProviderS3 {
+
+	return &ProviderS3{
+		ProviderLocal: local.NewProvider(name, privateBucket, publicBucket),
+		s3Endpoint:    s3Endpoint,
+		s3Region:      s3Region,
+		s3Secret:      s3Secret,
+		s3Token:       s3Token,
+		s3AccessKeyID: s3AccessKeyID,
+	}
 }

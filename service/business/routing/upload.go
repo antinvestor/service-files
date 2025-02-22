@@ -19,19 +19,15 @@ import (
 	"fmt"
 	"github.com/antinvestor/gomatrixserverlib"
 	"github.com/antinvestor/gomatrixserverlib/spec"
-	"github.com/antinvestor/service-files/service/business/storage_provider"
-	"github.com/antinvestor/service-files/service/queue/thumbnailer"
-	"github.com/antinvestor/service-files/service/utils"
-	"github.com/pitabwire/frame"
-	"path/filepath"
 
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
+	"github.com/antinvestor/service-files/service/utils"
+	"github.com/pitabwire/frame"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 
@@ -58,10 +54,12 @@ type uploadResponse struct {
 // This implementation supports a configurable maximum file size limit in bytes. If a user tries to upload more than this, they will receive an error that their upload is too large.
 // Uploaded files are processed piece-wise to avoid DoS attacks which would starve the server of memory.
 // TODO: We should time out requests if they have not received any data within a configured timeout period.
-func Upload(req *http.Request, cfg *config.FilesConfig, db storage.Database, provider storage_provider.Provider, activeThumbnailGeneration *types.ActiveThumbnailGeneration) util.JSONResponse {
+func Upload(req *http.Request, service *frame.Service, db storage.Database, provider storage.Provider) util.JSONResponse {
 
 	ctx := req.Context()
 	authClaims := frame.ClaimsFromContext(ctx)
+
+	cfg := service.Config().(*config.FilesConfig)
 
 	if authClaims == nil {
 		return util.JSONResponse{
@@ -85,14 +83,22 @@ func Upload(req *http.Request, cfg *config.FilesConfig, db storage.Database, pro
 		return *resErr
 	}
 
-	if resErr = r.doUpload(req.Context(), ownerID, req.Body, cfg, db, provider, activeThumbnailGeneration); resErr != nil {
+	if resErr = r.doUpload(req.Context(), ownerID, req.Body, cfg, db, provider); resErr != nil {
 		return *resErr
+	}
+
+	err = queueThumbnailGeneration(ctx, service, r.MediaMetadata.MediaID)
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusInternalServerError,
+			JSON: spec.Unknown("Failed to generate thumbnails"),
+		}
 	}
 
 	return util.JSONResponse{
 		Code: http.StatusOK,
 		JSON: uploadResponse{
-			ContentURI: fmt.Sprintf("mxc://%s/%s", cfg.ServerName, r.MediaMetadata.MediaID),
+			ContentURI: fmt.Sprintf("mxc://%s/%s", r.MediaMetadata.ServerName, r.MediaMetadata.MediaID),
 		},
 	}
 }
@@ -133,8 +139,7 @@ func (r *uploadRequest) doUpload(
 	reqReader io.Reader,
 	cfg *config.FilesConfig,
 	db storage.Database,
-	provider storage_provider.Provider,
-	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
+	provider storage.Provider,
 ) *util.JSONResponse {
 
 	r.Logger.WithFields(log.Fields{
@@ -215,10 +220,17 @@ func (r *uploadRequest) doUpload(
 		"ContentType":   r.MediaMetadata.ContentType,
 	}).Info("File uploaded")
 
-	return r.storeFileAndMetadata(
-		ctx, tmpDir, cfg.AbsBasePath, db, provider, cfg.ThumbnailSizes,
-		activeThumbnailGeneration, cfg.MaxThumbnailGenerators,
-	)
+	err = r.storeFileAndMetadata(ctx, tmpDir, cfg.AbsBasePath, db, provider)
+	if err != nil {
+		r.Logger.WithError(err).Error("Failed to upload file.")
+		return &util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: spec.Unknown(err.Error()),
+		}
+	}
+
+	return nil
+
 }
 
 func requestEntityTooLargeJSONResponse(maxFileSizeBytes config.FileSizeBytes) *util.JSONResponse {
@@ -266,18 +278,11 @@ func (r *uploadRequest) storeFileAndMetadata(
 	tmpDir types.Path,
 	absBasePath config.Path,
 	db storage.Database,
-	provider storage_provider.Provider,
-	thumbnailSizes []config.ThumbnailSize,
-	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
-	maxThumbnailGenerators int,
-) *util.JSONResponse {
-	finalPath, duplicate, err := uploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, r.Logger)
+	provider storage.Provider,
+) error {
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, r.Logger)
 	if err != nil {
-		r.Logger.WithError(err).Error("Failed to move file.")
-		return &util.JSONResponse{
-			Code: http.StatusBadRequest,
-			JSON: spec.Unknown("Failed to upload"),
-		}
+		return err
 	}
 	if duplicate {
 		r.Logger.WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
@@ -291,73 +296,16 @@ func (r *uploadRequest) storeFileAndMetadata(
 		if !duplicate {
 			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), r.Logger)
 		}
-		return &util.JSONResponse{
-			Code: http.StatusBadRequest,
-			JSON: spec.Unknown("Failed to upload"),
-		}
+		return err
 	}
-
-	go func() {
-		file, err := os.Open(string(finalPath))
-		if err != nil {
-			r.Logger.WithError(err).Error("unable to open file")
-			return
-		}
-		defer file.Close() // nolint: errcheck
-		// http.DetectContentType only needs 512 bytes
-		buf := make([]byte, 512)
-		_, err = file.Read(buf)
-		if err != nil {
-			r.Logger.WithError(err).Error("unable to read file")
-			return
-		}
-		// Check if we need to generate thumbnails
-		fileType := http.DetectContentType(buf)
-		if !strings.HasPrefix(fileType, "image") {
-			r.Logger.WithField("contentType", fileType).Debugf("uploaded file is not an image or can not be thumbnailed, not generating thumbnails")
-			return
-		}
-
-		busy, err := thumbnailer.GenerateThumbnails(
-			ctx, finalPath, thumbnailSizes, r.MediaMetadata,
-			activeThumbnailGeneration, maxThumbnailGenerators, db, r.Logger,
-		)
-		if err != nil {
-			r.Logger.WithError(err).Warn("Error generating thumbnails")
-		}
-		if busy {
-			r.Logger.Warn("Maximum number of active thumbnail generators reached. Skipping pre-generation.")
-		}
-	}()
 
 	return nil
 }
 
-// uploadFileWithHashCheck checks for hash collisions when moving a temporary file to its final path based on metadata
-// The final path is based on the hash of the file.
-// If the final path exists and the file size matches, the file does not need to be moved.
-// In error cases where the file is not a duplicate, the caller may decide to remove the final path.
-// Returns the final path of the file, whether it is a duplicate and an error.
-func uploadFileWithHashCheck(ctx context.Context, provider storage_provider.Provider, tmpDir types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *log.Entry) (types.Path, bool, error) {
-	// Note: in all error and success cases, we need to remove the temporary directory
-	defer utils.RemoveDir(tmpDir, logger)
-	duplicate := false
-	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
-	if err != nil {
-		return "", false, fmt.Errorf("failed to get file path from metadata: %w", err)
-	}
-
-	uploadBucket := provider.PrivateBucket()
-	if mediaMetadata.IsPublic {
-		uploadBucket = provider.PublicBucket()
-	}
-
-	duplicate, err = provider.UploadFile(ctx, uploadBucket,
-		types.Path(filepath.Join(string(tmpDir), "content")),
-		types.Path(finalPath),
-	)
-	if err != nil {
-		return "", duplicate, fmt.Errorf("failed to move file to final destination (%v): %w", finalPath, err)
-	}
-	return types.Path(finalPath), duplicate, nil
+func queueThumbnailGeneration(ctx context.Context, service *frame.Service, mediaID types.MediaID) error {
+	cfg := service.Config().(*config.FilesConfig)
+	thumbnailGenerationQueue := cfg.QueueThumbnailsGenerateName
+	return service.Publish(ctx, thumbnailGenerationQueue, map[string]string{
+		"media_id": string(mediaID),
+	})
 }
