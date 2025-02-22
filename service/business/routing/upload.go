@@ -19,9 +19,11 @@ import (
 	"fmt"
 	"github.com/antinvestor/gomatrixserverlib"
 	"github.com/antinvestor/gomatrixserverlib/spec"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
 	"github.com/antinvestor/service-files/service/queue/thumbnailer"
 	"github.com/antinvestor/service-files/service/utils"
 	"github.com/pitabwire/frame"
+	"path/filepath"
 
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/storage"
@@ -56,7 +58,7 @@ type uploadResponse struct {
 // This implementation supports a configurable maximum file size limit in bytes. If a user tries to upload more than this, they will receive an error that their upload is too large.
 // Uploaded files are processed piece-wise to avoid DoS attacks which would starve the server of memory.
 // TODO: We should time out requests if they have not received any data within a configured timeout period.
-func Upload(req *http.Request, cfg *config.FilesConfig, db storage.Database, activeThumbnailGeneration *types.ActiveThumbnailGeneration) util.JSONResponse {
+func Upload(req *http.Request, cfg *config.FilesConfig, db storage.Database, provider storage_provider.Provider, activeThumbnailGeneration *types.ActiveThumbnailGeneration) util.JSONResponse {
 
 	ctx := req.Context()
 	authClaims := frame.ClaimsFromContext(ctx)
@@ -83,7 +85,7 @@ func Upload(req *http.Request, cfg *config.FilesConfig, db storage.Database, act
 		return *resErr
 	}
 
-	if resErr = r.doUpload(req.Context(), ownerID, req.Body, cfg, db, activeThumbnailGeneration); resErr != nil {
+	if resErr = r.doUpload(req.Context(), ownerID, req.Body, cfg, db, provider, activeThumbnailGeneration); resErr != nil {
 		return *resErr
 	}
 
@@ -131,6 +133,7 @@ func (r *uploadRequest) doUpload(
 	reqReader io.Reader,
 	cfg *config.FilesConfig,
 	db storage.Database,
+	provider storage_provider.Provider,
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 ) *util.JSONResponse {
 
@@ -213,7 +216,7 @@ func (r *uploadRequest) doUpload(
 	}).Info("File uploaded")
 
 	return r.storeFileAndMetadata(
-		ctx, tmpDir, cfg.AbsBasePath, db, cfg.ThumbnailSizes,
+		ctx, tmpDir, cfg.AbsBasePath, db, provider, cfg.ThumbnailSizes,
 		activeThumbnailGeneration, cfg.MaxThumbnailGenerators,
 	)
 }
@@ -263,11 +266,12 @@ func (r *uploadRequest) storeFileAndMetadata(
 	tmpDir types.Path,
 	absBasePath config.Path,
 	db storage.Database,
+	provider storage_provider.Provider,
 	thumbnailSizes []config.ThumbnailSize,
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 	maxThumbnailGenerators int,
 ) *util.JSONResponse {
-	finalPath, duplicate, err := utils.MoveFileWithHashCheck(tmpDir, r.MediaMetadata, absBasePath, r.Logger)
+	finalPath, duplicate, err := uploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, r.Logger)
 	if err != nil {
 		r.Logger.WithError(err).Error("Failed to move file.")
 		return &util.JSONResponse{
@@ -327,4 +331,33 @@ func (r *uploadRequest) storeFileAndMetadata(
 	}()
 
 	return nil
+}
+
+// uploadFileWithHashCheck checks for hash collisions when moving a temporary file to its final path based on metadata
+// The final path is based on the hash of the file.
+// If the final path exists and the file size matches, the file does not need to be moved.
+// In error cases where the file is not a duplicate, the caller may decide to remove the final path.
+// Returns the final path of the file, whether it is a duplicate and an error.
+func uploadFileWithHashCheck(ctx context.Context, provider storage_provider.Provider, tmpDir types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *log.Entry) (types.Path, bool, error) {
+	// Note: in all error and success cases, we need to remove the temporary directory
+	defer utils.RemoveDir(tmpDir, logger)
+	duplicate := false
+	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to get file path from metadata: %w", err)
+	}
+
+	uploadBucket := provider.PrivateBucket()
+	if mediaMetadata.IsPublic {
+		uploadBucket = provider.PublicBucket()
+	}
+
+	duplicate, err = provider.UploadFile(ctx, uploadBucket,
+		types.Path(filepath.Join(string(tmpDir), "content")),
+		types.Path(finalPath),
+	)
+	if err != nil {
+		return "", duplicate, fmt.Errorf("failed to move file to final destination (%v): %w", finalPath, err)
+	}
+	return types.Path(finalPath), duplicate, nil
 }

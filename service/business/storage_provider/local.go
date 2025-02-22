@@ -3,11 +3,11 @@ package storage_provider
 import (
 	"context"
 	"fmt"
+	"github.com/antinvestor/service-files/service/types"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 type ProviderLocal struct {
@@ -47,38 +47,49 @@ func (provider *ProviderLocal) Init(ctx context.Context, bucketName string) (*bl
 	return blob.OpenBucket(ctx, fmt.Sprintf("file://%s", bucketName))
 }
 
-func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string, pathName string, extension string, contents []byte) (string, error) {
+func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string, sourcePath types.Path, destinationPath types.Path) (bool, error) {
 
 	bucket, err := provider.Init(ctx, bucketName)
 	if err != nil {
-		return "", err
+		return false, err
 	}
 	defer bucket.Close()
-
-	fullPathName := filepath.Join(pathName, extension)
 
 	writeCtx, cancelWrite := context.WithCancel(ctx)
 	defer cancelWrite()
 
-	// Open the key "foo.txt" for writing with the default options.
-	w, err := bucket.NewWriter(writeCtx, fullPathName, nil)
+	exits, err := bucket.Exists(writeCtx, string(destinationPath))
 	if err != nil {
-		return "", err
+		return false, err
+	}
+
+	if exits {
+		return true, nil
+	}
+
+	// Open the key "foo.txt" for writing with the default options.
+	w, err := bucket.NewWriter(writeCtx, string(destinationPath), nil)
+	if err != nil {
+		return false, err
 	}
 	defer w.Close()
 
-	_, err = w.Write(contents)
+	tempFile, err := os.Open(string(sourcePath))
+	if err != nil {
+		return false, err
+	}
+	defer tempFile.Close()
+
+	_, err = w.ReadFrom(tempFile)
 
 	if err != nil {
-		// First cancel the context.
-		cancelWrite()
-		return "", err
+		return false, err
 	}
 
-	return fullPathName, nil
+	return false, nil
 }
 
-func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName string, pathName string, extension string) ([]byte, error) {
+func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName string, sourcePath types.Path) ([]byte, error) {
 
 	bucket, err := provider.Init(ctx, bucketName)
 	if err != nil {
@@ -86,9 +97,7 @@ func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName stri
 	}
 	defer bucket.Close()
 
-	fullPathName := filepath.Join(pathName, extension)
-
-	r, err := bucket.NewReader(ctx, fullPathName, nil)
+	r, err := bucket.NewReader(ctx, string(sourcePath), nil)
 	if err != nil {
 		return nil, err
 	}

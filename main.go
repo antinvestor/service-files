@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/openapi"
 	"github.com/antinvestor/service-files/service/business/routing"
 	"github.com/antinvestor/service-files/service/business/storage_provider"
 	events2 "github.com/antinvestor/service-files/service/events"
@@ -67,15 +66,12 @@ func main() {
 		jwtAudience = serviceName
 	}
 
-	apiService := openapi.NewApiV1Service(sysService, storageProvider)
-	apiController := openapi.NewDefaultApiController(apiService)
-	router := openapi.NewRouter(apiController)
-
 	metadataStore, err := storage.NewMediaAPIDatasource(sysService)
 	if err != nil {
 		log.Fatalf("main -- failed to setup storage because : %v", err)
 	}
-	routing.SetupMatrixRoutes(&cfg, metadataStore, router)
+
+	router := routing.SetupMatrixRoutes(&cfg, metadataStore, storageProvider)
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(

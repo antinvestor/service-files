@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
 	"net/http"
@@ -48,20 +49,15 @@ type configResponse struct {
 func SetupMatrixRoutes(
 	cfg *config.FilesConfig,
 	db storage.Database,
-	defaultRouter *mux.Router,
-) {
+	provider storage_provider.Provider,
+) *mux.Router {
 
-	matrixPathsRouter := defaultRouter.SkipClean(true)
+	matrixPathsRouter := mux.NewRouter().SkipClean(true)
 	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix).Subrouter().UseEncodedPath()
-	MediaRouters := matrixPathsRouter.PathPrefix(PublicMediaPathPrefix).Subrouter().UseEncodedPath()
 
 	ClientRouters.NotFoundHandler = NotFoundCORSHandler
 	ClientRouters.MethodNotAllowedHandler = NotAllowedHandler
 
-	MediaRouters.NotFoundHandler = NotFoundCORSHandler
-	MediaRouters.MethodNotAllowedHandler = NotAllowedHandler
-
-	v3mux := MediaRouters.PathPrefix("/{apiversion:(?:r0|v1|v3)}/").Subrouter()
 	v1mux := ClientRouters.PathPrefix("/v1/media/").Subrouter()
 
 	activeThumbnailGeneration := &types.ActiveThumbnailGeneration{
@@ -70,7 +66,7 @@ func SetupMatrixRoutes(
 
 	uploadHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
-			return Upload(req, cfg, db, activeThumbnailGeneration)
+			return Upload(req, cfg, db, provider, activeThumbnailGeneration)
 		})
 
 	configHandler := CreateHandler(
@@ -86,30 +82,25 @@ func SetupMatrixRoutes(
 			}
 		})
 
-	v3mux.Handle("/upload", uploadHandler).Methods(http.MethodPost, http.MethodOptions)
-	v3mux.Handle("/config", configHandler).Methods(http.MethodGet, http.MethodOptions)
+	v1mux.Handle("/upload", uploadHandler).Methods(http.MethodPost, http.MethodOptions)
 
-	downloadHandler := makeDownloadAPI("download_unauthed", cfg, db, activeThumbnailGeneration)
-	v3mux.Handle("/download/{serverName}/{mediaId}", downloadHandler).Methods(http.MethodGet, http.MethodOptions)
-	v3mux.Handle("/download/{serverName}/{mediaId}/{downloadName}", downloadHandler).Methods(http.MethodGet, http.MethodOptions)
+	//TODO: Implement the endpoints for Create new mxc:// URIs and upload content to mxc:// URIs
 
-	v3mux.Handle("/thumbnail/{serverName}/{mediaId}",
-		makeDownloadAPI("thumbnail_unauthed", cfg, db, activeThumbnailGeneration),
-	).Methods(http.MethodGet, http.MethodOptions)
-
-	// v1 client endpoints requiring auth
-	downloadHandlerAuthed := makeDownloadAPI("download_authed_client", cfg, db, activeThumbnailGeneration)
+	downloadHandlerAuthed := makeDownloadAPI("download_client", cfg, db, provider, activeThumbnailGeneration)
 	v1mux.Handle("/config", configHandler).Methods(http.MethodGet, http.MethodOptions)
 	v1mux.Handle("/download/{serverName}/{mediaId}", downloadHandlerAuthed).Methods(http.MethodGet, http.MethodOptions)
 	v1mux.Handle("/download/{serverName}/{mediaId}/{downloadName}", downloadHandlerAuthed).Methods(http.MethodGet, http.MethodOptions)
 
-	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, activeThumbnailGeneration)).Methods(http.MethodGet, http.MethodOptions)
+	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, provider, activeThumbnailGeneration)).Methods(http.MethodGet, http.MethodOptions)
+
+	return matrixPathsRouter
 }
 
 func makeDownloadAPI(
 	name string,
 	cfg *config.FilesConfig,
 	db storage.Database,
+	provider storage_provider.Provider,
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 ) http.HandlerFunc {
 
@@ -129,7 +120,7 @@ func makeDownloadAPI(
 		w.Header().Set("Cache-Control", "public,max-age=86400,s-maxage=86400")
 
 		Download(w, req, types.MediaID(vars["mediaId"]),
-			cfg, db, activeThumbnailGeneration,
+			cfg, db, provider, activeThumbnailGeneration,
 			strings.HasPrefix(name, "thumbnail"), vars["downloadName"],
 		)
 	}

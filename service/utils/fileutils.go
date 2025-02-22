@@ -74,7 +74,7 @@ func MoveFileWithHashCheck(tmpDir types.Path, mediaMetadata *types.MediaMetadata
 	duplicate := false
 	finalPath, err := GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
 	if err != nil {
-		return "", duplicate, fmt.Errorf("failed to get file path from metadata: %w", err)
+		return "", false, fmt.Errorf("failed to get file path from metadata: %w", err)
 	}
 
 	var stat os.FileInfo

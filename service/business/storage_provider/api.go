@@ -3,6 +3,7 @@ package storage_provider
 import (
 	"context"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/types"
 	"github.com/pitabwire/frame"
 	"gocloud.dev/blob"
 )
@@ -14,8 +15,8 @@ type Provider interface {
 
 	Setup(ctx context.Context) error
 	Init(ctx context.Context, bucketName string) (*blob.Bucket, error)
-	UploadFile(ctx context.Context, bucket string, pathName string, extension string, contents []byte) (string, error)
-	DownloadFile(ctx context.Context, bucket string, pathName string, extension string) ([]byte, error)
+	UploadFile(ctx context.Context, bucket string, sourcePath types.Path, destinationPath types.Path) (bool, error)
+	DownloadFile(ctx context.Context, bucket string, sourcePath types.Path) ([]byte, error)
 }
 
 func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (Provider, error) {

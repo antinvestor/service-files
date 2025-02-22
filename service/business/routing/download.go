@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
 	"github.com/antinvestor/service-files/service/queue/thumbnailer"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
@@ -109,6 +110,7 @@ func Download(
 	mediaID types.MediaID,
 	cfg *config.FilesConfig,
 	db storage.Database,
+	provider storage_provider.Provider,
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 	isThumbnailRequest bool,
 	customFilename string,
@@ -154,7 +156,7 @@ func Download(
 	}
 
 	metadata, err := dReq.doDownload(
-		req.Context(), w, cfg, db, activeThumbnailGeneration,
+		req.Context(), w, cfg, db, provider, activeThumbnailGeneration,
 	)
 	if err != nil {
 		// If we bubbled up a os.PathError, e.g. no such file or directory, don't send
@@ -239,6 +241,7 @@ func (r *downloadRequest) doDownload(
 	w http.ResponseWriter,
 	cfg *config.FilesConfig,
 	db storage.Database,
+	provider storage_provider.Provider,
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 ) (*types.MediaMetadata, error) {
 	// check if we have a record of the media in our database
@@ -255,7 +258,7 @@ func (r *downloadRequest) doDownload(
 	}
 	return r.respondFromLocalFile(
 		ctx, w, cfg.AbsBasePath, activeThumbnailGeneration,
-		cfg.MaxThumbnailGenerators, db,
+		cfg.MaxThumbnailGenerators, db, provider,
 		cfg.DynamicThumbnails, cfg.ThumbnailSizes,
 	)
 }
@@ -269,6 +272,7 @@ func (r *downloadRequest) respondFromLocalFile(
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 	maxThumbnailGenerators int,
 	db storage.Database,
+	provider storage_provider.Provider,
 	dynamicThumbnails bool,
 	thumbnailSizes []config.ThumbnailSize,
 ) (*types.MediaMetadata, error) {

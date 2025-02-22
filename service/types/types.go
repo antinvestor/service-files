@@ -54,6 +54,7 @@ type MediaMetadata struct {
 	Base64Hash        Base64Hash
 	OwnerID           OwnerID
 	ThumbnailSize     *ThumbnailSize
+	IsPublic          bool
 }
 
 // RemoteRequestResult is used for broadcasting the result of a request for a remote file to routines waiting on the condition

@@ -3,6 +3,7 @@ package routing
 import (
 	"context"
 	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/business/storage_provider"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/antinvestor/service-files/testsutil"
@@ -136,11 +137,15 @@ func Test_uploadRequest_doUpload(t *testing.T) {
 			db, err := storage.NewMediaAPIDatasource(srv)
 			assert.NoErrorf(t, err, "failed to open media database")
 
+			var provider storage_provider.Provider
+			provider, err = storage_provider.GetStorageProvider(ctx, cfg)
+			assert.NoErrorf(t, err, "failed to get a storage provider to use")
+
 			r := &uploadRequest{
 				MediaMetadata: tt.fields.MediaMetadata,
 				Logger:        tt.fields.Logger,
 			}
-			if got := r.doUpload(ctx, tt.args.ownerId, tt.args.reqReader, tt.args.cfg, db, tt.args.activeThumbnailGeneration); !reflect.DeepEqual(got, tt.want) {
+			if got := r.doUpload(ctx, tt.args.ownerId, tt.args.reqReader, tt.args.cfg, db, provider, tt.args.activeThumbnailGeneration); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("doUpload() = %+v, want %+v", got, tt.want)
 			}
 		})
