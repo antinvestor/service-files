@@ -168,6 +168,9 @@ func createThumbnail(
 	}
 
 	tempThumbnailPath, err := GetTempThumbnailPath(temporaryPath, config)
+	if err != nil {
+		return err
+	}
 
 	exists, err := isThumbnailExists(ctx, config, mediaMetadata, db, logger)
 	if err != nil || exists {

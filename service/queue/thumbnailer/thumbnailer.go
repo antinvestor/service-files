@@ -20,11 +20,9 @@ import (
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"path/filepath"
-	"sync"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type thumbnailFitness struct {
@@ -85,49 +83,6 @@ func SelectThumbnail(desired types.ThumbnailSize, thumbnails []*types.ThumbnailM
 	}
 
 	return chosenThumbnail, chosenThumbnailSize
-}
-
-// getActiveThumbnailGeneration checks for active thumbnail generation
-func getActiveThumbnailGeneration(dst types.Path, _ types.ThumbnailSize, activeThumbnailGeneration *types.ActiveThumbnailGeneration, maxThumbnailGenerators int, logger *log.Entry) (isActive bool, busy bool, errorReturn error) {
-	// Check if there is active thumbnail generation.
-	activeThumbnailGeneration.Lock()
-	defer activeThumbnailGeneration.Unlock()
-	if activeThumbnailGenerationResult, ok := activeThumbnailGeneration.PathToResult[string(dst)]; ok {
-		logger.Info("Waiting for another goroutine to generate the thumbnail.")
-
-		// NOTE: Wait unlocks and locks again internally. There is still a deferred Unlock() that will unlock this.
-		activeThumbnailGenerationResult.Cond.Wait()
-		// Note: either there is an error or it is nil, either way returning it is correct
-		return false, false, activeThumbnailGenerationResult.Err
-	}
-
-	// Only allow thumbnail generation up to a maximum configured number. Above this we fall back to serving the
-	// original. Or in the case of pre-generation, they maybe get generated on the first request for a thumbnail if
-	// load has subsided.
-	if len(activeThumbnailGeneration.PathToResult) >= maxThumbnailGenerators {
-		return false, true, nil
-	}
-
-	// No active thumbnail generation so create one
-	activeThumbnailGeneration.PathToResult[string(dst)] = &types.ThumbnailGenerationResult{
-		Cond: &sync.Cond{L: activeThumbnailGeneration},
-	}
-
-	return true, false, nil
-}
-
-// broadcastGeneration broadcasts that thumbnail generation completed and the error to all waiting goroutines
-// Note: This should only be called by the owner of the activeThumbnailGenerationResult
-func broadcastGeneration(dst types.Path, activeThumbnailGeneration *types.ActiveThumbnailGeneration, _ types.ThumbnailSize, errorReturn error, logger *log.Entry) {
-	activeThumbnailGeneration.Lock()
-	defer activeThumbnailGeneration.Unlock()
-	if activeThumbnailGenerationResult, ok := activeThumbnailGeneration.PathToResult[string(dst)]; ok {
-		logger.Info("Signalling other goroutines waiting for this goroutine to generate the thumbnail.")
-		// Note: errorReturn is a named return value error that is signalled from here to waiting goroutines
-		activeThumbnailGenerationResult.Err = errorReturn
-		activeThumbnailGenerationResult.Cond.Broadcast()
-	}
-	delete(activeThumbnailGeneration.PathToResult, string(dst))
 }
 
 func isThumbnailExists(
