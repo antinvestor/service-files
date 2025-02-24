@@ -2,7 +2,7 @@
 services:
   files_datastore:
     hostname: files_datastore
-    image: paradedb/paradedb:0.15.3
+    image: paradedb/paradedb:0.15.4
     restart: always
     environment:
       POSTGRES_PASSWORD: s3cr3t
