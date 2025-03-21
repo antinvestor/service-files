@@ -22,6 +22,8 @@ filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
+github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
+github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
@@ -428,6 +430,8 @@ github.com/pitabwire/frame v1.30.5 h1:OKvWVPJcboznr+Bj2XckD1B8GmJhxOd2NIwkEo1zal
 github.com/pitabwire/frame v1.30.5/go.mod h1:LVe+Smdm/meJTsq3HzHamfxQyjml+wWQGesHpl8ghZA=
 github.com/pitabwire/frame v1.30.6 h1:p3Nf6NQRPrsFiRooy+q9ueBU9IxSXN/juqfPAAuu6p0=
 github.com/pitabwire/frame v1.30.6/go.mod h1:CC9FfXIoU/dFsQIsK7arFcMfcEOL4OXSGpbicuhrivI=
+github.com/pitabwire/frame v1.30.7 h1:7b5I2xP3/l7QGAIHDOcmqKS6WXbAmi5DgeVBaUurI+0=
+github.com/pitabwire/frame v1.30.7/go.mod h1:7QSnsNSqpzR6cqdiuKedOkmVnqEpPtabjCpe7JrQEtk=
 github.com/pitabwire/natspubsub v0.1.8 h1:+pOhUNH+mkdcGzQFZMiNzjjgK4lDX1j0QYJgQwcwFc4=
 github.com/pitabwire/natspubsub v0.1.8/go.mod h1:pEF6ULDkCP69o+JrJAPVBDzyHQZCkyJDuWIA/MUl5kk=
 github.com/pitabwire/util v0.1.2 h1:j7jhgCpKmaxKvoCa34S3iD3U4F8mmMNPs8YePysGjA8=
