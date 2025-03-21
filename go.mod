@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.30.6
+	github.com/pitabwire/frame v1.30.7
 	github.com/pitabwire/util v0.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -29,7 +29,7 @@ require (
 	cloud.google.com/go/iam v1.3.1 // indirect
 	cloud.google.com/go/storage v1.43.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/antinvestor/gomatrix v0.1.2 // indirect
 	github.com/aws/aws-sdk-go v1.55.6 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
