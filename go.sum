@@ -178,6 +178,8 @@ github.com/aws/aws-sdk-go-v2/service/s3 v1.80.3 h1:jBOwbbIQlfZG079E0YEnfipULNr7w
 github.com/aws/aws-sdk-go-v2/service/s3 v1.80.3/go.mod h1:kUklwasNoCn5YpyAqC/97r6dzTA1SRKJfKq16SXeoDU=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.81.0 h1:1GmCadhKR3J2sMVKs2bAYq9VnwYeCqfRyZzD4RASGlA=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.81.0/go.mod h1:kUklwasNoCn5YpyAqC/97r6dzTA1SRKJfKq16SXeoDU=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.82.0 h1:JubM8CGDDFaAOmBrd8CRYNr49ZNgEAiLwGwgNMdS0nw=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.82.0/go.mod h1:kUklwasNoCn5YpyAqC/97r6dzTA1SRKJfKq16SXeoDU=
 github.com/aws/aws-sdk-go-v2/service/sso v1.24.16 h1:YV6xIKDJp6U7YB2bxfud9IENO1LRpGhe2Tv/OKtPrOQ=
 github.com/aws/aws-sdk-go-v2/service/sso v1.24.16/go.mod h1:DvbmMKgtpA6OihFJK13gHMZOZrCHttz8wPHGKXqU+3o=
 github.com/aws/aws-sdk-go-v2/service/sso v1.25.1 h1:8JdC7Gr9NROg1Rusk25IcZeTO59zLxsKgE0gkh5O6h0=
