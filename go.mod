@@ -18,7 +18,7 @@ require (
 	gocloud.dev v0.40.0
 	golang.org/x/image v0.28.0
 	gopkg.in/h2non/bimg.v1 v1.1.9
-	gorm.io/datatypes v1.2.5
+	gorm.io/datatypes v1.2.6
 )
 
 require (
@@ -111,6 +111,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
-	gorm.io/gorm v1.25.12 // indirect
+	gorm.io/gorm v1.30.0 // indirect
 	nhooyr.io/websocket v1.8.17 // indirect
 )
