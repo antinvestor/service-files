@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/antinvestor/service-files/service/types"
+	"github.com/pitabwire/util"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 )
@@ -62,7 +63,7 @@ func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string
 	if err != nil {
 		return false, err
 	}
-	defer bucket.Close()
+	defer util.CloseAndLogOnError(ctx, bucket)
 
 	writeCtx, cancelWrite := context.WithCancel(ctx)
 	defer cancelWrite()
@@ -81,13 +82,13 @@ func (provider *ProviderLocal) UploadFile(ctx context.Context, bucketName string
 	if err != nil {
 		return false, err
 	}
-	defer w.Close()
+	defer util.CloseAndLogOnError(ctx, w)
 
 	tempFile, err := os.Open(string(sourcePath))
 	if err != nil {
 		return false, err
 	}
-	defer tempFile.Close()
+	defer util.CloseAndLogOnError(ctx, tempFile)
 
 	_, err = w.ReadFrom(tempFile)
 
@@ -107,13 +108,13 @@ func (provider *ProviderLocal) DownloadFile(ctx context.Context, bucketName stri
 
 	r, err := bucket.NewReader(ctx, string(inBucketPath), nil)
 	if err != nil {
-		_ = bucket.Close()
+		util.CloseAndLogOnError(ctx, bucket)
 		return nil, nil, err
 	}
 
 	return r, func() {
-		_ = r.Close() // Ignore errors on cleanup
-		_ = bucket.Close()
+		util.CloseAndLogOnError(ctx, r) // Ignore errors on cleanup
+		util.CloseAndLogOnError(ctx, bucket)
 	}, nil
 }
 

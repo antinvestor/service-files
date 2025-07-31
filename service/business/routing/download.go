@@ -425,8 +425,8 @@ func (r *downloadRequest) addDownloadFilenameToHeaders(
 func (r *downloadRequest) getThumbnailMetadata(
 	ctx context.Context,
 	db storage.Database,
-	provider storage.Provider,
-	media *types.MediaMetadata,
+	_ storage.Provider,
+	_ *types.MediaMetadata,
 	thumbnailSizes []config.ThumbnailSize,
 ) (*types.ThumbnailMetadata, error) {
 	var thumbnail *types.ThumbnailMetadata
@@ -485,7 +485,8 @@ func (r *downloadRequest) GetContentLengthAndReader(contentLengthHeader string, 
 // TODO: extend once something is defined.
 type mediaMeta struct{}
 
-func parseMultipartResponse(r *downloadRequest, resp *http.Response, maxFileSizeBytes config.FileSizeBytes) (int64, io.Reader, error) {
+func parseMultipartResponse(ctx context.Context, r *downloadRequest, resp *http.Response, maxFileSizeBytes config.FileSizeBytes) (int64, io.Reader, error) {
+
 	_, params, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if err != nil {
 		return 0, nil, err
@@ -500,7 +501,7 @@ func parseMultipartResponse(r *downloadRequest, resp *http.Response, maxFileSize
 	if err != nil {
 		return 0, nil, err
 	}
-	defer p.Close() // nolint: errcheck
+	defer util.CloseAndLogOnError(ctx, p) // nolint: errcheck
 
 	if p.Header.Get("Content-Type") != "application/json" {
 		return 0, nil, fmt.Errorf("first part of the response must be application/json")
@@ -510,7 +511,7 @@ func parseMultipartResponse(r *downloadRequest, resp *http.Response, maxFileSize
 	if err = json.NewDecoder(p).Decode(&meta); err != nil {
 		return 0, nil, err
 	}
-	defer p.Close() // nolint: errcheck
+	defer util.CloseAndLogOnError(ctx, p) // nolint: errcheck
 
 	// Get the actual media content
 	p, err = mr.NextPart()

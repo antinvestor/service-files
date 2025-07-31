@@ -62,7 +62,7 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if authClaims == nil {
 		return util.JSONResponse{
 			Code: http.StatusUnauthorized,
-			JSON: spec.Unknown("Unauthorized"),
+			JSON: spec.Unknown("Unauthorised"),
 		}
 	}
 
@@ -71,7 +71,7 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if err != nil {
 		return util.JSONResponse{
 			Code: http.StatusUnauthorized,
-			JSON: spec.Unknown("Unauthorized"),
+			JSON: spec.Unknown("Unauthorised"),
 		}
 	}
 
