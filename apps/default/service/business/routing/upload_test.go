@@ -13,13 +13,23 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/storage/datastore"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/apps/default/testsutil"
+	"github.com/pitabwire/frame/tests/testdef"
 	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func Test_uploadRequest_doUpload(t *testing.T) {
+type UploadTestSuite struct {
+	tests.BaseTestSuite
+}
+
+func TestUploadTestSuite(t *testing.T) {
+	suite.Run(t, new(UploadTestSuite))
+}
+
+func (suite *UploadTestSuite) Test_uploadRequest_doUpload() {
 	type fields struct {
 		MediaMetadata *types.MediaMetadata
 		Logger        *util.LogEntry
@@ -33,11 +43,11 @@ func Test_uploadRequest_doUpload(t *testing.T) {
 
 	wd, err := os.Getwd()
 	if err != nil {
-		t.Errorf("failed to get current working directory: %v", err)
+		suite.T().Errorf("failed to get current working directory: %v", err)
 	}
 
 	maxSize := config.FileSizeBytes(8)
-	logger := util.Log(t.Context()).WithField("mediaapi", "test")
+	logger := util.Log(suite.T().Context()).WithField("mediaapi", "test")
 	testdataPath := filepath.Join(wd, "./testdata")
 
 	cfg := &config.FilesConfig{
@@ -126,27 +136,29 @@ func Test_uploadRequest_doUpload(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
 
-			ctx, srv, cleanUpFunc, err := testsutil.GetTestServiceWithConfig(tt.args.ctx, "upload", tt.args.cfg)
-			assert.NoErrorf(t, err, "failed to get test service")
-			defer cleanUpFunc()
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				ctx := tt.args.ctx
+				
+				// Get database connection from dependency
+				svc, _ := suite.CreateService(t, dep)
+				db, err := datastore.NewMediaDatabase(svc)
+				assert.NoErrorf(t, err, "failed to open media database")
 
-			db, err := datastore.NewMediaDatabase(srv)
-			assert.NoErrorf(t, err, "failed to open media database")
+				var storageProvider storage.Provider
+				storageProvider, err = provider.GetStorageProvider(ctx, tt.args.cfg)
+				assert.NoErrorf(t, err, "failed to get a storage storageProvider to use")
 
-			var storageProvider storage.Provider
-			storageProvider, err = provider.GetStorageProvider(ctx, cfg)
-			assert.NoErrorf(t, err, "failed to get a storage storageProvider to use")
-
-			r := &uploadRequest{
-				MediaMetadata: tt.fields.MediaMetadata,
-				Logger:        tt.fields.Logger,
-			}
-			if got := r.doUpload(ctx, tt.args.ownerId, tt.args.reqReader, tt.args.cfg, db, storageProvider); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("doUpload() = %+v, want %+v", got, tt.want)
-			}
-		})
-	}
+				r := &uploadRequest{
+					MediaMetadata: tt.fields.MediaMetadata,
+					Logger:        tt.fields.Logger,
+				}
+				if got := r.doUpload(ctx, tt.args.ownerId, tt.args.reqReader, tt.args.cfg, db, storageProvider); !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("doUpload() = %+v, want %+v", got, tt.want)
+				}
+			})
+		}
+	})
 }

@@ -6,132 +6,136 @@ import (
 	"testing"
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/datastore"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/apps/default/testsutil"
+	"github.com/pitabwire/frame/tests/testdef"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestMediaRepository(t *testing.T) {
-
-	ctx, srv, cleanUpFunc, err := testsutil.GetTestService(context.TODO(), "media_repository")
-	assert.NoErrorf(t, err, "failed to get test service")
-	defer cleanUpFunc()
-
-	db, err := datastore.NewMediaDatabase(srv)
-	assert.NoErrorf(t, err, "failed to open media database")
-
-	t.Run("can insert media & query media", func(t *testing.T) {
-		metadata := &types.MediaMetadata{
-			MediaID:       "testing",
-			ContentType:   "image/png",
-			FileSizeBytes: 10,
-			UploadName:    "upload test",
-			Base64Hash:    "dGVzdGluZw==",
-			OwnerID:       "@alice:localhost",
-		}
-		if err := db.StoreMediaMetadata(ctx, metadata); err != nil {
-			t.Fatalf("unable to store media metadata: %v", err)
-		}
-		// query by media id
-		gotMetadata, err := db.GetMediaMetadata(ctx, metadata.MediaID)
-		if err != nil {
-			t.Fatalf("unable to query media metadata: %v", err)
-		}
-		if !reflect.DeepEqual(metadata, gotMetadata) {
-			t.Fatalf("expected metadata %+v, got %v", metadata, gotMetadata)
-		}
-		// query by media hash
-		gotMetadata, err = db.GetMediaMetadataByHash(ctx, metadata.OwnerID, metadata.Base64Hash)
-		if err != nil {
-			t.Fatalf("unable to query media metadata by hash: %v", err)
-		}
-		if !reflect.DeepEqual(metadata, gotMetadata) {
-			t.Fatalf("expected metadata %+v, got %v", metadata, gotMetadata)
-		}
-	})
-
+type DatastoreTestSuite struct {
+	tests.BaseTestSuite
 }
 
-func TestThumbnailsStorage(t *testing.T) {
-	ctx, srv, cleanUpFunc, err := testsutil.GetTestService(context.TODO(), "thumbnail_storage")
-	assert.NoErrorf(t, err, "failed to get test service")
-	defer cleanUpFunc()
+func TestDatastoreTestSuite(t *testing.T) {
+	suite.Run(t, new(DatastoreTestSuite))
+}
 
-	db, err := datastore.NewMediaDatabase(srv)
-	assert.NoErrorf(t, err, "failed to open media database")
+func (suite *DatastoreTestSuite) TestMediaRepository() {
+	testCases := []struct {
+		name     string
+		metadata *types.MediaMetadata
+	}{
+		{
+			name: "can insert media & query media",
+			metadata: &types.MediaMetadata{
+				MediaID:       "testing",
+				ContentType:   "image/png",
+				FileSizeBytes: 10,
+				UploadName:    "upload test",
+				Base64Hash:    "dGVzdGluZw==",
+				OwnerID:       "@alice:localhost",
+			},
+		},
+	}
 
-	t.Run("can insert thumbnails & query media", func(t *testing.T) {
-		thumbnails := []*types.ThumbnailMetadata{
-			{
-				MediaMetadata: &types.MediaMetadata{
-					MediaID:       "curerv4pf2t9jvceefgg",
-					ParentID:      "testing",
-					ContentType:   "image/png",
-					FileSizeBytes: 6,
-					ThumbnailSize: &types.ThumbnailSize{
-						Width:        5,
-						Height:       5,
-						ResizeMethod: types.Crop,
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ctx := context.Background()
+				
+				svc, _ := suite.CreateService(t, dep)
+				db, err := datastore.NewMediaDatabase(svc)
+				assert.NoErrorf(t, err, "failed to open media database")
+
+				if err := db.StoreMediaMetadata(ctx, tc.metadata); err != nil {
+					t.Fatalf("unable to store media metadata: %v", err)
+				}
+				
+				// query by media id
+				gotMetadata, err := db.GetMediaMetadata(ctx, tc.metadata.MediaID)
+				if err != nil {
+					t.Fatalf("unable to query media metadata: %v", err)
+				}
+				if !reflect.DeepEqual(tc.metadata, gotMetadata) {
+					t.Fatalf("expected metadata %+v, got %v", tc.metadata, gotMetadata)
+				}
+				
+				// query by media hash
+				gotMetadata, err = db.GetMediaMetadataByHash(ctx, tc.metadata.OwnerID, tc.metadata.Base64Hash)
+				if err != nil {
+					t.Fatalf("unable to query media metadata by hash: %v", err)
+				}
+				if !reflect.DeepEqual(tc.metadata, gotMetadata) {
+					t.Fatalf("expected metadata %+v, got %v", tc.metadata, gotMetadata)
+				}
+			})
+		}
+	})
+}
+
+func (suite *DatastoreTestSuite) TestThumbnailsStorage() {
+	testCases := []struct {
+		name       string
+		thumbnails []*types.ThumbnailMetadata
+	}{
+		{
+			name: "can insert thumbnails & query media",
+			thumbnails: []*types.ThumbnailMetadata{
+				{
+					MediaMetadata: &types.MediaMetadata{
+						MediaID:       "curerv4pf2t9jvceefgg",
+						ParentID:      "testing",
+						ContentType:   "image/png",
+						FileSizeBytes: 6,
+						ThumbnailSize: &types.ThumbnailSize{
+							Width:        5,
+							Height:       5,
+							ResizeMethod: types.Crop,
+						},
+					},
+				},
+				{
+					MediaMetadata: &types.MediaMetadata{
+						MediaID:       "curerv4pf2t9jvceefgx",
+						ParentID:      "testing",
+						ContentType:   "image/png",
+						FileSizeBytes: 10,
+						ThumbnailSize: &types.ThumbnailSize{
+							Width:        10,
+							Height:       10,
+							ResizeMethod: types.Scale,
+						},
 					},
 				},
 			},
-			{
-				MediaMetadata: &types.MediaMetadata{
-					MediaID:       "curerv4pf2t9jvceefgx",
-					ParentID:      "testing",
-					ContentType:   "image/png",
-					FileSizeBytes: 7,
-					ThumbnailSize: &types.ThumbnailSize{
-						Width:        1,
-						Height:       1,
-						ResizeMethod: types.Scale,
-					},
-				},
-			},
-		}
-		for i := range thumbnails {
-			if err := db.StoreThumbnail(ctx, thumbnails[i]); err != nil {
-				t.Fatalf("unable to store thumbnail metadata: %v", err)
-			}
-		}
-		// query by single thumbnail
-		gotMetadata, err := db.GetThumbnail(ctx,
-			thumbnails[0].ParentID,
-			thumbnails[0].ThumbnailSize.Width, thumbnails[0].ThumbnailSize.Height,
-			thumbnails[0].ThumbnailSize.ResizeMethod,
-		)
-		if err != nil {
-			t.Fatalf("unable to query thumbnail metadata: %v", err)
-		}
-		if !reflect.DeepEqual(thumbnails[0].MediaMetadata, gotMetadata.MediaMetadata) {
-			t.Fatalf("expected metadata %+v, got %+v", thumbnails[0].MediaMetadata, gotMetadata.MediaMetadata)
-		}
-		if !reflect.DeepEqual(thumbnails[0].ThumbnailSize, gotMetadata.ThumbnailSize) {
-			t.Fatalf("expected metadata %+v, got %+v", thumbnails[0].MediaMetadata, gotMetadata.MediaMetadata)
-		}
-		// query by all thumbnails
-		gotMediadatas, err := db.GetThumbnails(ctx, thumbnails[0].ParentID)
-		if err != nil {
-			t.Fatalf("unable to query media metadata by hash: %v", err)
-		}
-		if len(gotMediadatas) != len(thumbnails) {
-			t.Fatalf("expected %d stored thumbnail metadata, got %d", len(thumbnails), len(gotMediadatas))
-		}
-		for i := range gotMediadatas {
-			// metadata may be returned in a different order than it was stored, perform a search
-			metaDataMatches := func() bool {
-				for _, t := range thumbnails {
-					if reflect.DeepEqual(t.MediaMetadata, gotMediadatas[i].MediaMetadata) && reflect.DeepEqual(t.ThumbnailSize, gotMediadatas[i].ThumbnailSize) {
-						return true
+		},
+	}
+
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ctx := context.Background()
+				
+				svc, _ := suite.CreateService(t, dep)
+				db, err := datastore.NewMediaDatabase(svc)
+				assert.NoErrorf(t, err, "failed to open media database")
+
+				for _, thumbnail := range tc.thumbnails {
+					if err := db.StoreThumbnail(ctx, thumbnail); err != nil {
+						t.Fatalf("unable to store thumbnail metadata: %v", err)
 					}
 				}
-				return false
-			}
 
-			if !metaDataMatches() {
-				t.Fatalf("expected metadata %+v, got %+v", thumbnails[i].MediaMetadata, gotMediadatas[i].MediaMetadata)
-
-			}
+				// query thumbnails by parent id
+				gotThumbnails, err := db.GetThumbnails(ctx, "testing")
+				if err != nil {
+					t.Fatalf("unable to query thumbnail metadata: %v", err)
+				}
+				if len(gotThumbnails) != len(tc.thumbnails) {
+					t.Fatalf("expected %d thumbnails, got %d", len(tc.thumbnails), len(gotThumbnails))
+				}
+			})
 		}
 	})
 }

@@ -52,7 +52,7 @@ func (mr *mediaRepository) GetByHash(ctx context.Context, ownerId types.OwnerID,
 
 func (mr *mediaRepository) GetByParentID(ctx context.Context, parentId types.MediaID) ([]*models.MediaMetadata, error) {
 	var media []*models.MediaMetadata
-	err := mr.service.DB(ctx, true).Where(" parent_id @@@ ?", string(parentId)).Find(&media).Error
+	err := mr.service.DB(ctx, true).Where("parent_id = ?", string(parentId)).Find(&media).Error
 	if err != nil {
 		return nil, err
 	}
@@ -62,11 +62,11 @@ func (mr *mediaRepository) GetByParentID(ctx context.Context, parentId types.Med
 
 func (mr *mediaRepository) GetByParentIDAndThumbnailSize(ctx context.Context, parentId types.MediaID, thumbnailSize *types.ThumbnailSize) (*models.MediaMetadata, error) {
 	media := &models.MediaMetadata{}
-	tx := mr.service.DB(ctx, true).Where(" parent_id @@@ ? ", string(parentId))
+	tx := mr.service.DB(ctx, true).Where(" parent_id = ? ", string(parentId))
 	if thumbnailSize != nil {
-		tx = tx.Where("id  @@@ paradedb.match( 'properties.h', ?) "+
-			"AND id  @@@ paradedb.match( 'properties.w', ?) "+
-			"AND id  @@@ paradedb.match( 'properties.m', ?)",
+		tx = tx.Where("properties ->> 'h' = ?  "+
+			"AND properties ->> 'w' = ?  "+
+			"AND properties ->> 'm' = ? ",
 			strconv.Itoa(thumbnailSize.Height), strconv.Itoa(thumbnailSize.Width), thumbnailSize.ResizeMethod)
 	}
 
