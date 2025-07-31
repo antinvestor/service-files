@@ -20,4 +20,4 @@ coverage.html
 .glide/
 vendor/
 
-service/business/routing/testdata/tmp/
+apps/default/service/business/routing/testdata/tmp/
