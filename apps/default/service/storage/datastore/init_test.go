@@ -43,15 +43,16 @@ func (suite *DatastoreTestSuite) TestMediaRepository() {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := context.Background()
-				
+
 				svc, _ := suite.CreateService(t, dep)
 				db, err := datastore.NewMediaDatabase(svc)
 				assert.NoErrorf(t, err, "failed to open media database")
 
-				if err := db.StoreMediaMetadata(ctx, tc.metadata); err != nil {
+				err = db.StoreMediaMetadata(ctx, tc.metadata)
+				if err != nil {
 					t.Fatalf("unable to store media metadata: %v", err)
 				}
-				
+
 				// query by media id
 				gotMetadata, err := db.GetMediaMetadata(ctx, tc.metadata.MediaID)
 				if err != nil {
@@ -60,7 +61,7 @@ func (suite *DatastoreTestSuite) TestMediaRepository() {
 				if !reflect.DeepEqual(tc.metadata, gotMetadata) {
 					t.Fatalf("expected metadata %+v, got %v", tc.metadata, gotMetadata)
 				}
-				
+
 				// query by media hash
 				gotMetadata, err = db.GetMediaMetadataByHash(ctx, tc.metadata.OwnerID, tc.metadata.Base64Hash)
 				if err != nil {
@@ -116,13 +117,14 @@ func (suite *DatastoreTestSuite) TestThumbnailsStorage() {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := context.Background()
-				
+
 				svc, _ := suite.CreateService(t, dep)
 				db, err := datastore.NewMediaDatabase(svc)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				for _, thumbnail := range tc.thumbnails {
-					if err := db.StoreThumbnail(ctx, thumbnail); err != nil {
+					err = db.StoreThumbnail(ctx, thumbnail)
+					if err != nil {
 						t.Fatalf("unable to store thumbnail metadata: %v", err)
 					}
 				}

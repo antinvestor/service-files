@@ -141,7 +141,7 @@ func (suite *UploadTestSuite) Test_uploadRequest_doUpload() {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				ctx := tt.args.ctx
-				
+
 				// Get database connection from dependency
 				svc, _ := suite.CreateService(t, dep)
 				db, err := datastore.NewMediaDatabase(svc)

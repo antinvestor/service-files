@@ -95,7 +95,7 @@ func (suite *DownloadTestSuite) Test_Multipart() {
 				resp, err := srv.Client().Get(srv.URL)
 				assert.NoError(t, err)
 				defer util.CloseAndLogOnError(ctx, resp.Body)
-				
+
 				// contentLength is always 0, since there's no Content-Length header on the multipart part.
 				_, reader, err := parseMultipartResponse(ctx, r, resp, tc.maxSize)
 				assert.NoError(t, err)

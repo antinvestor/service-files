@@ -22,9 +22,9 @@ func TestProviderTestSuite(t *testing.T) {
 
 func (suite *ProviderTestSuite) TestGetStorageProvider() {
 	testCases := []struct {
-		name           string
-		expectedType   string
-		shouldSucceed  bool
+		name          string
+		expectedType  string
+		shouldSucceed bool
 	}{
 		{
 			name:          "should return local provider",

@@ -20,4 +20,6 @@ coverage.html
 .glide/
 vendor/
 
+docker.env
+
 apps/default/service/business/routing/testdata/tmp/

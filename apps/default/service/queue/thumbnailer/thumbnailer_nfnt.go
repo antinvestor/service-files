@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+
 	// Imported for gif codec
 	_ "image/gif"
 	"image/jpeg"
+
 	// Imported for png codec
 	_ "image/png"
 	// Imported for webp codec
@@ -35,9 +37,8 @@ import (
 	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
-	"github.com/pitabwire/util"
-
 	"github.com/nfnt/resize"
+	"github.com/pitabwire/util"
 	_ "golang.org/x/image/webp"
 )
 
