@@ -3,7 +3,7 @@ module github.com/antinvestor/service-files
 go 1.23.0
 
 require (
-	github.com/antinvestor/gomatrixserverlib v0.1.2
+	github.com/antinvestor/gomatrixserverlib v0.2.4
 	github.com/aws/aws-sdk-go-v2 v1.36.5
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.70
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.83.0
