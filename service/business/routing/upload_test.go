@@ -2,14 +2,6 @@ package routing
 
 import (
 	"context"
-	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/storage"
-	"github.com/antinvestor/service-files/service/storage/datastore"
-	"github.com/antinvestor/service-files/service/storage/provider"
-
-	"github.com/antinvestor/service-files/service/types"
-	"github.com/antinvestor/service-files/testsutil"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,14 +9,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/storage/datastore"
+	"github.com/antinvestor/service-files/service/storage/provider"
+	"github.com/antinvestor/service-files/service/types"
+	"github.com/antinvestor/service-files/testsutil"
 	"github.com/pitabwire/util"
-	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_uploadRequest_doUpload(t *testing.T) {
 	type fields struct {
 		MediaMetadata *types.MediaMetadata
-		Logger        *log.Entry
+		Logger        *util.LogEntry
 	}
 	type args struct {
 		ctx       context.Context
@@ -39,7 +37,7 @@ func Test_uploadRequest_doUpload(t *testing.T) {
 	}
 
 	maxSize := config.FileSizeBytes(8)
-	logger := log.New().WithField("mediaapi", "test")
+	logger := util.Log(t.Context()).WithField("mediaapi", "test")
 	testdataPath := filepath.Join(wd, "./testdata")
 
 	cfg := &config.FilesConfig{

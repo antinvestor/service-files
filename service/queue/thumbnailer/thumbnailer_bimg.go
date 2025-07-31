@@ -22,6 +22,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/types"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/h2non/bimg.v1"
 )

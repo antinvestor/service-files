@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+	"testing"
+
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/storage/provider/local"
 	"github.com/pitabwire/frame"
-	"testing"
 )
 
 func TestGetStorageProvider(t *testing.T) {

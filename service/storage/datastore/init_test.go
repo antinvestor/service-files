@@ -2,12 +2,13 @@ package datastore_test
 
 import (
 	"context"
+	"reflect"
+	"testing"
+
 	"github.com/antinvestor/service-files/service/storage/datastore"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/antinvestor/service-files/testsutil"
 	"github.com/stretchr/testify/assert"
-	"reflect"
-	"testing"
 )
 
 func TestMediaRepository(t *testing.T) {
@@ -95,7 +96,7 @@ func TestThumbnailsStorage(t *testing.T) {
 		}
 		// query by single thumbnail
 		gotMetadata, err := db.GetThumbnail(ctx,
-			thumbnails[0].MediaMetadata.ParentID,
+			thumbnails[0].ParentID,
 			thumbnails[0].ThumbnailSize.Width, thumbnails[0].ThumbnailSize.Height,
 			thumbnails[0].ThumbnailSize.ResizeMethod,
 		)
@@ -109,7 +110,7 @@ func TestThumbnailsStorage(t *testing.T) {
 			t.Fatalf("expected metadata %+v, got %+v", thumbnails[0].MediaMetadata, gotMetadata.MediaMetadata)
 		}
 		// query by all thumbnails
-		gotMediadatas, err := db.GetThumbnails(ctx, thumbnails[0].MediaMetadata.ParentID)
+		gotMediadatas, err := db.GetThumbnails(ctx, thumbnails[0].ParentID)
 		if err != nil {
 			t.Fatalf("unable to query media metadata by hash: %v", err)
 		}

@@ -18,13 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/antinvestor/gomatrixserverlib/spec"
-	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/queue/thumbnailer"
-	"github.com/antinvestor/service-files/service/storage"
-
-	"github.com/antinvestor/service-files/service/types"
-	"github.com/antinvestor/service-files/service/utils"
 	"io"
 	"io/fs"
 	"mime"
@@ -37,9 +30,14 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/antinvestor/gomatrixserverlib/spec"
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/queue/thumbnailer"
+	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/types"
+	"github.com/antinvestor/service-files/service/utils"
 	"github.com/pitabwire/util"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 const mediaIDCharacters = "A-Za-z0-9_=-"
@@ -48,8 +46,8 @@ const mediaIDCharacters = "A-Za-z0-9_=-"
 var mediaIDRegex = regexp.MustCompile("^[" + mediaIDCharacters + "]+$")
 
 // Regular expressions to help us cope with Content-Disposition parsing
-//var rfc2183 = regexp.MustCompile(`filename=utf-8"(.*)"`)
-//var rfc6266 = regexp.MustCompile(`filename\*=utf-8''(.*)`)
+// var rfc2183 = regexp.MustCompile(`filename=utf-8"(.*)"`)
+// var rfc6266 = regexp.MustCompile(`filename\*=utf-8''(.*)`)
 
 // downloadRequest metadata included in or derivable from a download or thumbnail request
 // https://matrix.org/docs/spec/client_server/r0.2.0.html#get-matrix-media-r0-download-servername-mediaid
@@ -58,7 +56,7 @@ type downloadRequest struct {
 	MediaMetadata      *types.MediaMetadata
 	IsThumbnailRequest bool
 	ThumbnailSize      types.ThumbnailSize
-	Logger             *log.Entry
+	Logger             *util.LogEntry
 	DownloadFilename   string
 	multipartResponse  bool // whether we need to return a multipart/mixed response (for requests coming in over federation)
 }
@@ -119,11 +117,9 @@ func Download(
 			MediaID: mediaID,
 		},
 		IsThumbnailRequest: isThumbnailRequest,
-		Logger: util.GetLogger(req.Context()).WithFields(log.Fields{
-			"MediaID": mediaID,
-		}),
-		DownloadFilename:  customFilename,
-		multipartResponse: false,
+		Logger:             util.Log(req.Context()).With("MediaID", mediaID),
+		DownloadFilename:   customFilename,
+		multipartResponse:  false,
 	}
 
 	if dReq.IsThumbnailRequest {
@@ -140,11 +136,11 @@ func Download(
 			Height:       height,
 			ResizeMethod: strings.ToLower(req.FormValue("method")),
 		}
-		dReq.Logger.WithFields(log.Fields{
-			"RequestedWidth":        dReq.ThumbnailSize.Width,
-			"RequestedHeight":       dReq.ThumbnailSize.Height,
-			"RequestedResizeMethod": dReq.ThumbnailSize.ResizeMethod,
-		})
+		dReq.Logger.With(
+			"RequestedWidth", dReq.ThumbnailSize.Width,
+			"RequestedHeight", dReq.ThumbnailSize.Height,
+			"RequestedResizeMethod", dReq.ThumbnailSize.ResizeMethod,
+		)
 	}
 
 	// request validation
@@ -196,7 +192,7 @@ func (r *downloadRequest) jsonErrorResponse(w http.ResponseWriter, res util.JSON
 
 	// Set status code and write the body
 	w.WriteHeader(res.Code)
-	r.Logger.WithField("code", res.Code).Tracef("Responding (%d bytes)", len(resBytes))
+	r.Logger.WithField("code", res.Code).WithField("bytes count", len(resBytes)).Trace("Responding with bytes")
 
 	// we don't really care that much if we fail to write the error response
 	w.Write(resBytes) // nolint: errcheck
@@ -279,12 +275,6 @@ func (r *downloadRequest) respondFromProvider(
 			return nil, resErr
 		}
 		if thumbMetadata == nil {
-			r.Logger.WithFields(log.Fields{
-				"UploadName":    r.MediaMetadata.UploadName,
-				"Base64Hash":    r.MediaMetadata.Base64Hash,
-				"FileSizeBytes": r.MediaMetadata.FileSizeBytes,
-				"ContentType":   r.MediaMetadata.ContentType,
-			}).Trace("No good thumbnail found. Responding with original file.")
 			responseMetadata = r.MediaMetadata
 		} else {
 			r.Logger.Trace("Responding with thumbnail")
@@ -307,12 +297,6 @@ func (r *downloadRequest) respondFromProvider(
 
 	defer finalizer()
 
-	r.Logger.WithFields(log.Fields{
-		"UploadName":    responseMetadata.UploadName,
-		"Base64Hash":    responseMetadata.Base64Hash,
-		"FileSizeBytes": responseMetadata.FileSizeBytes,
-		"ContentType":   responseMetadata.ContentType,
-	}).Trace("Responding with file")
 	if err = r.addDownloadFilenameToHeaders(w, responseMetadata); err != nil {
 		return nil, err
 	}
@@ -536,7 +520,7 @@ func parseMultipartResponse(r *downloadRequest, resp *http.Response, maxFileSize
 
 	redirect := p.Header.Get("Location")
 	if redirect != "" {
-		return 0, nil, fmt.Errorf("Location header is not yet supported")
+		return 0, nil, fmt.Errorf("location header is not yet supported")
 	}
 
 	contentLength, reader, err := r.GetContentLengthAndReader(p.Header.Get("Content-Length"), p, maxFileSizeBytes)

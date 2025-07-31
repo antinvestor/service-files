@@ -3,11 +3,12 @@ package local
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/antinvestor/service-files/service/types"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
-	"io"
-	"os"
 )
 
 type ProviderLocal struct {

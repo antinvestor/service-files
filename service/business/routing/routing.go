@@ -16,17 +16,16 @@ package routing
 
 import (
 	"encoding/json"
-	"github.com/antinvestor/gomatrixserverlib/spec"
-	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/storage"
-
-	"github.com/antinvestor/service-files/service/types"
-	"github.com/pitabwire/frame"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/antinvestor/gomatrixserverlib/spec"
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/types"
 	"github.com/gorilla/mux"
+	"github.com/pitabwire/frame"
 	"github.com/pitabwire/util"
 )
 

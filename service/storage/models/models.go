@@ -1,10 +1,10 @@
 package models
 
 import (
+	"strconv"
+
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/pitabwire/frame"
-	"gorm.io/datatypes"
-	"strconv"
 )
 
 // MediaMetadata Our model responsible for holding uploaded file data
@@ -26,7 +26,7 @@ type MediaMetadata struct {
 	BucketName string `gorm:"type:TEXT"`
 	Provider   string `gorm:"type:TEXT"`
 
-	Properties datatypes.JSONMap
+	Properties frame.JSONMap
 }
 
 func (mm *MediaMetadata) ToApi() *types.MediaMetadata {

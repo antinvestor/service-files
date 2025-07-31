@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"errors"
+
 	"github.com/antinvestor/service-files/service/storage/models"
 	"github.com/antinvestor/service-files/service/storage/repository"
 	"github.com/pitabwire/frame"
@@ -32,7 +33,7 @@ func (fms *MediaMetadataSaveEvent) Validate(_ context.Context, payload any) erro
 func (fms *MediaMetadataSaveEvent) Execute(ctx context.Context, payload any) error {
 	metadata := payload.(*models.MediaMetadata)
 
-	logger := fms.Service.L(ctx).WithField("payload", metadata).
+	logger := fms.Service.Log(ctx).WithField("payload", metadata).
 		WithField("type", fms.Name())
 	logger.Debug("handling file metadata save event")
 

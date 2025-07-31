@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/storage/provider"
-	"github.com/antinvestor/service-files/service/types"
-	"github.com/pitabwire/frame"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage/provider"
+	"github.com/antinvestor/service-files/service/types"
+	"github.com/pitabwire/frame"
 )
 
 func TestProviderLocal_UploadFile(t *testing.T) {

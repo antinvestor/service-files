@@ -2,12 +2,12 @@ package routing
 
 import (
 	"bytes"
-	"github.com/antinvestor/service-files/service/types"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/antinvestor/service-files/service/types"
 	"github.com/stretchr/testify/assert"
 )
 

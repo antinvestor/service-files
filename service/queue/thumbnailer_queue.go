@@ -3,12 +3,13 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/queue/thumbnailer"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/pitabwire/frame"
-	"strings"
 )
 
 type ThumbnailQueueHandler struct {
@@ -19,7 +20,7 @@ type ThumbnailQueueHandler struct {
 
 func (fq *ThumbnailQueueHandler) Handle(ctx context.Context, _ map[string]string, payload []byte) error {
 
-	logger := fq.service.L(ctx)
+	logger := fq.service.Log(ctx)
 
 	mediaPayload := map[string]string{}
 	err := json.Unmarshal(payload, &mediaPayload)

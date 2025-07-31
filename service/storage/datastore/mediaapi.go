@@ -16,6 +16,7 @@ package datastore
 
 import (
 	"context"
+
 	"github.com/antinvestor/service-files/service/storage/models"
 	"github.com/antinvestor/service-files/service/storage/repository"
 	"github.com/antinvestor/service-files/service/types"
@@ -39,7 +40,7 @@ func (d *Database) StoreMediaMetadata(ctx context.Context, mediaMetadata *types.
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error) {
 	mediaMetadata, err := d.MediaRepository.GetByID(ctx, mediaID)
-	if frame.DBErrorIsRecordNotFound(err) {
+	if frame.ErrorIsNoRows(err) {
 		return nil, nil
 	}
 	return mediaMetadata.ToApi(), err
@@ -50,7 +51,7 @@ func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) 
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadataByHash(ctx context.Context, ownerId types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error) {
 	mediaMetadata, err := d.MediaRepository.GetByHash(ctx, ownerId, mediaHash)
-	if frame.DBErrorIsRecordNotFound(err) {
+	if frame.ErrorIsNoRows(err) {
 		return nil, nil
 	}
 	return mediaMetadata.ToApi(), err
@@ -75,7 +76,7 @@ func (d *Database) GetThumbnail(ctx context.Context, mediaID types.MediaID, widt
 	mediaMetadata, err := d.MediaRepository.GetByParentIDAndThumbnailSize(ctx, mediaID, &thumbnailSize)
 	if err != nil {
 
-		if frame.DBErrorIsRecordNotFound(err) {
+		if frame.ErrorIsNoRows(err) {
 			return nil, nil
 		}
 		return nil, err
@@ -94,7 +95,7 @@ func (d *Database) GetThumbnails(ctx context.Context, mediaID types.MediaID) ([]
 	metadatas, err := d.MediaRepository.GetByParentID(ctx, mediaID)
 	if err != nil {
 
-		if frame.DBErrorIsRecordNotFound(err) {
+		if frame.ErrorIsNoRows(err) {
 			return nil, nil
 		}
 		return nil, err

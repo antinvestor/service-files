@@ -3,13 +3,14 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io"
+	"path/filepath"
+
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/types"
 	"github.com/antinvestor/service-files/service/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/pitabwire/util"
 	"gocloud.dev/blob"
-	"io"
-	"path/filepath"
 )
 
 type Provider interface {
@@ -28,7 +29,7 @@ type Provider interface {
 // If the final path exists and the file size matches, the file does not need to be moved.
 // In error cases where the file is not a duplicate, the caller may decide to remove the final path.
 // Returns the final path of the file, whether it is a duplicate and an error.
-func UploadFileWithHashCheck(ctx context.Context, provider Provider, tmpDir types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *log.Entry) (types.Path, bool, error) {
+func UploadFileWithHashCheck(ctx context.Context, provider Provider, tmpDir types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *util.LogEntry) (types.Path, bool, error) {
 	// Note: in all error and success cases, we need to remove the temporary directory
 	defer utils.RemoveDir(tmpDir, logger)
 	duplicate := false

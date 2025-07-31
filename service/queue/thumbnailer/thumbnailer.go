@@ -17,12 +17,13 @@ package thumbnailer
 import (
 	"context"
 	"fmt"
+	"math"
+	"path/filepath"
+
 	"github.com/antinvestor/service-files/config"
 	"github.com/antinvestor/service-files/service/storage"
 	"github.com/antinvestor/service-files/service/types"
-	log "github.com/sirupsen/logrus"
-	"math"
-	"path/filepath"
+	"github.com/pitabwire/util"
 )
 
 type thumbnailFitness struct {
@@ -90,7 +91,7 @@ func isThumbnailExists(
 	config types.ThumbnailSize,
 	mediaMetadata *types.MediaMetadata,
 	db storage.Database,
-	logger *log.Entry,
+	logger *util.LogEntry,
 ) (bool, error) {
 	thumbnailMetadata, err := db.GetThumbnail(
 		ctx, mediaMetadata.MediaID, config.Width, config.Height, config.ResizeMethod,

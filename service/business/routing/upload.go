@@ -17,22 +17,20 @@ package routing
 import (
 	"context"
 	"fmt"
-	"github.com/antinvestor/gomatrixserverlib"
-	"github.com/antinvestor/gomatrixserverlib/spec"
-
-	"github.com/antinvestor/service-files/config"
-	"github.com/antinvestor/service-files/service/storage"
-	"github.com/antinvestor/service-files/service/types"
-	"github.com/antinvestor/service-files/service/utils"
-	"github.com/pitabwire/frame"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
 
+	"github.com/antinvestor/gomatrixserverlib"
+	"github.com/antinvestor/gomatrixserverlib/spec"
+	"github.com/antinvestor/service-files/config"
+	"github.com/antinvestor/service-files/service/storage"
+	"github.com/antinvestor/service-files/service/types"
+	"github.com/antinvestor/service-files/service/utils"
+	"github.com/pitabwire/frame"
 	"github.com/pitabwire/util"
-	log "github.com/sirupsen/logrus"
 )
 
 // uploadRequest metadata included in or derivable from an upload request
@@ -40,7 +38,7 @@ import (
 // NOTE: The members come from HTTP request metadata such as headers, query parameters or can be derived from such
 type uploadRequest struct {
 	MediaMetadata *types.MediaMetadata
-	Logger        *log.Entry
+	Logger        *util.LogEntry
 }
 
 // uploadResponse defines the format of the JSON response
@@ -115,7 +113,7 @@ func parseAndValidateRequest(req *http.Request, cfg *config.FilesConfig, ownerID
 			UploadName:    types.Filename(url.PathEscape(req.FormValue("filename"))),
 			OwnerID:       ownerID,
 		},
-		Logger: util.GetLogger(req.Context()),
+		Logger: util.Log(req.Context()),
 	}
 
 	if resErr := r.Validate(cfg.MaxFileSizeBytes); resErr != nil {
@@ -142,11 +140,11 @@ func (r *uploadRequest) doUpload(
 	provider storage.Provider,
 ) *util.JSONResponse {
 
-	r.Logger.WithFields(log.Fields{
-		"UploadName":    r.MediaMetadata.UploadName,
-		"FileSizeBytes": r.MediaMetadata.FileSizeBytes,
-		"ContentType":   r.MediaMetadata.ContentType,
-	}).Info("Uploading file")
+	r.Logger.With(
+		"UploadName", r.MediaMetadata.UploadName,
+		"FileSizeBytes", r.MediaMetadata.FileSizeBytes,
+		"ContentType", r.MediaMetadata.ContentType,
+	).Info("Uploading file")
 
 	// The file data is hashed and the hash is used as the MediaID. The hash is useful as a
 	// method of deduplicating files to save storage, as well as a way to conduct
@@ -161,9 +159,10 @@ func (r *uploadRequest) doUpload(
 	// nested function to guarantee either storage or cleanup.
 	if cfg.MaxFileSizeBytes > 0 {
 		if cfg.MaxFileSizeBytes+1 <= 0 {
-			r.Logger.WithFields(log.Fields{
-				"MaxFileSizeBytes": cfg.MaxFileSizeBytes,
-			}).Warnf("Configured MaxFileSizeBytes overflows int64, defaulting to %d bytes", config.DefaultMaxFileSizeBytes)
+			r.Logger.With(
+				"MaxFileSizeBytes", cfg.MaxFileSizeBytes,
+				"Default File SizeBytes", config.DefaultMaxFileSizeBytes,
+			).Warn("Configured MaxFileSizeBytes overflows int64")
 			cfg.MaxFileSizeBytes = config.DefaultMaxFileSizeBytes
 		}
 		reqReader = io.LimitReader(reqReader, int64(cfg.MaxFileSizeBytes)+1)
@@ -171,9 +170,9 @@ func (r *uploadRequest) doUpload(
 
 	hash, bytesWritten, tmpDir, err := utils.WriteTempFile(ctx, reqReader, cfg.AbsBasePath)
 	if err != nil {
-		r.Logger.WithError(err).WithFields(log.Fields{
-			"MaxFileSizeBytes": cfg.MaxFileSizeBytes,
-		}).Warn("Error while transferring file")
+		r.Logger.WithError(err).With(
+			"MaxFileSizeBytes", cfg.MaxFileSizeBytes,
+		).Warn("Error while transferring file")
 		return &util.JSONResponse{
 			Code: http.StatusBadRequest,
 			JSON: spec.Unknown("Failed to upload"),
@@ -213,12 +212,12 @@ func (r *uploadRequest) doUpload(
 	}
 
 	r.Logger = r.Logger.WithField("media_id", r.MediaMetadata.MediaID)
-	r.Logger.WithFields(log.Fields{
-		"Base64Hash":    r.MediaMetadata.Base64Hash,
-		"UploadName":    r.MediaMetadata.UploadName,
-		"FileSizeBytes": r.MediaMetadata.FileSizeBytes,
-		"ContentType":   r.MediaMetadata.ContentType,
-	}).Info("File uploaded")
+	r.Logger.With(
+		"Base64Hash", r.MediaMetadata.Base64Hash,
+		"UploadName", r.MediaMetadata.UploadName,
+		"FileSizeBytes", r.MediaMetadata.FileSizeBytes,
+		"ContentType", r.MediaMetadata.ContentType,
+	).Info("File uploaded")
 
 	err = r.storeFileAndMetadata(ctx, tmpDir, cfg.AbsBasePath, db, provider)
 	if err != nil {

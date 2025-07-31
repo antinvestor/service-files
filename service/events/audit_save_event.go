@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"errors"
+
 	"github.com/antinvestor/service-files/service/storage/models"
 	"github.com/antinvestor/service-files/service/storage/repository"
 	"github.com/pitabwire/frame"
@@ -32,7 +33,7 @@ func (mas *MediaAuditSaveEvent) Validate(_ context.Context, payload any) error {
 func (mas *MediaAuditSaveEvent) Execute(ctx context.Context, payload any) error {
 	audit := payload.(*models.MediaAudit)
 
-	logger := mas.Service.L(ctx).WithField("payload", audit).
+	logger := mas.Service.Log(ctx).WithField("payload", audit).
 		WithField("type", mas.Name())
 	logger.Debug("handling file audit save event")
 
