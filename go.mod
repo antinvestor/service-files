@@ -8,7 +8,7 @@ require (
 	github.com/antinvestor/apis/go/common v1.37.1
 	github.com/antinvestor/apis/go/partition v1.37.3
 	github.com/antinvestor/apis/go/profile v1.37.3
-	github.com/antinvestor/gomatrixserverlib v0.2.4
+	github.com/antinvestor/gomatrixserverlib v0.2.5
 	github.com/aws/aws-sdk-go-v2 v1.37.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.85.1
@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pitabwire/frame v1.50.23
-	github.com/pitabwire/util v0.3.3
+	github.com/pitabwire/util v0.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
