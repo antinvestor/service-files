@@ -54,6 +54,8 @@ github.com/antinvestor/gomatrix v0.1.4 h1:VAnFZlZJfKRRvZNlYIHjPoPeekPjfpsAtQ6Fap
 github.com/antinvestor/gomatrix v0.1.4/go.mod h1:AWqCA5n5cpLwbde76MeSLBod5Lb4H2rSqvLVNgRCZ0Q=
 github.com/antinvestor/gomatrixserverlib v0.2.4 h1:aYpuqfabDa4nZ8IPJiBEmS+djV7o/aGkUB+iqRlzhTw=
 github.com/antinvestor/gomatrixserverlib v0.2.4/go.mod h1:JbClRgJjcVUhPD09Hd7uAK1SsplEgdCXLtzfmu6KbXY=
+github.com/antinvestor/gomatrixserverlib v0.2.5 h1:7C/XmjKOwS3ArHO5QcJlMv/slvEC7/Igj/EnAYBIfkQ=
+github.com/antinvestor/gomatrixserverlib v0.2.5/go.mod h1:RcCejoo5Yqumk+HfUOeA/QhsHxpLsD7Klgdnieh1KPk=
 github.com/aws/aws-sdk-go v1.55.7 h1:UJrkFq7es5CShfBwlWAC8DA077vp8PyVbQd3lqLiztE=
 github.com/aws/aws-sdk-go v1.55.7/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
 github.com/aws/aws-sdk-go-v2 v1.36.5 h1:0OF9RiEMEdDdZEMqF9MRjevyxAQcf6gY+E7vwBILFj0=
@@ -311,6 +313,8 @@ github.com/pitabwire/util v0.3.2 h1:krg4nkyf1MfoMXo7etLNAg+tE861OJ+kLut3keE9Ok0=
 github.com/pitabwire/util v0.3.2/go.mod h1:LjCZEToLP6DaOkiMBmRn0uWxFEDmPkrO9kKxY1/f4pI=
 github.com/pitabwire/util v0.3.3 h1:5VF8NqRy9YNipInmYMP75z+E2UAKwKTBpYY102x4bMs=
 github.com/pitabwire/util v0.3.3/go.mod h1:LjCZEToLP6DaOkiMBmRn0uWxFEDmPkrO9kKxY1/f4pI=
+github.com/pitabwire/util v0.3.4 h1:OOsNVgJlqrC4EFNBqXsTwi/GbvENKv0BuK8ZK1E+F/4=
+github.com/pitabwire/util v0.3.4/go.mod h1:LjCZEToLP6DaOkiMBmRn0uWxFEDmPkrO9kKxY1/f4pI=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 h1:GFCKgmp0tecUJ0sJuv4pzYCqS9+RGSn52M3FUwPs+uo=
