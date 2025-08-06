@@ -2,7 +2,7 @@ module github.com/antinvestor/service-files
 
 go 1.24.0
 
-toolchain go1.24.5
+toolchain go1.24.6
 
 require (
 	github.com/antinvestor/apis/go/common v1.37.1
