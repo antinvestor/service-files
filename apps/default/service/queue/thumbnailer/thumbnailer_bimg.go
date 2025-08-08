@@ -25,7 +25,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	log "github.com/sirupsen/logrus"
+	"github.com/pitabwire/util"
 	"gopkg.in/h2non/bimg.v1"
 )
 
@@ -38,7 +38,7 @@ func GenerateThumbnails(
 	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
 	maxThumbnailGenerators int,
 	db storage.Database,
-	logger *log.Entry,
+	logger *util.LogEntry,
 ) (busy bool, errorReturn error) {
 	buffer, err := bimg.Read(string(src))
 	if err != nil {

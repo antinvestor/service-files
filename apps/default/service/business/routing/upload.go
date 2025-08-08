@@ -26,7 +26,7 @@ import (
 	"github.com/antinvestor/gomatrixserverlib"
 	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
-	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
+	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/frame"
@@ -52,7 +52,7 @@ type uploadResponse struct {
 // This implementation supports a configurable maximum file size limit in bytes. If a user tries to upload more than this, they will receive an error that their upload is too large.
 // Uploaded files are processed piece-wise to avoid DoS attacks which would starve the server of memory.
 // TODO: We should time out requests if they have not received any data within a configured timeout period.
-func Upload(req *http.Request, service *frame.Service, db storage2.Database, provider storage2.Provider) util.JSONResponse {
+func Upload(req *http.Request, service *frame.Service, db storage.Database, provider storage.Provider) util.JSONResponse {
 
 	ctx := req.Context()
 	authClaims := frame.ClaimsFromContext(ctx)
@@ -136,8 +136,8 @@ func (r *uploadRequest) doUpload(
 	ownerID types.OwnerID,
 	reqReader io.Reader,
 	cfg *config.FilesConfig,
-	db storage2.Database,
-	provider storage2.Provider,
+	db storage.Database,
+	provider storage.Provider,
 ) *util.JSONResponse {
 
 	r.Logger.With(
@@ -276,10 +276,10 @@ func (r *uploadRequest) storeFileAndMetadata(
 	ctx context.Context,
 	tmpDir types.Path,
 	absBasePath config.Path,
-	db storage2.Database,
-	provider storage2.Provider,
+	db storage.Database,
+	provider storage.Provider,
 ) error {
-	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, r.Logger)
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, r.Logger)
 	if err != nil {
 		return err
 	}

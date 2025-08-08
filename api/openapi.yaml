@@ -49,7 +49,7 @@ paths:
         "403":
           description: |-
             The user does not have permission to upload the content. Some reasons for this error include:
-            
+
             - The server does not permit the file type.
             - The user has reached a quota for uploaded content.
           content:
@@ -645,6 +645,127 @@ paths:
           $ref: '#/components/responses/rateLimited'
       tags:
         - Media
+  /media/search:
+    get:
+      summary: Search for media files
+      operationId: searchMedia
+      security:
+        - accessTokenBearer: [ ]
+      parameters:
+        - name: q
+          in: query
+          description: Search query string
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: Number of results per page (default 20, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: owner_id
+          in: query
+          description: Filter by owner ID
+          required: false
+          schema:
+            type: string
+        - name: parent_id
+          in: query
+          description: Filter by parent media ID
+          required: false
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          description: Filter by creation date (start range)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: Filter by creation date (end range)
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Search results containing media metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - results
+                  - total
+                  - page
+                  - has_more
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaMetadata'
+                    description: Array of media metadata objects matching the search criteria
+                  total:
+                    type: integer
+                    description: Total number of results returned in this page
+                  page:
+                    type: integer
+                    description: Current page number
+                  has_more:
+                    type: boolean
+                    description: Whether there are more results available
+              examples:
+                response:
+                  value: {
+                    "results": [
+                      {
+                        "media_id": "AQwafuaFswefuhsfAFAgsw",
+                        "content_type": "image/jpeg",
+                        "file_size_bytes": 102400,
+                        "creation_timestamp": 1640995200,
+                        "upload_name": "example.jpg",
+                        "base64_hash": "aGVsbG8gd29ybGQ",
+                        "owner_id": "@user:example.com"
+                      }
+                    ],
+                    "total": 1,
+                    "page": 0,
+                    "has_more": false
+                  }
+        "400":
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized - missing or invalid access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - Media
 servers:
   - url: "{protocol}://{hostname}{basePath}"
     variables:
@@ -819,3 +940,37 @@ components:
       required: true
       schema:
         type: string
+  schemas:
+    MediaMetadata:
+      type: object
+      properties:
+        media_id:
+          type: string
+          description: The media ID of the file
+        content_type:
+          type: string
+          description: The content type of the file
+        file_size_bytes:
+          type: integer
+          description: The size of the file in bytes
+        creation_timestamp:
+          type: integer
+          description: The timestamp when the file was uploaded
+        upload_name:
+          type: string
+          description: The name of the file when it was uploaded
+        base64_hash:
+          type: string
+          description: The base64 encoded hash of the file
+        owner_id:
+          type: string
+          description: The ID of the user who uploaded the file
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code
+        error:
+          type: string
+          description: The error message

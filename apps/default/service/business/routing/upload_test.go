@@ -11,7 +11,7 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
-	"github.com/antinvestor/service-files/apps/default/service/storage/datastore"
+	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -144,7 +144,7 @@ func (suite *UploadTestSuite) Test_uploadRequest_doUpload() {
 
 				// Get database connection from dependency
 				svc, _ := suite.CreateService(t, dep)
-				db, err := datastore.NewMediaDatabase(svc)
+				db, err := connection.NewMediaDatabase(svc)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				var storageProvider storage.Provider

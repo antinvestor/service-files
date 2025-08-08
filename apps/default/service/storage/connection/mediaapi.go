@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package datastore
+package connection
 
 import (
 	"context"
@@ -21,9 +21,11 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/datastore"
 )
 
 type Database struct {
+	Svc             *frame.Service
 	MediaRepository repository.MediaRepository
 }
 
@@ -55,6 +57,44 @@ func (d *Database) GetMediaMetadataByHash(ctx context.Context, ownerId types.Own
 		return nil, nil
 	}
 	return mediaMetadata.ToApi(), err
+}
+
+func (d *Database) Search(ctx context.Context, query *datastore.SearchQuery) (frame.JobResultPipe[*types.MediaMetadata], error) {
+
+	jobResult := frame.NewJob[*types.MediaMetadata](func(ctx context.Context, result frame.JobResultPipe[*types.MediaMetadata]) error {
+
+		metadataResult, err := d.MediaRepository.Search(ctx, query)
+
+		if err != nil {
+			return err
+		}
+
+		for {
+
+			res, ok := metadataResult.ReadResult(ctx)
+			if !ok {
+				return nil
+			}
+
+			if res.IsError() {
+				return res.Error()
+			}
+
+			for _, mediaMetadata := range res.Item() {
+				err = result.WriteResult(ctx, mediaMetadata.ToApi())
+				if err != nil {
+					return err
+				}
+			}
+		}
+	})
+
+	err := frame.SubmitJob(ctx, d.Svc, jobResult)
+	if err != nil {
+		return nil, err
+	}
+
+	return jobResult, nil
 }
 
 // StoreThumbnail inserts the metadata about the thumbnail into the database.

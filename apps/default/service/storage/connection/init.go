@@ -1,4 +1,4 @@
-package datastore
+package connection
 
 import (
 	"github.com/antinvestor/service-files/apps/default/service/storage"

@@ -1,11 +1,10 @@
-package datastore_test
+package connection_test
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
-	"github.com/antinvestor/service-files/apps/default/service/storage/datastore"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/tests/testdef"
@@ -45,7 +44,7 @@ func (suite *DatastoreTestSuite) TestMediaRepository() {
 				ctx := context.Background()
 
 				svc, _ := suite.CreateService(t, dep)
-				db, err := datastore.NewMediaDatabase(svc)
+				db, err := connection.NewMediaDatabase(svc)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				err = db.StoreMediaMetadata(ctx, tc.metadata)
@@ -119,7 +118,7 @@ func (suite *DatastoreTestSuite) TestThumbnailsStorage() {
 				ctx := context.Background()
 
 				svc, _ := suite.CreateService(t, dep)
-				db, err := datastore.NewMediaDatabase(svc)
+				db, err := connection.NewMediaDatabase(svc)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				for _, thumbnail := range tc.thumbnails {

@@ -7,7 +7,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/business/routing"
 	events3 "github.com/antinvestor/service-files/apps/default/service/events"
 	"github.com/antinvestor/service-files/apps/default/service/queue"
-	"github.com/antinvestor/service-files/apps/default/service/storage/datastore"
+	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/gorilla/handlers"
@@ -47,7 +47,7 @@ func main() {
 		jwtAudience = serviceName
 	}
 
-	metadataStore, err := datastore.NewMediaDatabase(svc)
+	metadataStore, err := connection.NewMediaDatabase(svc)
 	if err != nil {
 		log.WithError(err).Fatal("main -- failed to setup storage")
 	}

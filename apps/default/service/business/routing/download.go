@@ -33,7 +33,7 @@ import (
 	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/queue/thumbnailer"
-	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
+	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/util"
@@ -106,8 +106,8 @@ func Download(
 	req *http.Request,
 	mediaID types.MediaID,
 	cfg *config.FilesConfig,
-	db storage2.Database,
-	provider storage2.Provider,
+	db storage.Database,
+	provider storage.Provider,
 	isThumbnailRequest bool,
 	customFilename string,
 ) {
@@ -232,8 +232,8 @@ func (r *downloadRequest) doDownload(
 	ctx context.Context,
 	w http.ResponseWriter,
 	cfg *config.FilesConfig,
-	db storage2.Database,
-	provider storage2.Provider,
+	db storage.Database,
+	provider storage.Provider,
 ) (*types.MediaMetadata, error) {
 	// check if we have a record of the media in our database
 	mediaMetadata, err := db.GetMediaMetadata(ctx, r.MediaMetadata.MediaID)
@@ -259,8 +259,8 @@ func (r *downloadRequest) respondFromProvider(
 	ctx context.Context,
 	w http.ResponseWriter,
 	absBasePath config.Path,
-	db storage2.Database,
-	provider storage2.Provider,
+	db storage.Database,
+	provider storage.Provider,
 	thumbnailSizes []config.ThumbnailSize,
 ) (*types.MediaMetadata, error) {
 
@@ -424,8 +424,8 @@ func (r *downloadRequest) addDownloadFilenameToHeaders(
 // If no thumbnail was found then returns nil, nil, nil
 func (r *downloadRequest) getThumbnailMetadata(
 	ctx context.Context,
-	db storage2.Database,
-	_ storage2.Provider,
+	db storage.Database,
+	_ storage.Provider,
 	_ *types.MediaMetadata,
 	thumbnailSizes []config.ThumbnailSize,
 ) (*types.ThumbnailMetadata, error) {

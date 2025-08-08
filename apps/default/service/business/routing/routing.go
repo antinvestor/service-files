@@ -15,16 +15,19 @@
 package routing
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
 	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/gorilla/mux"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/util"
 )
@@ -34,6 +37,137 @@ const (
 	PublicMediaPathPrefix  = "/_matrix/media/"
 	PublicStaticPath       = "/_matrix/static/"
 )
+
+// Route represents a single route with pattern and handler
+type Route struct {
+	Pattern string
+	Handler http.Handler
+	Methods []string
+	Regex   *regexp.Regexp
+}
+
+// Router is a custom router that replaces mux functionality
+type Router struct {
+	routes []Route
+	prefix string
+}
+
+// NewRouter creates a new custom router
+func NewRouter() *Router {
+	return &Router{
+		routes: make([]Route, 0),
+	}
+}
+
+// PathPrefix creates a subrouter with the given prefix
+func (r *Router) PathPrefix(prefix string) *Router {
+	return &Router{
+		routes: make([]Route, 0),
+		prefix: r.prefix + prefix,
+	}
+}
+
+// Handle adds a route with the given pattern and handler
+func (r *Router) Handle(pattern string, handler http.Handler) *RouteBuilder {
+	fullPattern := r.prefix + pattern
+	route := Route{
+		Pattern: fullPattern,
+		Handler: handler,
+		Methods: []string{},
+	}
+	
+	// Convert pattern to regex for path variable extraction
+	regexPattern := regexp.QuoteMeta(fullPattern)
+	regexPattern = strings.ReplaceAll(regexPattern, "\\{serverName\\}", "([^/]+)")
+	regexPattern = strings.ReplaceAll(regexPattern, "\\{mediaId\\}", "([^/]+)")
+	regexPattern = strings.ReplaceAll(regexPattern, "\\{downloadName\\}", "([^/]+)")
+	regexPattern = "^" + regexPattern + "$"
+	
+	route.Regex = regexp.MustCompile(regexPattern)
+	r.routes = append(r.routes, route)
+	
+	return &RouteBuilder{router: r, routeIndex: len(r.routes) - 1}
+}
+
+// RouteBuilder allows method chaining for route configuration
+type RouteBuilder struct {
+	router     *Router
+	routeIndex int
+}
+
+// Methods sets the allowed HTTP methods for the route
+func (rb *RouteBuilder) Methods(methods ...string) *RouteBuilder {
+	rb.router.routes[rb.routeIndex].Methods = methods
+	return rb
+}
+
+// ServeHTTP implements http.Handler interface
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	path := req.URL.Path
+	method := req.Method
+	
+	for _, route := range r.routes {
+		if route.Regex.MatchString(path) {
+			// Check if method is allowed
+			if len(route.Methods) > 0 {
+				methodAllowed := false
+				for _, allowedMethod := range route.Methods {
+					if method == allowedMethod {
+						methodAllowed = true
+						break
+					}
+				}
+				if !methodAllowed {
+					NotAllowedHandler.ServeHTTP(w, req)
+					return
+				}
+			}
+			
+			// Extract path variables and add to request context
+			matches := route.Regex.FindStringSubmatch(path)
+			if len(matches) > 1 {
+				vars := make(map[string]string)
+				
+				// Map matches to variable names based on the pattern
+				if strings.Contains(route.Pattern, "{serverName}") && strings.Contains(route.Pattern, "{mediaId}") {
+					if strings.Contains(route.Pattern, "{downloadName}") {
+						// Pattern: /download/{serverName}/{mediaId}/{downloadName}
+						if len(matches) >= 4 {
+							vars["serverName"] = matches[1]
+							vars["mediaId"] = matches[2]
+							vars["downloadName"] = matches[3]
+						}
+					} else {
+						// Pattern: /download/{serverName}/{mediaId} or /thumbnail/{serverName}/{mediaId}
+						if len(matches) >= 3 {
+							vars["serverName"] = matches[1]
+							vars["mediaId"] = matches[2]
+						}
+					}
+				}
+				
+				ctx := context.WithValue(req.Context(), "pathVars", vars)
+				req = req.WithContext(ctx)
+			}
+			
+			route.Handler.ServeHTTP(w, req)
+			return
+		}
+	}
+	
+	// No route found
+	NotFoundCORSHandler.ServeHTTP(w, req)
+}
+
+// GetPathVars extracts path variables from request context (replaces mux.Vars)
+func GetPathVars(req *http.Request) map[string]string {
+	if vars := req.Context().Value("pathVars"); vars != nil {
+		if pathVars, ok := vars.(map[string]string); ok {
+			return pathVars
+		}
+	}
+	return make(map[string]string)
+}
 
 // configResponse is the response to GET /_matrix/media/r0/config
 // https://matrix.org/docs/spec/client_server/latest#get-matrix-media-r0-config
@@ -50,17 +184,25 @@ func SetupMatrixRoutes(
 	service *frame.Service,
 	db storage2.Database,
 	provider storage2.Provider,
-) *mux.Router {
+) *Router {
 
 	cfg := service.Config().(*config.FilesConfig)
 
-	matrixPathsRouter := mux.NewRouter().SkipClean(true)
-	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix).Subrouter().UseEncodedPath()
+	matrixPathsRouter := NewRouter()
+	
+	// Add OpenAPI spec route at root
+	matrixPathsRouter.Handle("/", http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
+	
+	// Add search endpoint at /media/search
+	searchHandler := CreateHandler(
+		func(req *http.Request) util.JSONResponse {
+			return Search(req, service, db)
+		})
+	matrixPathsRouter.Handle("/media/search", searchHandler).Methods(http.MethodGet, http.MethodOptions)
+	
+	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix)
 
-	ClientRouters.NotFoundHandler = NotFoundCORSHandler
-	ClientRouters.MethodNotAllowedHandler = NotAllowedHandler
-
-	v1mux := ClientRouters.PathPrefix("/v1/media/").Subrouter()
+	v1mux := ClientRouters.PathPrefix("/v1/media/")
 
 	uploadHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
@@ -94,6 +236,46 @@ func SetupMatrixRoutes(
 	return matrixPathsRouter
 }
 
+// ServeOpenAPISpec serves the OpenAPI specification file
+func ServeOpenAPISpec(w http.ResponseWriter, req *http.Request) {
+	// Set CORS headers
+	util.SetCORSHeaders(w)
+	
+	// Handle OPTIONS request
+	if req.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	
+	// Get the current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		errorResponse, _ := json.Marshal(spec.InternalServerError{})
+		w.Write(errorResponse)
+		return
+	}
+	
+	// Construct path to openapi.yaml
+	openAPIPath := filepath.Join(wd, "api", "openapi.yaml")
+	
+	// Read the OpenAPI spec file
+	content, err := os.ReadFile(openAPIPath)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		errorResponse, _ := json.Marshal(spec.NotFound("OpenAPI specification not found"))
+		w.Write(errorResponse)
+		return
+	}
+	
+	// Set content type and write the YAML content
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.WriteHeader(http.StatusOK)
+	w.Write(content)
+}
+
 func makeDownloadAPI(
 	name string,
 	cfg *config.FilesConfig,
@@ -110,7 +292,7 @@ func makeDownloadAPI(
 		// Content-Type will be overridden in case of returning file data, else we respond with JSON-formatted errors
 		w.Header().Set("Content-Type", "application/json")
 
-		vars, _ := URLDecodeMapValues(mux.Vars(req))
+		vars, _ := URLDecodeMapValues(GetPathVars(req))
 		_ = spec.ServerName(vars["serverName"])
 
 		// CacheOptions media for at least one day.

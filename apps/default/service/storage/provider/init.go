@@ -8,8 +8,9 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/gcs"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/local"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/s3"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/util"
 )
+
 
 func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (storage.Provider, error) {
 	var provider storage.Provider
@@ -25,7 +26,7 @@ func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (storag
 
 	default:
 
-		provider = local.NewProvider("LOCAL", frame.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"), frame.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"))
+		provider = local.NewProvider("LOCAL", util.GetEnv("LOCAL_PRIVATE_DIRECTORY", "/tmp/private"), util.GetEnv("LOCAL_PUBLIC_DIRECTORY", "/tmp/public"))
 
 	}
 
