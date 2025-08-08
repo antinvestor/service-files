@@ -36,6 +36,7 @@ const (
 	PublicClientPathPrefix = "/_matrix/client/"
 	PublicMediaPathPrefix  = "/_matrix/media/"
 	PublicStaticPath       = "/_matrix/static/"
+	PublicAPISpecPath      = "/swagger.json"
 )
 
 type ctxValueString string
@@ -193,7 +194,7 @@ func SetupMatrixRoutes(
 	matrixPathsRouter := NewRouter()
 
 	// Add OpenAPI spec route at root
-	matrixPathsRouter.Handle("/", http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
+	matrixPathsRouter.Handle(PublicAPISpecPath, http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
 
 	// Add search endpoint at /media/search
 	searchHandler := CreateHandler(
