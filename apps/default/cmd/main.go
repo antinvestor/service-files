@@ -52,13 +52,17 @@ func main() {
 		log.WithError(err).Fatal("main -- failed to setup storage")
 	}
 
+	publicRouter := routing.SetupApiSpecRoute(svc)
+
 	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider)
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
 		svc.AuthenticationMiddleware(router, jwtAudience, cfg.Oauth2JwtVerifyIssuer))
 
-	defaultServer := frame.WithHTTPHandler(authServiceHandlers)
+	publicRouter.Handle("/", authServiceHandlers)
+
+	defaultServer := frame.WithHTTPHandler(publicRouter)
 	serviceOptions = append(serviceOptions, defaultServer)
 
 	events := frame.WithRegisterEvents(

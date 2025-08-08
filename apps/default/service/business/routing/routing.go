@@ -178,6 +178,12 @@ type configResponse struct {
 	UploadSize *config.FileSizeBytes `json:"m.upload.size,omitempty"`
 }
 
+func SetupApiSpecRoute(service *frame.Service) *Router {
+	apiSpecRoute := NewRouter()
+	apiSpecRoute.Handle(PublicAPISpecPath, http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
+	return apiSpecRoute
+}
+
 // SetupMatrixRoutes registers the media API HTTP handlers
 //
 // Due to Setup being used to call many other functions, a gocyclo nolint is
