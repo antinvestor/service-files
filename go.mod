@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.5.2
 	gocloud.dev v0.43.0
-	golang.org/x/image v0.29.0
+	golang.org/x/image v0.30.0
 	google.golang.org/grpc v1.74.2
 	gopkg.in/h2non/bimg.v1 v1.1.9
 	gorm.io/gorm v1.30.1
@@ -182,7 +182,7 @@ require (
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.242.0 // indirect
