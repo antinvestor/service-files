@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/tests/testdef"

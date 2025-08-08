@@ -11,7 +11,6 @@ import (
 	"github.com/pitabwire/util"
 )
 
-
 func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (storage.Provider, error) {
 	var provider storage.Provider
 	switch config.StorageProvider {

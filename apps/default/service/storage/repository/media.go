@@ -8,7 +8,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/datastore"
+	"github.com/pitabwire/frame/framedata"
 )
 
 type MediaRepository interface {
@@ -17,7 +17,7 @@ type MediaRepository interface {
 	GetByParentID(ctx context.Context, parentId types.MediaID) ([]*models.MediaMetadata, error)
 	GetByParentIDAndThumbnailSize(ctx context.Context, parentId types.MediaID, thumbnailSize *types.ThumbnailSize) (*models.MediaMetadata, error)
 	GetByOwnerID(ctx context.Context, ownerId types.OwnerID, query string, page int32, limit int32) ([]*models.MediaMetadata, error)
-	Search(ctx context.Context, query *datastore.SearchQuery) (frame.JobResultPipe[[]*models.MediaMetadata], error)
+	Search(ctx context.Context, query *framedata.SearchQuery) (frame.JobResultPipe[[]*models.MediaMetadata], error)
 	Save(ctx context.Context, file *models.MediaMetadata) error
 	Delete(ctx context.Context, id types.MediaID) error
 }
@@ -86,10 +86,12 @@ func (mr *mediaRepository) GetByOwnerID(ctx context.Context, ownerId types.Owner
 	tx := mr.service.DB(ctx, true).Where(" owner_id = ? ", string(ownerId))
 
 	if query != "" {
-		tx = tx.Where("name = ?", query)
+		tx = tx.Where("name LIKE ?", "%"+query+"%")
 	}
 
-	tx = tx.Offset(int(page))
+	// Use 0-based pagination: page 0 is the first page
+	offset := page * limit
+	tx = tx.Offset(int(offset))
 	tx = tx.Limit(int(limit))
 
 	err := tx.Find(&fileList).Error
@@ -102,11 +104,11 @@ func (mr *mediaRepository) GetByOwnerID(ctx context.Context, ownerId types.Owner
 
 func (mr *mediaRepository) Search(
 	ctx context.Context,
-	query *datastore.SearchQuery,
+	query *framedata.SearchQuery,
 ) (frame.JobResultPipe[[]*models.MediaMetadata], error) {
-	return datastore.StableSearch[models.MediaMetadata](ctx, mr.service, query, func(
+	return framedata.StableSearch[models.MediaMetadata](ctx, mr.service, query, func(
 		ctx context.Context,
-		query *datastore.SearchQuery,
+		query *framedata.SearchQuery,
 	) ([]*models.MediaMetadata, error) {
 		var metadataList []*models.MediaMetadata
 

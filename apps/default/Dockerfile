@@ -23,6 +23,7 @@ WORKDIR /
 
 COPY --from=builder /app/binary /files
 COPY --from=builder /app/apps/default/migrations /migrations
+COPY --from=builder /app/apps/default/api /api
 
 # Run the service command by default when the container starts.
 ENTRYPOINT ["/files"]

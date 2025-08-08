@@ -21,7 +21,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/datastore"
+	"github.com/pitabwire/frame/framedata"
 )
 
 type Database struct {
@@ -59,7 +59,7 @@ func (d *Database) GetMediaMetadataByHash(ctx context.Context, ownerId types.Own
 	return mediaMetadata.ToApi(), err
 }
 
-func (d *Database) Search(ctx context.Context, query *datastore.SearchQuery) (frame.JobResultPipe[*types.MediaMetadata], error) {
+func (d *Database) Search(ctx context.Context, query *framedata.SearchQuery) (frame.JobResultPipe[*types.MediaMetadata], error) {
 
 	jobResult := frame.NewJob[*types.MediaMetadata](func(ctx context.Context, result frame.JobResultPipe[*types.MediaMetadata]) error {
 

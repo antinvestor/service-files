@@ -38,6 +38,8 @@ const (
 	PublicStaticPath       = "/_matrix/static/"
 )
 
+type ctxValueString string
+
 // Route represents a single route with pattern and handler
 type Route struct {
 	Pattern string
@@ -75,17 +77,17 @@ func (r *Router) Handle(pattern string, handler http.Handler) *RouteBuilder {
 		Handler: handler,
 		Methods: []string{},
 	}
-	
+
 	// Convert pattern to regex for path variable extraction
 	regexPattern := regexp.QuoteMeta(fullPattern)
 	regexPattern = strings.ReplaceAll(regexPattern, "\\{serverName\\}", "([^/]+)")
 	regexPattern = strings.ReplaceAll(regexPattern, "\\{mediaId\\}", "([^/]+)")
 	regexPattern = strings.ReplaceAll(regexPattern, "\\{downloadName\\}", "([^/]+)")
 	regexPattern = "^" + regexPattern + "$"
-	
+
 	route.Regex = regexp.MustCompile(regexPattern)
 	r.routes = append(r.routes, route)
-	
+
 	return &RouteBuilder{router: r, routeIndex: len(r.routes) - 1}
 }
 
@@ -105,7 +107,7 @@ func (rb *RouteBuilder) Methods(methods ...string) *RouteBuilder {
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	method := req.Method
-	
+
 	for _, route := range r.routes {
 		if route.Regex.MatchString(path) {
 			// Check if method is allowed
@@ -122,12 +124,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					return
 				}
 			}
-			
+
 			// Extract path variables and add to request context
 			matches := route.Regex.FindStringSubmatch(path)
 			if len(matches) > 1 {
 				vars := make(map[string]string)
-				
+
 				// Map matches to variable names based on the pattern
 				if strings.Contains(route.Pattern, "{serverName}") && strings.Contains(route.Pattern, "{mediaId}") {
 					if strings.Contains(route.Pattern, "{downloadName}") {
@@ -145,23 +147,23 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 						}
 					}
 				}
-				
-				ctx := context.WithValue(req.Context(), "pathVars", vars)
+
+				ctx := context.WithValue(req.Context(), ctxValueString("pathVars"), vars)
 				req = req.WithContext(ctx)
 			}
-			
+
 			route.Handler.ServeHTTP(w, req)
 			return
 		}
 	}
-	
+
 	// No route found
 	NotFoundCORSHandler.ServeHTTP(w, req)
 }
 
 // GetPathVars extracts path variables from request context (replaces mux.Vars)
 func GetPathVars(req *http.Request) map[string]string {
-	if vars := req.Context().Value("pathVars"); vars != nil {
+	if vars := req.Context().Value(ctxValueString("pathVars")); vars != nil {
 		if pathVars, ok := vars.(map[string]string); ok {
 			return pathVars
 		}
@@ -189,17 +191,17 @@ func SetupMatrixRoutes(
 	cfg := service.Config().(*config.FilesConfig)
 
 	matrixPathsRouter := NewRouter()
-	
+
 	// Add OpenAPI spec route at root
 	matrixPathsRouter.Handle("/", http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
-	
+
 	// Add search endpoint at /media/search
 	searchHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
 			return Search(req, service, db)
 		})
 	matrixPathsRouter.Handle("/media/search", searchHandler).Methods(http.MethodGet, http.MethodOptions)
-	
+
 	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix)
 
 	v1mux := ClientRouters.PathPrefix("/v1/media/")
@@ -240,40 +242,40 @@ func SetupMatrixRoutes(
 func ServeOpenAPISpec(w http.ResponseWriter, req *http.Request) {
 	// Set CORS headers
 	util.SetCORSHeaders(w)
-	
+
 	// Handle OPTIONS request
 	if req.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	// Get the current working directory
 	wd, err := os.Getwd()
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		errorResponse, _ := json.Marshal(spec.InternalServerError{})
-		w.Write(errorResponse)
+		_, _ = w.Write(errorResponse)
 		return
 	}
-	
+
 	// Construct path to openapi.yaml
 	openAPIPath := filepath.Join(wd, "api", "openapi.yaml")
-	
+
 	// Read the OpenAPI spec file
 	content, err := os.ReadFile(openAPIPath)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		errorResponse, _ := json.Marshal(spec.NotFound("OpenAPI specification not found"))
-		w.Write(errorResponse)
+		_, _ = w.Write(errorResponse)
 		return
 	}
-	
+
 	// Set content type and write the YAML content
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.WriteHeader(http.StatusOK)
-	w.Write(content)
+	_, _ = w.Write(content)
 }
 
 func makeDownloadAPI(

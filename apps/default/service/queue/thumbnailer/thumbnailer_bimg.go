@@ -25,6 +25,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
+	"github.com/containerd/log"
 	"github.com/pitabwire/util"
 	"gopkg.in/h2non/bimg.v1"
 )

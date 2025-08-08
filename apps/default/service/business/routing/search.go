@@ -22,7 +22,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/datastore"
+	"github.com/pitabwire/frame/framedata"
 	"github.com/pitabwire/util"
 )
 
@@ -61,13 +61,14 @@ func Search(
 
 	for k, v := range req.URL.Query() {
 
-		if k == "q" {
+		switch k {
+		case "q":
 			queryStr = v[0]
-		} else if k == "page" {
+		case "page":
 			pageStr = v[0]
-		} else if k == "limit" {
+		case "limit":
 			limitStr = v[0]
-		} else {
+		default:
 
 			searchProperties[k] = v[0]
 		}
@@ -83,18 +84,10 @@ func Search(
 		count = 20
 	}
 
-	query, err := datastore.NewSearchQuery(
-		ctx,
+	query := framedata.NewSearchQuery(
 		queryStr, searchProperties,
 		page, count,
 	)
-	if err != nil {
-		logger.WithError(err).Error("Failed to create search query")
-		return util.JSONResponse{
-			Code: http.StatusInternalServerError,
-			JSON: spec.InternalServerError{},
-		}
-	}
 
 	// Convert models to API types
 	modelResults, err := db.Search(ctx, query)
