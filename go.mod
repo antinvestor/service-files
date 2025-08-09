@@ -3,7 +3,7 @@ module github.com/antinvestor/service-files
 go 1.24.0
 
 require (
-	github.com/antinvestor/apis/go/common v1.37.9
+	github.com/antinvestor/apis/go/common v1.37.10
 	github.com/antinvestor/apis/go/partition v1.37.9
 	github.com/antinvestor/apis/go/profile v1.37.9
 	github.com/antinvestor/gomatrixserverlib v0.2.5
