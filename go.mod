@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/antinvestor/apis/go/common v1.38.0
-	github.com/antinvestor/apis/go/partition v1.37.10
+	github.com/antinvestor/apis/go/partition v1.38.2
 	github.com/antinvestor/apis/go/profile v1.37.10
 	github.com/antinvestor/gomatrixserverlib v0.2.5
 	github.com/aws/aws-sdk-go-v2 v1.37.2
