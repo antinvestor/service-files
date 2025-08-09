@@ -50,6 +50,8 @@ github.com/antinvestor/apis/go/common v1.37.10 h1:3SWhnhYe/5dtzPhoJzg4lxsa/jAQmq
 github.com/antinvestor/apis/go/common v1.37.10/go.mod h1:62XDxXBxRqRBgnA0PjRlNIUqLZJdfZ1xeLbrTlVkRfU=
 github.com/antinvestor/apis/go/partition v1.37.9 h1:XxNiClFxLPs/E0CcrpHqIbUUUKnwc95ICNm4pnBoT0A=
 github.com/antinvestor/apis/go/partition v1.37.9/go.mod h1:ZeXlGgLAu84XDJJfDl8JNkkzmzbYYnp7va59PbuLqCo=
+github.com/antinvestor/apis/go/partition v1.37.10 h1:q5ywqAnlmLlWKwb2A9N8EyW1S9r2BkWvmkmIZkfiaQI=
+github.com/antinvestor/apis/go/partition v1.37.10/go.mod h1:ZeXlGgLAu84XDJJfDl8JNkkzmzbYYnp7va59PbuLqCo=
 github.com/antinvestor/apis/go/profile v1.37.9 h1:zZOeqb327H9+pBGveiT2jBXRTtfeqDfl4npBlmKIs2k=
 github.com/antinvestor/apis/go/profile v1.37.9/go.mod h1:eZg3tInHTU230U6ij/hhQO4N4/vHxkNcSkJMlb1mO20=
 github.com/antinvestor/gomatrix v0.1.4 h1:VAnFZlZJfKRRvZNlYIHjPoPeekPjfpsAtQ6Fapf1c1M=
