@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/antinvestor/apis/go/common v1.37.10
-	github.com/antinvestor/apis/go/partition v1.37.10
+	github.com/antinvestor/apis/go/partition v1.38.0
 	github.com/antinvestor/apis/go/profile v1.37.10
 	github.com/antinvestor/gomatrixserverlib v0.2.5
 	github.com/aws/aws-sdk-go-v2 v1.37.2
@@ -25,7 +25,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250717185734-6c6e0d3c608e.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.7-20250717185734-6c6e0d3c608e.1 // indirect
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.4 // indirect
 	cloud.google.com/go/auth v0.16.3 // indirect
