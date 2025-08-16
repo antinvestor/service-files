@@ -3,8 +3,6 @@
 
 DATABASE_URL = postgres://ant:s3cr3t@localhost:5434/service_files?sslmode=disable
 
-
-SERVICE		?= $(shell basename `go list`)
 VERSION		?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || cat $(PWD)/.version 2> /dev/null || echo v0)
 PACKAGE		?= $(shell go list)
 PACKAGES	?= $(shell go list ./...)

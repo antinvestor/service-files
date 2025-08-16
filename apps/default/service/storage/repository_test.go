@@ -8,7 +8,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame/tests/testdef"
+	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 )
@@ -24,11 +24,11 @@ func TestMediaRepositoryTestSuite(t *testing.T) {
 func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 	testCases := []struct {
 		name     string
-		testFunc func(t *testing.T, dep *testdef.DependancyOption)
+		testFunc func(t *testing.T, dep *definition.DependancyOption)
 	}{
 		{
 			name: "can_create_and_retrieve_media_by_id",
-			testFunc: func(t *testing.T, dep *testdef.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)
@@ -63,7 +63,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 		},
 		{
 			name: "can_retrieve_media_by_hash",
-			testFunc: func(t *testing.T, dep *testdef.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)
@@ -97,7 +97,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 		},
 		{
 			name: "can_delete_media",
-			testFunc: func(t *testing.T, dep *testdef.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)
@@ -138,7 +138,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 		},
 		{
 			name: "returns_error_for_non_existent_media",
-			testFunc: func(t *testing.T, dep *testdef.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)

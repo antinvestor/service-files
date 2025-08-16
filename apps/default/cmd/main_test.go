@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/antinvestor/service-files/internal/tests"
-	"github.com/pitabwire/frame/tests/testdef"
+	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -28,7 +28,7 @@ func (suite *SystemTestSuite) TestSystem() {
 		},
 	}
 
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				// This is a placeholder test that was originally empty

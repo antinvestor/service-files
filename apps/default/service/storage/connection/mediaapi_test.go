@@ -12,7 +12,7 @@ import (
 	"github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/framedata"
-	"github.com/pitabwire/frame/tests/testdef"
+	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -26,8 +26,9 @@ func TestConnectionTestSuite(t *testing.T) {
 	suite.Run(t, new(ConnectionTestSuite))
 }
 
-func (suite *ConnectionTestSuite) createService(t *testing.T, dep *testdef.DependancyOption) *frame.Service {
-	t.Setenv("OTEL_TRACES_EXPORTER", "none")
+func (suite *ConnectionTestSuite) createService(t *testing.T, dep *definition.DependancyOption) *frame.Service {
+
+	ctx := t.Context()
 	profileConfig, err := frame.ConfigFromEnv[config.FilesConfig]()
 	require.NoError(t, err)
 
@@ -35,19 +36,19 @@ func (suite *ConnectionTestSuite) createService(t *testing.T, dep *testdef.Depen
 	profileConfig.RunServiceSecurely = false
 	profileConfig.ServerPort = ""
 
-	for _, res := range dep.Database() {
-		testDS, cleanup, err0 := res.GetRandomisedDS(t.Context(), dep.Prefix())
+	for _, res := range dep.Database(ctx) {
+		testDS, cleanup, err0 := res.GetRandomisedDS(ctx, dep.Prefix())
 		require.NoError(t, err0)
 
 		t.Cleanup(func() {
-			cleanup(t.Context())
+			cleanup(ctx)
 		})
 
 		profileConfig.DatabasePrimaryURL = []string{testDS.String()}
 		profileConfig.DatabaseReplicaURL = []string{testDS.String()}
 	}
 
-	ctx, svc := frame.NewServiceWithContext(t.Context(), "connection tests",
+	ctx, svc := frame.NewServiceWithContext(ctx, "connection tests",
 		frame.WithConfig(&profileConfig),
 		frame.WithDatastore(),
 		frame.WithNoopDriver())
@@ -64,7 +65,7 @@ func (suite *ConnectionTestSuite) createService(t *testing.T, dep *testdef.Depen
 }
 
 func (suite *ConnectionTestSuite) TestStoreMediaMetadata() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -141,7 +142,7 @@ func (suite *ConnectionTestSuite) TestStoreMediaMetadata() {
 }
 
 func (suite *ConnectionTestSuite) TestGetMediaMetadata() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -208,7 +209,7 @@ func (suite *ConnectionTestSuite) TestGetMediaMetadata() {
 }
 
 func (suite *ConnectionTestSuite) TestGetMediaMetadataByHash() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -284,7 +285,7 @@ func (suite *ConnectionTestSuite) TestGetMediaMetadataByHash() {
 }
 
 func (suite *ConnectionTestSuite) TestSearch() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -384,7 +385,7 @@ func (suite *ConnectionTestSuite) TestSearch() {
 }
 
 func (suite *ConnectionTestSuite) TestStoreThumbnail() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -448,7 +449,7 @@ func (suite *ConnectionTestSuite) TestStoreThumbnail() {
 }
 
 func (suite *ConnectionTestSuite) TestGetThumbnail() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -541,7 +542,7 @@ func (suite *ConnectionTestSuite) TestGetThumbnail() {
 }
 
 func (suite *ConnectionTestSuite) TestGetThumbnails() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -637,7 +638,7 @@ func (suite *ConnectionTestSuite) TestGetThumbnails() {
 }
 
 func (suite *ConnectionTestSuite) TestNewMediaDatabase() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		svc := suite.createService(t, dep)
 
 		testCases := []struct {

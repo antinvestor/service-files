@@ -8,7 +8,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/local"
 	"github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/tests/testdef"
+	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -33,7 +33,7 @@ func (suite *ProviderTestSuite) TestGetStorageProvider() {
 		},
 	}
 
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *testdef.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := context.Background()
