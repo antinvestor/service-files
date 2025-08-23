@@ -17,7 +17,7 @@ require (
 	github.com/pitabwire/util v0.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
-	go.uber.org/mock v0.5.2
+	go.uber.org/mock v0.6.0
 	gocloud.dev v0.43.0
 	golang.org/x/image v0.30.0
 	gopkg.in/h2non/bimg.v1 v1.1.9
