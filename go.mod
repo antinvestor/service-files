@@ -13,7 +13,7 @@ require (
 	github.com/containerd/log v0.1.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.55.7
+	github.com/pitabwire/frame v1.55.9
 	github.com/pitabwire/util v0.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
@@ -170,8 +170,8 @@ require (
 	google.golang.org/genproto v0.0.0-20250715232539-7130f93afb79 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
-	google.golang.org/grpc v1.74.2 // indirect
-	google.golang.org/protobuf v1.36.7 // indirect
+	google.golang.org/grpc v1.75.0 // indirect
+	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
