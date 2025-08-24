@@ -16,7 +16,7 @@ require (
 	github.com/pitabwire/frame v1.55.9
 	github.com/pitabwire/util v0.3.4
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	go.uber.org/mock v0.6.0
 	gocloud.dev v0.43.0
 	golang.org/x/image v0.30.0
