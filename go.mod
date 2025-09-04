@@ -21,7 +21,7 @@ require (
 	gocloud.dev v0.43.0
 	golang.org/x/image v0.30.0
 	gopkg.in/h2non/bimg.v1 v1.1.9
-	gorm.io/gorm v1.30.2
+	gorm.io/gorm v1.30.3
 )
 
 require (
