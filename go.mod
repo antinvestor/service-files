@@ -6,7 +6,7 @@ require (
 	github.com/antinvestor/apis/go/common v1.38.0
 	github.com/antinvestor/apis/go/partition v1.39.0
 	github.com/antinvestor/apis/go/profile v1.39.0
-	github.com/antinvestor/gomatrixserverlib v0.2.5
+	github.com/antinvestor/gomatrixserverlib v0.2.6
 	github.com/aws/aws-sdk-go-v2 v1.38.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.10
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.87.3
