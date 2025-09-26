@@ -2,7 +2,7 @@
 services:
   files_datastore:
     hostname: files_datastore
-    image: postgres:17
+    image: postgres:18
     restart: always
     environment:
       POSTGRES_PASSWORD: s3cr3t
