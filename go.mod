@@ -9,7 +9,7 @@ require (
 	github.com/antinvestor/gomatrixserverlib v0.2.6
 	github.com/aws/aws-sdk-go-v2 v1.39.4
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.19
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.88.7
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.89.0
 	github.com/containerd/log v0.1.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
