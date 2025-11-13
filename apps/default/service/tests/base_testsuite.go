@@ -9,6 +9,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	internaltests "github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/require"
 )
@@ -30,22 +31,21 @@ func (bs *BaseTestSuite) CreateService(
 	profileConfig.RunServiceSecurely = false
 	profileConfig.ServerPort = ""
 
-	for _, res := range depOpts.Database(ctx) {
-		testDS, cleanup, err0 := res.GetRandomisedDS(ctx, depOpts.Prefix())
-		require.NoError(t, err0)
+	res := depOpts.ByIsDatabase(ctx)
+	testDS, cleanup, err0 := res.GetRandomisedDS(ctx, depOpts.Prefix())
+	require.NoError(t, err0)
 
-		t.Cleanup(func() {
-			cleanup(ctx)
-		})
+	t.Cleanup(func() {
+		cleanup(ctx)
+	})
 
-		profileConfig.DatabasePrimaryURL = []string{testDS.String()}
-		profileConfig.DatabaseReplicaURL = []string{testDS.String()}
-	}
+	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
+	profileConfig.DatabaseReplicaURL = []string{testDS.String()}
 
 	ctx, svc := frame.NewServiceWithContext(ctx, "profile tests",
 		frame.WithConfig(&profileConfig),
 		frame.WithDatastore(),
-		frame.WithNoopDriver())
+		frametests.WithNoopDriver())
 
 	svc.Init(ctx, frame.WithRegisterEvents(
 		events2.NewAuditSaveHandler(svc),

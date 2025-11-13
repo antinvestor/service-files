@@ -12,6 +12,7 @@ import (
 	"github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/framedata"
+	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,22 +38,21 @@ func (suite *MediaRepositoryTestSuite) createService(t *testing.T, dep *definiti
 	profileConfig.RunServiceSecurely = false
 	profileConfig.ServerPort = ""
 
-	for _, res := range dep.Database(ctx) {
-		testDS, cleanup, err0 := res.GetRandomisedDS(ctx, dep.Prefix())
-		require.NoError(t, err0)
+	res := dep.ByIsDatabase(ctx)
+	testDS, cleanup, err0 := res.GetRandomisedDS(ctx, dep.Prefix())
+	require.NoError(t, err0)
 
-		t.Cleanup(func() {
-			cleanup(ctx)
-		})
+	t.Cleanup(func() {
+		cleanup(ctx)
+	})
 
-		profileConfig.DatabasePrimaryURL = []string{testDS.String()}
-		profileConfig.DatabaseReplicaURL = []string{testDS.String()}
-	}
+	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
+	profileConfig.DatabaseReplicaURL = []string{testDS.String()}
 
 	ctx, svc := frame.NewServiceWithContext(ctx, "repository tests",
 		frame.WithConfig(&profileConfig),
 		frame.WithDatastore(),
-		frame.WithNoopDriver())
+		frametests.WithNoopDriver())
 
 	svc.Init(ctx)
 

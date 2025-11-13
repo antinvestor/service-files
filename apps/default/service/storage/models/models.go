@@ -1,8 +1,6 @@
 package models
 
 import (
-	"strconv"
-
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame"
 )
@@ -42,19 +40,18 @@ func (mm *MediaMetadata) ToApi() *types.MediaMetadata {
 	}
 
 	if mm.ParentID != "" {
-		props := frame.DBPropertiesToMap(mm.Properties)
 		tmm.ParentID = types.MediaID(mm.ParentID)
 
 		h := 0
-		h, _ = strconv.Atoi(props["h"])
+		h = int(mm.Properties.GetFloat("h"))
 
 		w := 0
-		w, _ = strconv.Atoi(props["w"])
+		w = int(mm.Properties.GetFloat("w"))
 
 		tmm.ThumbnailSize = &types.ThumbnailSize{
 			Width:        w,
 			Height:       h,
-			ResizeMethod: props["m"],
+			ResizeMethod: mm.Properties.GetString("m"),
 		}
 	}
 
@@ -74,13 +71,9 @@ func (mm *MediaMetadata) Fill(tmm *types.MediaMetadata) {
 
 	if tmm.ThumbnailSize != nil {
 
-		props := frame.DBPropertiesToMap(mm.Properties)
-
-		props["h"] = strconv.Itoa(tmm.ThumbnailSize.Height)
-		props["w"] = strconv.Itoa(tmm.ThumbnailSize.Width)
-		props["m"] = tmm.ThumbnailSize.ResizeMethod
-
-		mm.Properties = frame.DBPropertiesFromMap(props)
+		mm.Properties["h"] = tmm.ThumbnailSize.Height
+		mm.Properties["w"] = tmm.ThumbnailSize.Width
+		mm.Properties["m"] = tmm.ThumbnailSize.ResizeMethod
 	}
 
 }
