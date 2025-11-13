@@ -11,6 +11,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/data"
 	"github.com/pitabwire/frame/framedata"
 	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
@@ -27,7 +28,7 @@ func TestMediaRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, new(MediaRepositoryTestSuite))
 }
 
-func (suite *MediaRepositoryTestSuite) createService(t *testing.T, dep *definition.DependancyOption) *frame.Service {
+func (suite *MediaRepositoryTestSuite) createService(t *testing.T, dep *definition.DependencyOption) *frame.Service {
 
 	ctx := t.Context()
 	t.Setenv("OTEL_TRACES_EXPORTER", "none")
@@ -66,7 +67,7 @@ func (suite *MediaRepositoryTestSuite) createService(t *testing.T, dep *definiti
 }
 
 func (suite *MediaRepositoryTestSuite) TestSave() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -92,7 +93,7 @@ func (suite *MediaRepositoryTestSuite) TestSave() {
 					Hash:       "test-hash-123",
 					BucketName: "test-bucket",
 					Provider:   "local",
-					Properties: frame.JSONMap{},
+					Properties: data.JSONMap{},
 				},
 				wantErr: false,
 			},
@@ -110,7 +111,7 @@ func (suite *MediaRepositoryTestSuite) TestSave() {
 					Hash:       "thumbnail-hash-456",
 					BucketName: "test-bucket",
 					Provider:   "local",
-					Properties: frame.JSONMap{"width": 100, "height": 100},
+					Properties: data.JSONMap{"width": 100, "height": 100},
 				},
 				wantErr: false,
 			},
@@ -131,7 +132,7 @@ func (suite *MediaRepositoryTestSuite) TestSave() {
 }
 
 func (suite *MediaRepositoryTestSuite) TestGetByID() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -149,7 +150,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByID() {
 			Hash:       "get-test-hash",
 			BucketName: "test-bucket",
 			Provider:   "local",
-			Properties: frame.JSONMap{},
+			Properties: data.JSONMap{},
 		}
 		err := repo.Save(ctx, testMedia)
 		assert.NoError(t, err)
@@ -190,7 +191,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByID() {
 }
 
 func (suite *MediaRepositoryTestSuite) TestGetByHash() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -208,7 +209,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByHash() {
 			Hash:       "unique-hash-123",
 			BucketName: "test-bucket",
 			Provider:   "local",
-			Properties: frame.JSONMap{},
+			Properties: data.JSONMap{},
 		}
 		err := repo.Save(ctx, testMedia)
 		assert.NoError(t, err)
@@ -257,7 +258,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByHash() {
 }
 
 func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -278,7 +279,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 				Hash:       "hash1",
 				BucketName: "test-bucket",
 				Provider:   "local",
-				Properties: frame.JSONMap{},
+				Properties: data.JSONMap{},
 			},
 			{
 				OwnerID:    ownerID,
@@ -290,7 +291,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 				Hash:       "hash2",
 				BucketName: "test-bucket",
 				Provider:   "local",
-				Properties: frame.JSONMap{},
+				Properties: data.JSONMap{},
 			},
 		}
 
@@ -364,7 +365,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 }
 
 func (suite *MediaRepositoryTestSuite) TestSearch() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -384,7 +385,7 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 			Hash:       "search-hash",
 			BucketName: "test-bucket",
 			Provider:   "local",
-			Properties: frame.JSONMap{"category": "photos", "tags": "vacation"},
+			Properties: data.JSONMap{"category": "photos", "tags": "vacation"},
 		}
 		err := repo.Save(ctx, testMedia)
 		assert.NoError(t, err)
@@ -450,7 +451,7 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 }
 
 func (suite *MediaRepositoryTestSuite) TestDelete() {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
 		svc := suite.createService(t, dep)
@@ -468,7 +469,7 @@ func (suite *MediaRepositoryTestSuite) TestDelete() {
 			Hash:       "delete-hash",
 			BucketName: "test-bucket",
 			Provider:   "local",
-			Properties: frame.JSONMap{},
+			Properties: data.JSONMap{},
 		}
 		err := repo.Save(ctx, testMedia)
 		assert.NoError(t, err)

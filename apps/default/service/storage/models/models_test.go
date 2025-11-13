@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 		{
 			name: "basic_media_metadata_conversion",
 			model: &MediaMetadata{
-				BaseModel: frame.BaseModel{ID: "test-id-123"},
+				BaseModel: data.BaseModel{ID: "test-id-123"},
 				OwnerID:   "owner-123",
 				Name:      "test-file.jpg",
 				Size:      1024,
@@ -39,7 +39,7 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 		{
 			name: "media_with_parent_and_thumbnail_properties",
 			model: &MediaMetadata{
-				BaseModel: frame.BaseModel{ID: "thumb-id-456"},
+				BaseModel: data.BaseModel{ID: "thumb-id-456"},
 				OwnerID:   "owner-456",
 				ParentID:  "parent-id-789",
 				Name:      "thumbnail.jpg",
@@ -72,7 +72,7 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 		{
 			name: "media_with_invalid_thumbnail_properties",
 			model: &MediaMetadata{
-				BaseModel: frame.BaseModel{ID: "invalid-thumb-id"},
+				BaseModel: data.BaseModel{ID: "invalid-thumb-id"},
 				OwnerID:   "owner-789",
 				ParentID:  "parent-id-abc",
 				Name:      "invalid-thumbnail.jpg",
@@ -105,7 +105,7 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 		{
 			name: "media_without_parent_id",
 			model: &MediaMetadata{
-				BaseModel: frame.BaseModel{ID: "no-parent-id"},
+				BaseModel: data.BaseModel{ID: "no-parent-id"},
 				OwnerID:   "owner-no-parent",
 				Name:      "standalone-file.png",
 				Size:      2048,
@@ -259,7 +259,7 @@ func TestMediaMetadata_Fill(t *testing.T) {
 func TestMediaMetadata_RoundTripConversion(t *testing.T) {
 	// Test that converting from model to API and back preserves data
 	original := &MediaMetadata{
-		BaseModel: frame.BaseModel{ID: "round-trip-id"},
+		BaseModel: data.BaseModel{ID: "round-trip-id"},
 		OwnerID:   "round-trip-owner",
 		ParentID:  "round-trip-parent",
 		Name:      "round-trip.jpg",
@@ -315,7 +315,7 @@ func TestMediaMetadata_EmptyValues(t *testing.T) {
 func TestMediaAudit_StructureAndFields(t *testing.T) {
 	// Test that MediaAudit struct can be created and fields are accessible
 	audit := &MediaAudit{
-		BaseModel: frame.BaseModel{ID: "audit-id-123"},
+		BaseModel: data.BaseModel{ID: "audit-id-123"},
 		FileID:    "file-id-456",
 		AccessID:  "access-id-789",
 		Action:    "download",

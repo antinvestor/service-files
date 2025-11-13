@@ -137,7 +137,7 @@ func (suite *UploadTestSuite) Test_uploadRequest_doUpload() {
 		},
 	}
 
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				ctx := tt.args.ctx

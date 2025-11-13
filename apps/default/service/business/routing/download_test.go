@@ -51,7 +51,7 @@ func (suite *DownloadTestSuite) Test_dispositionFor() {
 		},
 	}
 
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				result := contentDispositionFor(tc.contentType)
@@ -76,7 +76,7 @@ func (suite *DownloadTestSuite) Test_Multipart() {
 		},
 	}
 
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependancyOption) {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := t.Context()

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/antinvestor/service-files/apps/default/config"
+	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/business/routing"
 	events3 "github.com/antinvestor/service-files/apps/default/service/events"
 	"github.com/antinvestor/service-files/apps/default/service/queue"
@@ -12,21 +12,26 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/config"
+	"github.com/pitabwire/frame/security/interceptors/http"
 	"github.com/pitabwire/util"
 )
 
 func main() {
 
-	serviceName := "service_files"
 	ctx := context.Background()
 
-	cfg, err := frame.ConfigFromEnv[config.FilesConfig]()
+	cfg, err := config.LoadWithOIDC[aconfig.FilesConfig](ctx)
 	if err != nil {
 		util.Log(ctx).With("err", err).Error("could not process configs")
 		return
 	}
 
-	ctx, svc := frame.NewService(serviceName, frame.WithConfig(&cfg))
+	if cfg.Name() == "" {
+		cfg.ServerName = "service_files"
+	}
+
+	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithRegisterServerOauth2Client())
 
 	log := svc.Log(ctx)
 
@@ -42,11 +47,6 @@ func main() {
 		log.WithError(err).Fatal("main -- Could not setup or access storage")
 	}
 
-	jwtAudience := cfg.Oauth2JwtVerifyAudience
-	if jwtAudience == "" {
-		jwtAudience = serviceName
-	}
-
 	metadataStore, err := connection.NewMediaDatabase(svc)
 	if err != nil {
 		log.WithError(err).Fatal("main -- failed to setup storage")
@@ -56,9 +56,11 @@ func main() {
 
 	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider)
 
+	sm := svc.SecurityManager()
+
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
-		svc.AuthenticationMiddleware(router, jwtAudience, cfg.Oauth2JwtVerifyIssuer))
+		http.AuthenticationMiddleware(router, sm.GetAuthenticator(ctx)))
 
 	publicRouter.Handle("/", authServiceHandlers)
 
@@ -94,7 +96,7 @@ func main() {
 func handleDatabaseMigration(
 	ctx context.Context,
 	svc *frame.Service,
-	cfg config.FilesConfig,
+	cfg aconfig.FilesConfig,
 	log *util.LogEntry,
 ) bool {
 	serviceOptions := []frame.Option{frame.WithDatastore()}
@@ -102,7 +104,7 @@ func handleDatabaseMigration(
 	if cfg.DoDatabaseMigrate() {
 		svc.Init(ctx, serviceOptions...)
 
-		err := repository.Migrate(ctx, svc, cfg.GetDatabaseMigrationPath())
+		err := repository.Migrate(ctx, svc.DatastoreManager(), cfg.GetDatabaseMigrationPath())
 		if err != nil {
 			log.WithError(err).Fatal("main -- Could not migrate successfully")
 		}

@@ -24,11 +24,11 @@ func TestMediaRepositoryTestSuite(t *testing.T) {
 func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 	testCases := []struct {
 		name     string
-		testFunc func(t *testing.T, dep *definition.DependancyOption)
+		testFunc func(t *testing.T, dep *definition.DependencyOption)
 	}{
 		{
 			name: "can_create_and_retrieve_media_by_id",
-			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)
@@ -48,7 +48,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 				}
 
 				// Save media
-				err := repo.Save(ctx, media)
+				err := repo.Create(ctx, media)
 				suite.Require().NoError(err)
 				suite.Require().NotEmpty(media.GetID())
 
@@ -63,7 +63,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 		},
 		{
 			name: "can_retrieve_media_by_hash",
-			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)
@@ -97,7 +97,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 		},
 		{
 			name: "can_delete_media",
-			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)
@@ -138,7 +138,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 		},
 		{
 			name: "returns_error_for_non_existent_media",
-			testFunc: func(t *testing.T, dep *definition.DependancyOption) {
+			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
 				service, _ := suite.CreateService(t, dep)
 				repo := repository.NewMediaRepository(service)

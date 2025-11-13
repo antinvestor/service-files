@@ -30,6 +30,8 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/data"
+	"github.com/pitabwire/frame/security"
 	"github.com/pitabwire/util"
 )
 
@@ -55,7 +57,7 @@ type uploadResponse struct {
 func Upload(req *http.Request, service *frame.Service, db storage.Database, provider storage.Provider) util.JSONResponse {
 
 	ctx := req.Context()
-	authClaims := frame.ClaimsFromContext(ctx)
+	authClaims := security.ClaimsFromContext(ctx)
 
 	cfg := service.Config().(*config.FilesConfig)
 
@@ -125,7 +127,7 @@ func parseAndValidateRequest(req *http.Request, cfg *config.FilesConfig, ownerID
 
 func (r *uploadRequest) generateMediaID(ctx context.Context) types.MediaID {
 
-	model := frame.BaseModel{}
+	model := data.BaseModel{}
 	model.GenID(ctx)
 
 	return types.MediaID(model.GetID())
@@ -304,7 +306,7 @@ func (r *uploadRequest) storeFileAndMetadata(
 func queueThumbnailGeneration(ctx context.Context, service *frame.Service, mediaID types.MediaID) error {
 	cfg := service.Config().(*config.FilesConfig)
 	thumbnailGenerationQueue := cfg.QueueThumbnailsGenerateName
-	return service.Publish(ctx, thumbnailGenerationQueue, map[string]string{
+	return service.QueueManager().Publish(ctx, thumbnailGenerationQueue, map[string]string{
 		"media_id": string(mediaID),
 	})
 }

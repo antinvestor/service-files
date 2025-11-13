@@ -2,12 +2,12 @@ package models
 
 import (
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/data"
 )
 
 // MediaMetadata Our model responsible for holding uploaded file data
 type MediaMetadata struct {
-	frame.BaseModel
+	data.BaseModel
 
 	OwnerID  string `gorm:"type:TEXT"`
 	ParentID string `gorm:"type:TEXT"`
@@ -24,7 +24,7 @@ type MediaMetadata struct {
 	BucketName string `gorm:"type:TEXT"`
 	Provider   string `gorm:"type:TEXT"`
 
-	Properties frame.JSONMap
+	Properties data.JSONMap
 }
 
 func (mm *MediaMetadata) ToApi() *types.MediaMetadata {
@@ -80,7 +80,7 @@ func (mm *MediaMetadata) Fill(tmm *types.MediaMetadata) {
 
 // MediaAudit model responsible for holding events on a file
 type MediaAudit struct {
-	frame.BaseModel
+	data.BaseModel
 	FileID   string `gorm:"type:TEXT"`
 	AccessID string `gorm:"type:TEXT"`
 	Action   string `gorm:"type:TEXT"`

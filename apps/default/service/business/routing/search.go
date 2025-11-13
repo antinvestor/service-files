@@ -22,7 +22,8 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/framedata"
+	"github.com/pitabwire/frame/data"
+	"github.com/pitabwire/frame/security"
 	"github.com/pitabwire/util"
 )
 
@@ -50,12 +51,13 @@ func Search(
 	limitStr := ""
 
 	ownerID := ""
-	claims := frame.ClaimsFromContext(ctx)
+
+	claims := security.ClaimsFromContext(ctx)
 	if claims != nil {
 		ownerID, _ = claims.GetSubject()
 	}
 
-	searchProperties := map[string]any{
+	andFilters := map[string]any{
 		"owner_id": ownerID,
 	}
 
@@ -70,7 +72,7 @@ func Search(
 			limitStr = v[0]
 		default:
 
-			searchProperties[k] = v[0]
+			andFilters[k] = v[0]
 		}
 	}
 
@@ -84,10 +86,14 @@ func Search(
 		count = 20
 	}
 
-	query := framedata.NewSearchQuery(
-		queryStr, searchProperties,
-		page, count,
-	)
+	orFilters := map[string]any{
+		" name % ? ":                         queryStr,
+		" searchable @@ plainto_tsquery(?) ": queryStr,
+	}
+
+	query := data.NewSearchQuery(data.WithSearchOffset(page), data.WithSearchLimit(count),
+		data.WithSearchFiltersOrByValue(orFilters),
+		data.WithSearchFiltersAndByValue(andFilters))
 
 	// Convert models to API types
 	modelResults, err := db.Search(ctx, query)

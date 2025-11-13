@@ -4,45 +4,24 @@ import (
 	"context"
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/datastore"
+	"github.com/pitabwire/frame/datastore/pool"
+	"github.com/pitabwire/frame/workerpool"
 )
 
 type MediaAuditRepository interface {
-	GetByID(ctx context.Context, id string) (*models.MediaAudit, error)
-	Save(ctx context.Context, file *models.MediaAudit) error
-	Delete(ctx context.Context, id string) error
+	datastore.BaseRepository[*models.MediaAudit]
 }
 
-func NewMediaAuditRepository(service *frame.Service) MediaAuditRepository {
+func NewMediaAuditRepository(ctx context.Context, dbPool pool.Pool, workMan workerpool.Manager) MediaAuditRepository {
 	fileAuditRepo := fileAuditRepository{
-		service: service,
+		BaseRepository: datastore.NewBaseRepository[*models.MediaAudit](
+			ctx, dbPool, workMan, func() *models.MediaAudit { return &models.MediaAudit{} },
+		),
 	}
 	return &fileAuditRepo
 }
 
 type fileAuditRepository struct {
-	service *frame.Service
-}
-
-func (far *fileAuditRepository) GetByID(ctx context.Context, id string) (*models.MediaAudit, error) {
-	file := &models.MediaAudit{}
-	err := far.service.DB(ctx, true).First(file, " id = ?", id).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
-}
-
-func (far *fileAuditRepository) Save(ctx context.Context, file *models.MediaAudit) error {
-	return far.service.DB(ctx, false).Save(file).Error
-}
-
-func (far *fileAuditRepository) Delete(ctx context.Context, id string) error {
-
-	auditFile, err := far.GetByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	return far.service.DB(ctx, false).Delete(auditFile).Error
+	datastore.BaseRepository[*models.MediaAudit]
 }

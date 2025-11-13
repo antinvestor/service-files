@@ -18,8 +18,8 @@ import (
 	"context"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/framedata"
+	"github.com/pitabwire/frame/data"
+	"github.com/pitabwire/frame/workerpool"
 )
 
 type Database interface {
@@ -31,7 +31,7 @@ type MediaRepository interface {
 	StoreMediaMetadata(ctx context.Context, mediaMetadata *types.MediaMetadata) error
 	GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error)
 	GetMediaMetadataByHash(ctx context.Context, ownerID types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error)
-	Search(ctx context.Context, query *framedata.SearchQuery) (frame.JobResultPipe[*types.MediaMetadata], error)
+	Search(ctx context.Context, query *data.SearchQuery) (workerpool.JobResultPipe[*types.MediaMetadata], error)
 }
 
 type ThumbnailsRepository interface {

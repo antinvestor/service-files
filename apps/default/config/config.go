@@ -1,6 +1,8 @@
 package config
 
-import "github.com/pitabwire/frame"
+import (
+	"github.com/pitabwire/frame/config"
+)
 
 // A Path on the filesystem.
 type Path string
@@ -49,7 +51,7 @@ var DefaultMaxFileSizeBytes = FileSizeBytes(10485760)
 //}
 
 type FilesConfig struct {
-	frame.ConfigurationDefault
+	config.ConfigurationDefault
 	NotificationServiceURI string `envDefault:"127.0.0.1:7020" env:"NOTIFICATION_SERVICE_URI"`
 
 	StorageProvider            string `envDefault:"LOCAL" env:"STORAGE_PROVIDER"`

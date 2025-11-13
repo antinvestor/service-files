@@ -20,7 +20,7 @@ type BaseTestSuite struct {
 
 func (bs *BaseTestSuite) CreateService(
 	t *testing.T,
-	depOpts *definition.DependancyOption,
+	depOpts *definition.DependencyOption,
 ) (*frame.Service, context.Context) {
 
 	ctx := t.Context()
