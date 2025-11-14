@@ -40,7 +40,6 @@ import (
 // NOTE: The members come from HTTP request metadata such as headers, query parameters or can be derived from such
 type uploadRequest struct {
 	MediaMetadata *types.MediaMetadata
-	Logger        *util.LogEntry
 }
 
 // uploadResponse defines the format of the JSON response
@@ -115,7 +114,6 @@ func parseAndValidateRequest(req *http.Request, cfg *config.FilesConfig, ownerID
 			UploadName:    types.Filename(url.PathEscape(req.FormValue("filename"))),
 			OwnerID:       ownerID,
 		},
-		Logger: util.Log(req.Context()),
 	}
 
 	if resErr := r.Validate(cfg.MaxFileSizeBytes); resErr != nil {
@@ -142,11 +140,11 @@ func (r *uploadRequest) doUpload(
 	provider storage.Provider,
 ) *util.JSONResponse {
 
-	r.Logger.With(
+	util.Log(ctx).With(
 		"UploadName", r.MediaMetadata.UploadName,
 		"FileSizeBytes", r.MediaMetadata.FileSizeBytes,
 		"ContentType", r.MediaMetadata.ContentType,
-	).Info("Uploading file")
+	).Debug("Uploading file")
 
 	// The file data is hashed and the hash is used as the MediaID. The hash is useful as a
 	// method of deduplicating files to save storage, as well as a way to conduct
@@ -154,14 +152,14 @@ func (r *uploadRequest) doUpload(
 	// Data is truncated to maxFileSizeBytes. Content-Length was reported as 0 < Content-Length <= maxFileSizeBytes so this is OK.
 	//
 	// TODO: This has a bad API shape where you either need to call:
-	//   utils.RemoveDir(tmpDir, r.Logger)
+	//   utils.RemoveDir(tmpDir, util.Log(ctx))
 	// or call:
 	//   r.storeFileAndMetadata(ctx, tmpDir, ...)
 	// before you return from doUpload else we will leak a temp file. We could make this nicer with a `WithTransaction` style of
 	// nested function to guarantee either storage or cleanup.
 	if cfg.MaxFileSizeBytes > 0 {
 		if cfg.MaxFileSizeBytes+1 <= 0 {
-			r.Logger.With(
+			util.Log(ctx).With(
 				"MaxFileSizeBytes", cfg.MaxFileSizeBytes,
 				"Default File SizeBytes", config.DefaultMaxFileSizeBytes,
 			).Warn("Configured MaxFileSizeBytes overflows int64")
@@ -172,7 +170,7 @@ func (r *uploadRequest) doUpload(
 
 	hash, bytesWritten, tmpDir, err := utils.WriteTempFile(ctx, reqReader, cfg.AbsBasePath)
 	if err != nil {
-		r.Logger.WithError(err).With(
+		util.Log(ctx).WithError(err).With(
 			"MaxFileSizeBytes", cfg.MaxFileSizeBytes,
 		).Warn("Error while transferring file")
 		return &util.JSONResponse{
@@ -183,7 +181,7 @@ func (r *uploadRequest) doUpload(
 
 	// Check if temp file size exceeds max file size configuration
 	if cfg.MaxFileSizeBytes > 0 && bytesWritten > types.FileSizeBytes(cfg.MaxFileSizeBytes) {
-		utils.RemoveDir(tmpDir, r.Logger) // delete temp file
+		utils.RemoveDir(tmpDir, util.Log(ctx)) // delete temp file
 		return requestEntityTooLargeJSONResponse(cfg.MaxFileSizeBytes)
 	}
 
@@ -192,8 +190,8 @@ func (r *uploadRequest) doUpload(
 	// add a new metadata entry that refers to the same file.
 	existingMetadata, err := db.GetMediaMetadataByHash(ctx, ownerID, hash)
 	if err != nil {
-		utils.RemoveDir(tmpDir, r.Logger)
-		r.Logger.WithError(err).Error("Error querying the database by hash.")
+		utils.RemoveDir(tmpDir, util.Log(ctx))
+		util.Log(ctx).WithError(err).Error("Error querying the database by hash.")
 		return &util.JSONResponse{
 			Code: http.StatusInternalServerError,
 			JSON: spec.InternalServerError{},
@@ -201,7 +199,7 @@ func (r *uploadRequest) doUpload(
 	}
 	if existingMetadata != nil {
 		// The file already exists, delete the uploaded temporary file.
-		defer utils.RemoveDir(tmpDir, r.Logger)
+		defer utils.RemoveDir(tmpDir, util.Log(ctx))
 
 		// Then amend the upload metadata.
 		r.MediaMetadata = existingMetadata
@@ -213,8 +211,7 @@ func (r *uploadRequest) doUpload(
 		r.MediaMetadata.MediaID = r.generateMediaID(ctx)
 	}
 
-	r.Logger = r.Logger.WithField("media_id", r.MediaMetadata.MediaID)
-	r.Logger.With(
+	util.Log(ctx).WithField("media_id", r.MediaMetadata.MediaID).With(
 		"Base64Hash", r.MediaMetadata.Base64Hash,
 		"UploadName", r.MediaMetadata.UploadName,
 		"FileSizeBytes", r.MediaMetadata.FileSizeBytes,
@@ -223,7 +220,7 @@ func (r *uploadRequest) doUpload(
 
 	err = r.storeFileAndMetadata(ctx, tmpDir, cfg.AbsBasePath, db, provider)
 	if err != nil {
-		r.Logger.WithError(err).Error("Failed to upload file.")
+		util.Log(ctx).WithError(err).Error("Failed to upload file.")
 		return &util.JSONResponse{
 			Code: http.StatusBadRequest,
 			JSON: spec.Unknown(err.Error()),
@@ -281,21 +278,21 @@ func (r *uploadRequest) storeFileAndMetadata(
 	db storage.Database,
 	provider storage.Provider,
 ) error {
-	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, r.Logger)
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, tmpDir, r.MediaMetadata, absBasePath, util.Log(ctx))
 	if err != nil {
 		return err
 	}
 	if duplicate {
-		r.Logger.WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
+		util.Log(ctx).WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
 	}
 
 	if err = db.StoreMediaMetadata(ctx, r.MediaMetadata); err != nil {
-		r.Logger.WithError(err).Warn("Failed to store metadata")
+		util.Log(ctx).WithError(err).Warn("Failed to store metadata")
 		// If the file is a duplicate (has the same hash as an existing file) then
 		// there is valid metadata in the database for that file. As such we only
 		// remove the file if it is not a duplicate.
 		if !duplicate {
-			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), r.Logger)
+			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), util.Log(ctx))
 		}
 		return err
 	}

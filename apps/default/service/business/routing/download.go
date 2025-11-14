@@ -184,7 +184,7 @@ func (r *downloadRequest) jsonErrorResponse(w http.ResponseWriter, res util.JSON
 	// Marshal JSON response into raw bytes to send as the HTTP body
 	resBytes, err := json.Marshal(res.JSON)
 	if err != nil {
-		r.Logger.WithError(err).Error("Failed to marshal JSONResponse")
+		util.Log(ctx).WithError(err).Error("Failed to marshal JSONResponse")
 		// this should never fail to be marshalled so drop err to the floor
 		res = util.MessageResponse(http.StatusNotFound, "Download request failed: "+err.Error())
 		resBytes, _ = json.Marshal(res.JSON)
@@ -192,7 +192,7 @@ func (r *downloadRequest) jsonErrorResponse(w http.ResponseWriter, res util.JSON
 
 	// Set status code and write the body
 	w.WriteHeader(res.Code)
-	r.Logger.WithField("code", res.Code).WithField("bytes count", len(resBytes)).Trace("Responding with bytes")
+	util.Log(ctx).WithField("code", res.Code).WithField("bytes count", len(resBytes)).Trace("Responding with bytes")
 
 	// we don't really care that much if we fail to write the error response
 	w.Write(resBytes) // nolint: errcheck
@@ -277,7 +277,7 @@ func (r *downloadRequest) respondFromProvider(
 		if thumbMetadata == nil {
 			responseMetadata = r.MediaMetadata
 		} else {
-			r.Logger.Trace("Responding with thumbnail")
+			util.Log(ctx).Trace("Responding with thumbnail")
 			responseMetadata = thumbMetadata.MediaMetadata
 		}
 	} else {
@@ -332,7 +332,7 @@ func multipartResponse(w http.ResponseWriter, r *downloadRequest, contentType st
 	w.Header().Del("Content-Length") // let Go handle the content length
 	defer func() {
 		if err := mw.Close(); err != nil {
-			r.Logger.WithError(err).Error("Failed to close multipart writer")
+			util.Log(ctx).WithError(err).Error("Failed to close multipart writer")
 		}
 	}()
 
@@ -452,7 +452,7 @@ func (r *downloadRequest) GetContentLengthAndReader(contentLengthHeader string, 
 		// A Content-Length header is provided. Let's try to parse it.
 		parsedLength, parseErr := strconv.ParseInt(contentLengthHeader, 10, 64)
 		if parseErr != nil {
-			r.Logger.WithError(parseErr).Warn("Failed to parse content length")
+			util.Log(ctx).WithError(parseErr).Warn("Failed to parse content length")
 			return 0, nil, fmt.Errorf("strconv.ParseInt: %w", parseErr)
 		}
 		if maxFileSizeBytes > 0 && parsedLength > int64(maxFileSizeBytes) {

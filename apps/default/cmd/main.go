@@ -5,7 +5,7 @@ import (
 
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/business/routing"
-	events3 "github.com/antinvestor/service-files/apps/default/service/events"
+	"github.com/antinvestor/service-files/apps/default/service/events"
 	"github.com/antinvestor/service-files/apps/default/service/queue"
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
@@ -52,7 +52,7 @@ func main() {
 	dbManager := svc.DatastoreManager()
 	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
 	workManager := svc.WorkManager()
-	
+
 	mediaRepo := repository.NewMediaRepository(ctx, dbPool, workManager)
 	auditRepo := repository.NewMediaAuditRepository(ctx, dbPool, workManager)
 
@@ -76,12 +76,12 @@ func main() {
 	defaultServer := frame.WithHTTPHandler(publicRouter)
 	serviceOptions = append(serviceOptions, defaultServer)
 
-	events := frame.WithRegisterEvents(
-		events3.NewAuditSaveHandler(auditRepo),
-		events3.NewMetadataSaveHandler(mediaRepo),
-	)
 
-	serviceOptions = append(serviceOptions, events)
+
+	serviceOptions = append(serviceOptions, frame.WithRegisterEvents(
+		events.NewAuditSaveHandler(auditRepo),
+		events.NewMetadataSaveHandler(mediaRepo),
+	))
 
 	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(svc, metadataStore, storageProvider)
 	thumbnailGenerateQueue := frame.WithRegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, &thumbnailQueueHandler)
