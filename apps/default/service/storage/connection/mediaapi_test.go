@@ -1,21 +1,16 @@
 package connection_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
-	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
-	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/framedata"
-	"github.com/pitabwire/frame/frametests"
+	"github.com/pitabwire/frame/data"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -27,53 +22,15 @@ func TestConnectionTestSuite(t *testing.T) {
 	suite.Run(t, new(ConnectionTestSuite))
 }
 
-func (suite *ConnectionTestSuite) createService(t *testing.T, dep *definition.DependencyOption) *frame.Service {
-
-	ctx := t.Context()
-	profileConfig, err := frame.ConfigFromEnv[config.FilesConfig]()
-	require.NoError(t, err)
-
-	profileConfig.LogLevel = "debug"
-	profileConfig.RunServiceSecurely = false
-	profileConfig.ServerPort = ""
-
-	res := dep.ByIsDatabase(ctx)
-	testDS, cleanup, err0 := res.GetRandomisedDS(ctx, dep.Prefix())
-	require.NoError(t, err0)
-
-	t.Cleanup(func() {
-		cleanup(ctx)
-	})
-
-	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
-	profileConfig.DatabaseReplicaURL = []string{testDS.String()}
-
-	ctx, svc := frame.NewServiceWithContext(ctx, "connection tests",
-		frame.WithConfig(&profileConfig),
-		frame.WithDatastore(),
-		frametests.WithNoopDriver())
-
-	svc.Init(ctx)
-
-	err = repository.Migrate(ctx, svc, "../../../migrations/0001")
-	require.NoError(t, err)
-
-	err = svc.Run(ctx, "")
-	require.NoError(t, err)
-
-	return svc
-}
-
 func (suite *ConnectionTestSuite) TestStoreMediaMetadata() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		testCases := []struct {
@@ -143,14 +100,13 @@ func (suite *ConnectionTestSuite) TestStoreMediaMetadata() {
 
 func (suite *ConnectionTestSuite) TestGetMediaMetadata() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		// First, store a test media
@@ -210,14 +166,13 @@ func (suite *ConnectionTestSuite) TestGetMediaMetadata() {
 
 func (suite *ConnectionTestSuite) TestGetMediaMetadataByHash() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		// First, store a test media
@@ -286,14 +241,13 @@ func (suite *ConnectionTestSuite) TestGetMediaMetadataByHash() {
 
 func (suite *ConnectionTestSuite) TestSearch() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		ownerID := "test-owner-search"
@@ -314,41 +268,41 @@ func (suite *ConnectionTestSuite) TestSearch() {
 
 		testCases := []struct {
 			name    string
-			query   *framedata.SearchQuery
+			query   *data.SearchQuery
 			wantErr bool
 		}{
 			{
 				name: "basic search query",
-				query: framedata.NewSearchQuery(
-					"searchable",
-					map[string]interface{}{
+				query: data.NewSearchQuery(
+					data.WithSearchFiltersOrByValue(map[string]interface{}{
 						"owner_id": ownerID,
-					},
-					1, 10,
+					}),
+					data.WithSearchLimit(10),
+					data.WithSearchOffset(0),
 				),
 				wantErr: false,
 			},
 			{
 				name: "empty search query",
-				query: framedata.NewSearchQuery(
-					"",
-					map[string]interface{}{
+				query: data.NewSearchQuery(
+					data.WithSearchFiltersOrByValue(map[string]interface{}{
 						"owner_id": ownerID,
-					},
-					1, 10,
+					}),
+					data.WithSearchLimit(10),
+					data.WithSearchOffset(0),
 				),
 				wantErr: false,
 			},
 			{
 				name: "search with date range",
-				query: framedata.NewSearchQuery(
-					"",
-					map[string]interface{}{
+				query: data.NewSearchQuery(
+					data.WithSearchFiltersOrByValue(map[string]interface{}{
 						"owner_id":   ownerID,
 						"start_date": time.Now().Add(-24 * time.Hour).Unix(),
 						"end_date":   time.Now().Add(24 * time.Hour).Unix(),
-					},
-					1, 10,
+					}),
+					data.WithSearchLimit(10),
+					data.WithSearchOffset(0),
 				),
 				wantErr: false,
 			},
@@ -386,14 +340,13 @@ func (suite *ConnectionTestSuite) TestSearch() {
 
 func (suite *ConnectionTestSuite) TestStoreThumbnail() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		testCases := []struct {
@@ -450,14 +403,13 @@ func (suite *ConnectionTestSuite) TestStoreThumbnail() {
 
 func (suite *ConnectionTestSuite) TestGetThumbnail() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		// First, store a test thumbnail
@@ -543,14 +495,13 @@ func (suite *ConnectionTestSuite) TestGetThumbnail() {
 
 func (suite *ConnectionTestSuite) TestGetThumbnails() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		ctx, svc, res := suite.CreateService(t, dep)
 
-		mediaRepo := repository.NewMediaRepository(svc)
+		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			Svc:             svc,
-			MediaRepository: mediaRepo,
+			workManager:     svc.WorkManager(),
+			mediaRepository: mediaRepo,
 		}
 
 		mediaID := types.MediaID("list-thumb-media")
@@ -639,23 +590,21 @@ func (suite *ConnectionTestSuite) TestGetThumbnails() {
 
 func (suite *ConnectionTestSuite) TestNewMediaDatabase() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		svc := suite.createService(t, dep)
+		_, svc, res := suite.CreateService(t, dep)
 
 		testCases := []struct {
 			name    string
-			service *frame.Service
 			wantErr bool
 		}{
 			{
 				name:    "successful database creation",
-				service: svc,
 				wantErr: false,
 			},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				db, err := connection.NewMediaDatabase(tc.service)
+				db, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
 				if tc.wantErr {
 					assert.Error(t, err)
 					assert.Nil(t, db)

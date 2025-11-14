@@ -6,11 +6,11 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/events"
+	"github.com/pitabwire/util"
 )
 
 type MediaAuditSaveEvent struct {
-	Service         *frame.Service
 	AuditRepository repository.MediaAuditRepository
 }
 
@@ -33,15 +33,14 @@ func (mas *MediaAuditSaveEvent) Validate(_ context.Context, payload any) error {
 func (mas *MediaAuditSaveEvent) Execute(ctx context.Context, payload any) error {
 	audit := payload.(*models.MediaAudit)
 
-	logger := mas.Service.Log(ctx).WithField("payload", audit).
+	logger := util.Log(ctx).WithField("payload", audit).
 		WithField("type", mas.Name())
 	logger.Debug("handling file audit save event")
 
-	return mas.AuditRepository.Save(ctx, audit)
+	return mas.AuditRepository.Create(ctx, audit)
 
 }
 
-func NewAuditSaveHandler(service *frame.Service) frame.EventI {
-	auditRepository := repository.NewMediaAuditRepository(service)
-	return &MediaAuditSaveEvent{service, auditRepository}
+func NewAuditSaveHandler(auditRepository repository.MediaAuditRepository) events.EventI {
+	return &MediaAuditSaveEvent{AuditRepository: auditRepository}
 }

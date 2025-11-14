@@ -57,7 +57,7 @@ func (suite *UploadTestSuite) Test_uploadRequest_doUpload() {
 		DynamicThumbnails: false,
 	}
 
-	tests := []struct {
+	testCases := []struct {
 		name   string
 		fields fields
 		args   args
@@ -138,13 +138,13 @@ func (suite *UploadTestSuite) Test_uploadRequest_doUpload() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		for _, tt := range tests {
+		for _, tt := range testCases {
 			t.Run(tt.name, func(t *testing.T) {
 				ctx := tt.args.ctx
 
 				// Get database connection from dependency
-				svc, _ := suite.CreateService(t, dep)
-				db, err := connection.NewMediaDatabase(svc)
+				_, svc, res := suite.CreateService(t, dep)
+				db, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				var storageProvider storage.Provider

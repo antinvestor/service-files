@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/antinvestor/service-files/internal/tests"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/suite"
 )

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
-	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/frametests/definition"
@@ -30,8 +29,8 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 			name: "can_create_and_retrieve_media_by_id",
 			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
-				service, _ := suite.CreateService(t, dep)
-				repo := repository.NewMediaRepository(service)
+				_, _, res := suite.CreateService(t, dep)
+				repo := res.MediaRepository
 
 				// Create test media metadata
 				media := &models.MediaMetadata{
@@ -53,7 +52,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 				suite.Require().NotEmpty(media.GetID())
 
 				// Retrieve by ID
-				retrieved, err := repo.GetByID(ctx, types.MediaID(media.GetID()))
+				retrieved, err := repo.GetByID(ctx, media.GetID())
 				suite.Require().NoError(err)
 				suite.Require().NotNil(retrieved)
 				suite.Equal(media.OwnerID, retrieved.OwnerID)
@@ -65,8 +64,8 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 			name: "can_retrieve_media_by_hash",
 			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
-				service, _ := suite.CreateService(t, dep)
-				repo := repository.NewMediaRepository(service)
+				_, _, res := suite.CreateService(t, dep)
+				repo := res.MediaRepository
 
 				// Create test media metadata
 				media := &models.MediaMetadata{
@@ -83,7 +82,7 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 				}
 
 				// Save media
-				err := repo.Save(ctx, media)
+				err := repo.Create(ctx, media)
 				suite.Require().NoError(err)
 
 				// Retrieve by hash
@@ -99,8 +98,8 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 			name: "can_delete_media",
 			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
-				service, _ := suite.CreateService(t, dep)
-				repo := repository.NewMediaRepository(service)
+				_, _, res := suite.CreateService(t, dep)
+				repo := res.MediaRepository
 
 				// Create test media
 				media := &models.MediaMetadata{
@@ -116,22 +115,20 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 					Provider:   "local",
 				}
 
-				err := repo.Save(ctx, media)
+				err := repo.Create(ctx, media)
 				suite.Require().NoError(err)
 
-				mediaID := types.MediaID(media.GetID())
-
 				// Verify media exists
-				retrieved, err := repo.GetByID(ctx, mediaID)
+				retrieved, err := repo.GetByID(ctx, media.GetID())
 				suite.Require().NoError(err)
 				suite.Require().NotNil(retrieved)
 
 				// Delete media
-				err = repo.Delete(ctx, mediaID)
+				err = repo.Delete(ctx, media.GetID())
 				suite.Require().NoError(err)
 
 				// Verify media is deleted (should return error)
-				_, err = repo.GetByID(ctx, mediaID)
+				_, err = repo.GetByID(ctx, media.GetID())
 				suite.Require().Error(err)
 				suite.Equal(gorm.ErrRecordNotFound, err)
 			},
@@ -140,11 +137,11 @@ func (suite *MediaRepositoryTestSuite) TestMediaRepository() {
 			name: "returns_error_for_non_existent_media",
 			testFunc: func(t *testing.T, dep *definition.DependencyOption) {
 				ctx := context.Background()
-				service, _ := suite.CreateService(t, dep)
-				repo := repository.NewMediaRepository(service)
+				_, _, res := suite.CreateService(t, dep)
+				repo := res.MediaRepository
 
 				// Try to retrieve non-existent media
-				_, err := repo.GetByID(ctx, types.MediaID("non-existent-id"))
+				_, err := repo.GetByID(ctx, "non-existent-id")
 				suite.Require().Error(err)
 				suite.Equal(gorm.ErrRecordNotFound, err)
 

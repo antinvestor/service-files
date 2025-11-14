@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/antinvestor/service-files/apps/default/config"
+	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/local"
 	"github.com/antinvestor/service-files/internal/tests"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/suite"
 )
@@ -38,7 +38,7 @@ func (suite *ProviderTestSuite) TestGetStorageProvider() {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := context.Background()
 
-				cfg, err := frame.ConfigFromEnv[config.FilesConfig]()
+				cfg, err := config.FromEnv[aconfig.FilesConfig]()
 				if err != nil {
 					t.Errorf("Could not get file config : %v", err)
 				}

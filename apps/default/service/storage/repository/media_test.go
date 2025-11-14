@@ -5,18 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
-	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/internal/tests"
-	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/data"
-	"github.com/pitabwire/frame/framedata"
-	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -28,51 +22,13 @@ func TestMediaRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, new(MediaRepositoryTestSuite))
 }
 
-func (suite *MediaRepositoryTestSuite) createService(t *testing.T, dep *definition.DependencyOption) *frame.Service {
-
-	ctx := t.Context()
-	t.Setenv("OTEL_TRACES_EXPORTER", "none")
-	profileConfig, err := frame.ConfigFromEnv[config.FilesConfig]()
-	require.NoError(t, err)
-
-	profileConfig.LogLevel = "debug"
-	profileConfig.RunServiceSecurely = false
-	profileConfig.ServerPort = ""
-
-	res := dep.ByIsDatabase(ctx)
-	testDS, cleanup, err0 := res.GetRandomisedDS(ctx, dep.Prefix())
-	require.NoError(t, err0)
-
-	t.Cleanup(func() {
-		cleanup(ctx)
-	})
-
-	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
-	profileConfig.DatabaseReplicaURL = []string{testDS.String()}
-
-	ctx, svc := frame.NewServiceWithContext(ctx, "repository tests",
-		frame.WithConfig(&profileConfig),
-		frame.WithDatastore(),
-		frametests.WithNoopDriver())
-
-	svc.Init(ctx)
-
-	err = repository.Migrate(ctx, svc, "../../../migrations/0001")
-	require.NoError(t, err)
-
-	err = svc.Run(ctx, "")
-	require.NoError(t, err)
-
-	return svc
-}
-
 func (suite *MediaRepositoryTestSuite) TestSave() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		_, _, res := suite.CreateService(t, dep)
 
-		repo := repository.NewMediaRepository(svc)
+		repo := res.MediaRepository
 
 		testCases := []struct {
 			name     string
@@ -119,7 +75,7 @@ func (suite *MediaRepositoryTestSuite) TestSave() {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				err := repo.Save(ctx, tc.metadata)
+				err := repo.Create(ctx, tc.metadata)
 				if tc.wantErr {
 					assert.Error(t, err)
 				} else {
@@ -135,9 +91,9 @@ func (suite *MediaRepositoryTestSuite) TestGetByID() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		_, _, res := suite.CreateService(t, dep)
 
-		repo := repository.NewMediaRepository(svc)
+		repo := res.MediaRepository
 
 		// First, save a test media
 		testMedia := &models.MediaMetadata{
@@ -152,7 +108,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByID() {
 			Provider:   "local",
 			Properties: data.JSONMap{},
 		}
-		err := repo.Save(ctx, testMedia)
+		err := repo.Create(ctx, testMedia)
 		assert.NoError(t, err)
 
 		testCases := []struct {
@@ -174,7 +130,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByID() {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				result, err := repo.GetByID(ctx, tc.mediaID)
+				result, err := repo.GetByID(ctx, string(tc.mediaID))
 				if tc.wantErr {
 					assert.Error(t, err)
 					assert.Nil(t, result)
@@ -194,9 +150,9 @@ func (suite *MediaRepositoryTestSuite) TestGetByHash() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		_, _, res := suite.CreateService(t, dep)
 
-		repo := repository.NewMediaRepository(svc)
+		repo := res.MediaRepository
 
 		// First, save a test media
 		testMedia := &models.MediaMetadata{
@@ -211,7 +167,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByHash() {
 			Provider:   "local",
 			Properties: data.JSONMap{},
 		}
-		err := repo.Save(ctx, testMedia)
+		err := repo.Create(ctx, testMedia)
 		assert.NoError(t, err)
 
 		testCases := []struct {
@@ -261,9 +217,9 @@ func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		_, _, res := suite.CreateService(t, dep)
 
-		repo := repository.NewMediaRepository(svc)
+		repo := res.MediaRepository
 
 		ownerID := "test-owner-list"
 
@@ -296,7 +252,7 @@ func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 		}
 
 		for _, media := range testMedia {
-			err := repo.Save(ctx, media)
+			err := repo.Create(ctx, media)
 			assert.NoError(t, err)
 		}
 
@@ -368,9 +324,9 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		_, _, res := suite.CreateService(t, dep)
 
-		repo := repository.NewMediaRepository(svc)
+		repo := res.MediaRepository
 
 		ownerID := "test-owner-search"
 
@@ -387,35 +343,47 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 			Provider:   "local",
 			Properties: data.JSONMap{"category": "photos", "tags": "vacation"},
 		}
-		err := repo.Save(ctx, testMedia)
+		err := repo.Create(ctx, testMedia)
 		assert.NoError(t, err)
 
 		testCases := []struct {
 			name    string
-			query   *framedata.SearchQuery
+			query   *data.SearchQuery
 			wantErr bool
 		}{
 			{
 				name: "basic search query",
-				query: framedata.NewSearchQuery("searchable", map[string]interface{}{
-					"owner_id": ownerID,
-				}, 10, 0),
+				query: data.NewSearchQuery(
+					data.WithSearchFiltersOrByValue(map[string]interface{}{
+						"owner_id": ownerID,
+					}),
+					data.WithSearchLimit(10),
+					data.WithSearchOffset(0),
+				),
 				wantErr: false,
 			},
 			{
 				name: "empty search query",
-				query: framedata.NewSearchQuery("", map[string]interface{}{
-					"owner_id": ownerID,
-				}, 10, 0),
+				query: data.NewSearchQuery(
+					data.WithSearchFiltersOrByValue(map[string]interface{}{
+						"owner_id": ownerID,
+					}),
+					data.WithSearchLimit(10),
+					data.WithSearchOffset(0),
+				),
 				wantErr: false,
 			},
 			{
 				name: "search with date range",
-				query: framedata.NewSearchQuery("", map[string]interface{}{
-					"owner_id":   ownerID,
-					"start_date": time.Now().Add(-24 * time.Hour).Unix(),
-					"end_date":   time.Now().Add(24 * time.Hour).Unix(),
-				}, 10, 0),
+				query: data.NewSearchQuery(
+					data.WithSearchFiltersOrByValue(map[string]interface{}{
+						"owner_id":   ownerID,
+						"start_date": time.Now().Add(-24 * time.Hour).Unix(),
+						"end_date":   time.Now().Add(24 * time.Hour).Unix(),
+					}),
+					data.WithSearchLimit(10),
+					data.WithSearchOffset(0),
+				),
 				wantErr: false,
 			},
 		}
@@ -454,9 +422,9 @@ func (suite *MediaRepositoryTestSuite) TestDelete() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx := context.Background()
 
-		svc := suite.createService(t, dep)
+		_, _, res := suite.CreateService(t, dep)
 
-		repo := repository.NewMediaRepository(svc)
+		repo := res.MediaRepository
 
 		// First, save a test media
 		testMedia := &models.MediaMetadata{
@@ -471,7 +439,7 @@ func (suite *MediaRepositoryTestSuite) TestDelete() {
 			Provider:   "local",
 			Properties: data.JSONMap{},
 		}
-		err := repo.Save(ctx, testMedia)
+		err := repo.Create(ctx, testMedia)
 		assert.NoError(t, err)
 
 		testCases := []struct {
@@ -493,14 +461,14 @@ func (suite *MediaRepositoryTestSuite) TestDelete() {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				err = repo.Delete(ctx, tc.mediaID)
+				err = repo.Delete(ctx, string(tc.mediaID))
 				if tc.wantErr {
 					assert.Error(t, err)
 				} else {
 					assert.NoError(t, err)
 
 					// Verify the media is actually deleted
-					_, err := repo.GetByID(ctx, tc.mediaID)
+					_, err := repo.GetByID(ctx, string(tc.mediaID))
 					assert.Error(t, err) // Should error because it's deleted
 				}
 			})

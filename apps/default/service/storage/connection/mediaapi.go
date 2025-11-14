@@ -16,17 +16,19 @@ package connection
 
 import (
 	"context"
+	"errors"
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/framedata"
+	"github.com/pitabwire/frame/data"
+	"github.com/pitabwire/frame/workerpool"
+	"gorm.io/gorm"
 )
 
 type Database struct {
-	Svc             *frame.Service
-	MediaRepository repository.MediaRepository
+	workManager     workerpool.Manager
+	mediaRepository repository.MediaRepository
 }
 
 // StoreMediaMetadata inserts the metadata about the uploaded media into the database.
@@ -34,15 +36,15 @@ type Database struct {
 func (d *Database) StoreMediaMetadata(ctx context.Context, mediaMetadata *types.MediaMetadata) error {
 	media := models.MediaMetadata{}
 	media.Fill(mediaMetadata)
-	return d.MediaRepository.Save(ctx, &media)
+	return d.mediaRepository.Create(ctx, &media)
 }
 
 // GetMediaMetadata returns metadata about media stored on this server.
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error) {
-	mediaMetadata, err := d.MediaRepository.GetByID(ctx, mediaID)
-	if frame.ErrorIsNoRows(err) {
+	mediaMetadata, err := d.mediaRepository.GetByID(ctx, string(mediaID))
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	return mediaMetadata.ToApi(), err
@@ -52,18 +54,18 @@ func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) 
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadataByHash(ctx context.Context, ownerId types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error) {
-	mediaMetadata, err := d.MediaRepository.GetByHash(ctx, ownerId, mediaHash)
-	if frame.ErrorIsNoRows(err) {
+	mediaMetadata, err := d.mediaRepository.GetByHash(ctx, ownerId, mediaHash)
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	return mediaMetadata.ToApi(), err
 }
 
-func (d *Database) Search(ctx context.Context, query *framedata.SearchQuery) (frame.JobResultPipe[*types.MediaMetadata], error) {
+func (d *Database) Search(ctx context.Context, query *data.SearchQuery) (workerpool.JobResultPipe[*types.MediaMetadata], error) {
 
-	jobResult := frame.NewJob[*types.MediaMetadata](func(ctx context.Context, result frame.JobResultPipe[*types.MediaMetadata]) error {
+	jobResult := workerpool.NewJob(func(ctx context.Context, result workerpool.JobResultPipe[*types.MediaMetadata]) error {
 
-		metadataResult, err := d.MediaRepository.Search(ctx, query)
+		metadataResult, err := d.mediaRepository.Search(ctx, query)
 
 		if err != nil {
 			return err
@@ -89,7 +91,7 @@ func (d *Database) Search(ctx context.Context, query *framedata.SearchQuery) (fr
 		}
 	})
 
-	err := frame.SubmitJob(ctx, d.Svc, jobResult)
+	err := workerpool.SubmitJob(ctx, d.workManager, jobResult)
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +115,9 @@ func (d *Database) GetThumbnail(ctx context.Context, mediaID types.MediaID, widt
 		Height:       height,
 		ResizeMethod: resizeMethod,
 	}
-	mediaMetadata, err := d.MediaRepository.GetByParentIDAndThumbnailSize(ctx, mediaID, &thumbnailSize)
+	mediaMetadata, err := d.mediaRepository.GetByParentIDAndThumbnailSize(ctx, mediaID, &thumbnailSize)
 	if err != nil {
-
-		if frame.ErrorIsNoRows(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
@@ -132,10 +133,9 @@ func (d *Database) GetThumbnail(ctx context.Context, mediaID types.MediaID, widt
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there are no thumbnails associated with this media.
 func (d *Database) GetThumbnails(ctx context.Context, mediaID types.MediaID) ([]*types.ThumbnailMetadata, error) {
-	metadatas, err := d.MediaRepository.GetByParentID(ctx, mediaID)
+	metadatas, err := d.mediaRepository.GetByParentID(ctx, mediaID)
 	if err != nil {
-
-		if frame.ErrorIsNoRows(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err

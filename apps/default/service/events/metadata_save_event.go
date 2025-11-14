@@ -6,11 +6,11 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/events"
+	"github.com/pitabwire/util"
 )
 
 type MediaMetadataSaveEvent struct {
-	Service         *frame.Service
 	MediaRepository repository.MediaRepository
 }
 
@@ -33,15 +33,14 @@ func (fms *MediaMetadataSaveEvent) Validate(_ context.Context, payload any) erro
 func (fms *MediaMetadataSaveEvent) Execute(ctx context.Context, payload any) error {
 	metadata := payload.(*models.MediaMetadata)
 
-	logger := fms.Service.Log(ctx).WithField("payload", metadata).
+	logger := util.Log(ctx).WithField("payload", metadata).
 		WithField("type", fms.Name())
 	logger.Debug("handling file metadata save event")
 
-	return fms.MediaRepository.Save(ctx, metadata)
+	return fms.MediaRepository.Create(ctx, metadata)
 
 }
 
-func NewMetadataSaveHandler(service *frame.Service) frame.EventI {
-	mediaRepository := repository.NewMediaRepository(service)
-	return &MediaMetadataSaveEvent{service, mediaRepository}
+func NewMetadataSaveHandler(mediaRepository repository.MediaRepository) events.EventI {
+	return &MediaMetadataSaveEvent{ MediaRepository: mediaRepository}
 }

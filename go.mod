@@ -3,6 +3,11 @@ module github.com/antinvestor/service-files
 go 1.25.0
 
 require (
+	buf.build/gen/go/antinvestor/partition/connectrpc/go v1.19.1-20251104183841-abd5e3c3145b.2
+	buf.build/gen/go/antinvestor/partition/protocolbuffers/go v1.36.10-20251104183841-abd5e3c3145b.1
+	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251104183907-bd2327635adb.2
+	buf.build/gen/go/antinvestor/profile/protocolbuffers/go v1.36.10-20251104183907-bd2327635adb.1
+	connectrpc.com/connect v1.19.1
 	github.com/antinvestor/apis/go/common v1.47.12
 	github.com/antinvestor/apis/go/partition v1.47.13
 	github.com/antinvestor/apis/go/profile v1.47.13
@@ -11,13 +16,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.2
 	github.com/containerd/log v0.1.0
+	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pitabwire/frame v1.65.3
 	github.com/pitabwire/util v0.3.5
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
-	go.uber.org/mock v0.6.0
 	gocloud.dev v0.43.0
 	golang.org/x/image v0.33.0
 	gopkg.in/h2non/bimg.v1 v1.1.9
@@ -26,10 +31,6 @@ require (
 
 require (
 	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.10-20251104183629-02dfa9355307.1 // indirect
-	buf.build/gen/go/antinvestor/partition/connectrpc/go v1.19.1-20251104183841-abd5e3c3145b.2 // indirect
-	buf.build/gen/go/antinvestor/partition/protocolbuffers/go v1.36.10-20251104183841-abd5e3c3145b.1 // indirect
-	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251104183907-bd2327635adb.2 // indirect
-	buf.build/gen/go/antinvestor/profile/protocolbuffers/go v1.36.10-20251104183907-bd2327635adb.1 // indirect
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.10-20250912141014-52f32327d4b0.1 // indirect
 	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.10-20230414000709-087bc8072ce4.1 // indirect
 	cel.dev/expr v0.25.1 // indirect
@@ -40,7 +41,6 @@ require (
 	cloud.google.com/go/iam v1.5.2 // indirect
 	cloud.google.com/go/monitoring v1.24.2 // indirect
 	cloud.google.com/go/storage v1.55.0 // indirect
-	connectrpc.com/connect v1.19.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
@@ -48,7 +48,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/XSAM/otelsql v0.39.0 // indirect
 	github.com/aws/aws-sdk-go v1.55.7 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.3 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.29.17 // indirect
@@ -90,14 +89,12 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.7 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
 	github.com/hashicorp/go-set/v3 v3.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -182,6 +179,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
+	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.44.0 // indirect

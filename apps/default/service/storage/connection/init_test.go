@@ -44,8 +44,8 @@ func (suite *DatastoreTestSuite) TestMediaRepository() {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := context.Background()
 
-				svc, _ := suite.CreateService(t, dep)
-				db, err := connection.NewMediaDatabase(svc)
+				_, svc, res := suite.CreateService(t, dep)
+				db, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				err = db.StoreMediaMetadata(ctx, tc.metadata)
@@ -118,8 +118,8 @@ func (suite *DatastoreTestSuite) TestThumbnailsStorage() {
 			t.Run(tc.name, func(t *testing.T) {
 				ctx := context.Background()
 
-				svc, _ := suite.CreateService(t, dep)
-				db, err := connection.NewMediaDatabase(svc)
+				_, svc, res := suite.CreateService(t, dep)
+				db, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
 				assert.NoErrorf(t, err, "failed to open media database")
 
 				for _, thumbnail := range tc.thumbnails {
