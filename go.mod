@@ -8,7 +8,6 @@ require (
 	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251104183907-bd2327635adb.2
 	buf.build/gen/go/antinvestor/profile/protocolbuffers/go v1.36.10-20251104183907-bd2327635adb.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.47.12
 	github.com/antinvestor/apis/go/partition v1.47.13
 	github.com/antinvestor/apis/go/profile v1.47.13
 	github.com/antinvestor/gomatrixserverlib v0.2.7
@@ -19,7 +18,7 @@ require (
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.65.3
+	github.com/pitabwire/frame v1.65.5
 	github.com/pitabwire/util v0.3.5
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1

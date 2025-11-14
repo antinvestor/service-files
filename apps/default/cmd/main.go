@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/config"
+	"github.com/pitabwire/frame/datastore"
 	"github.com/pitabwire/frame/security/interceptors/http"
 	"github.com/pitabwire/util"
 )
@@ -47,7 +48,15 @@ func main() {
 		log.WithError(err).Fatal("main -- Could not setup or access storage")
 	}
 
-	metadataStore, err := connection.NewMediaDatabase(svc)
+	// Create repositories for the database
+	dbManager := svc.DatastoreManager()
+	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
+	workManager := svc.WorkManager()
+	
+	mediaRepo := repository.NewMediaRepository(ctx, dbPool, workManager)
+	auditRepo := repository.NewMediaAuditRepository(ctx, dbPool, workManager)
+
+	metadataStore, err := connection.NewMediaDatabase(workManager, mediaRepo)
 	if err != nil {
 		log.WithError(err).Fatal("main -- failed to setup storage")
 	}
@@ -68,8 +77,8 @@ func main() {
 	serviceOptions = append(serviceOptions, defaultServer)
 
 	events := frame.WithRegisterEvents(
-		events3.NewAuditSaveHandler(svc),
-		events3.NewMetadataSaveHandler(svc),
+		events3.NewAuditSaveHandler(auditRepo),
+		events3.NewMetadataSaveHandler(mediaRepo),
 	)
 
 	serviceOptions = append(serviceOptions, events)

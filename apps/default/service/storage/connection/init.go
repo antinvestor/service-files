@@ -9,5 +9,5 @@ import (
 // NewMediaDatabase opens a database connection.
 func NewMediaDatabase(workManager workerpool.Manager, mediaRepo repository.MediaRepository) (storage.Database, error) {
 
-	return &Database{workManager: workManager, mediaRepository: mediaRepo}, nil
+	return &Database{WorkManager: workManager, MediaRepository: mediaRepo}, nil
 }

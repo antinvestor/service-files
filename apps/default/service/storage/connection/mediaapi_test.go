@@ -7,7 +7,6 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/data"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/assert"
@@ -29,8 +28,8 @@ func (suite *ConnectionTestSuite) TestStoreMediaMetadata() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		testCases := []struct {
@@ -105,8 +104,8 @@ func (suite *ConnectionTestSuite) TestGetMediaMetadata() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		// First, store a test media
@@ -171,8 +170,8 @@ func (suite *ConnectionTestSuite) TestGetMediaMetadataByHash() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		// First, store a test media
@@ -246,8 +245,8 @@ func (suite *ConnectionTestSuite) TestSearch() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		ownerID := "test-owner-search"
@@ -345,8 +344,8 @@ func (suite *ConnectionTestSuite) TestStoreThumbnail() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		testCases := []struct {
@@ -408,8 +407,8 @@ func (suite *ConnectionTestSuite) TestGetThumbnail() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		// First, store a test thumbnail
@@ -500,8 +499,8 @@ func (suite *ConnectionTestSuite) TestGetThumbnails() {
 
 		mediaRepo := res.MediaRepository
 		db := &connection.Database{
-			workManager:     svc.WorkManager(),
-			mediaRepository: mediaRepo,
+			WorkManager:     svc.WorkManager(),
+			MediaRepository: mediaRepo,
 		}
 
 		mediaID := types.MediaID("list-thumb-media")

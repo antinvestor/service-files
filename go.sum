@@ -56,8 +56,6 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0/go.mod h1:cSgYe11MCNYunTnRXrKiR/tHc0eoKjICUuWpNZoVCOo=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/antinvestor/apis/go/common v1.47.12 h1:l33Vh/YBaQ+x4drKZ3SIaRSYoevebPmHfqK4K4yb1ns=
-github.com/antinvestor/apis/go/common v1.47.12/go.mod h1:ejosUvXb1ll1sOAqF6YwNjhqmN3nQc0sGU1rwdLMGe4=
 github.com/antinvestor/apis/go/partition v1.47.13 h1:IH0RhVUhu9j5bgNAB5eXAfURk7ju2Q5IF2B+yUvIWus=
 github.com/antinvestor/apis/go/partition v1.47.13/go.mod h1:dXvF8ax1h88wcvWSLSu7VIZ8CaL5NpM0N8gdAG9ae8A=
 github.com/antinvestor/apis/go/profile v1.47.13 h1:3E6tP799UAb/Oih/pgY6g6JucT5gZC0FHtkiHmTBvxA=
@@ -282,8 +280,8 @@ github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJw
 github.com/opencontainers/image-spec v1.1.1/go.mod h1:qpqAh3Dmcf36wStyyWU+kCeDgrGnAve2nCC8+7h8Q0M=
 github.com/panjf2000/ants/v2 v2.11.3 h1:AfI0ngBoXJmYOpDh9m516vjqoUu2sLrIVgppI9TZVpg=
 github.com/panjf2000/ants/v2 v2.11.3/go.mod h1:8u92CYMUc6gyvTIw8Ru7Mt7+/ESnJahz5EVtqfrilek=
-github.com/pitabwire/frame v1.65.3 h1:sC2PbT18zVONwh3D/OEEYXd69LJqDAYHoG10u1IWyoo=
-github.com/pitabwire/frame v1.65.3/go.mod h1:KvoO1pGTQnBYwj7t8q7xnu675aka02u2B2F9+pfjFpo=
+github.com/pitabwire/frame v1.65.5 h1:E2QPeUfXlKfHGNN59v2PQr26zhrwIjjf5yvnPg2zOK8=
+github.com/pitabwire/frame v1.65.5/go.mod h1:KvoO1pGTQnBYwj7t8q7xnu675aka02u2B2F9+pfjFpo=
 github.com/pitabwire/natspubsub v0.7.4 h1:gKNsutB8zoOMTq4h2o3SsLYhkZ1rPeKVowuDRMParFU=
 github.com/pitabwire/natspubsub v0.7.4/go.mod h1:sfQ2dg/zwXbSIelKabWOhEcxTkDB4HFc+JozUFSZrEU=
 github.com/pitabwire/util v0.3.5 h1:+0edmrGEyLaC/Q4+9i1auPxpygd1N1Q/r0Gj5rlLkaU=

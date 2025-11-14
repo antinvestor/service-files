@@ -27,8 +27,8 @@ import (
 )
 
 type Database struct {
-	workManager     workerpool.Manager
-	mediaRepository repository.MediaRepository
+	WorkManager     workerpool.Manager
+	MediaRepository repository.MediaRepository
 }
 
 // StoreMediaMetadata inserts the metadata about the uploaded media into the database.
@@ -36,14 +36,14 @@ type Database struct {
 func (d *Database) StoreMediaMetadata(ctx context.Context, mediaMetadata *types.MediaMetadata) error {
 	media := models.MediaMetadata{}
 	media.Fill(mediaMetadata)
-	return d.mediaRepository.Create(ctx, &media)
+	return d.MediaRepository.Create(ctx, &media)
 }
 
 // GetMediaMetadata returns metadata about media stored on this server.
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error) {
-	mediaMetadata, err := d.mediaRepository.GetByID(ctx, string(mediaID))
+	mediaMetadata, err := d.MediaRepository.GetByID(ctx, string(mediaID))
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -54,7 +54,7 @@ func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) 
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadataByHash(ctx context.Context, ownerId types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error) {
-	mediaMetadata, err := d.mediaRepository.GetByHash(ctx, ownerId, mediaHash)
+	mediaMetadata, err := d.MediaRepository.GetByHash(ctx, ownerId, mediaHash)
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -65,7 +65,7 @@ func (d *Database) Search(ctx context.Context, query *data.SearchQuery) (workerp
 
 	jobResult := workerpool.NewJob(func(ctx context.Context, result workerpool.JobResultPipe[*types.MediaMetadata]) error {
 
-		metadataResult, err := d.mediaRepository.Search(ctx, query)
+		metadataResult, err := d.MediaRepository.Search(ctx, query)
 
 		if err != nil {
 			return err
@@ -91,7 +91,7 @@ func (d *Database) Search(ctx context.Context, query *data.SearchQuery) (workerp
 		}
 	})
 
-	err := workerpool.SubmitJob(ctx, d.workManager, jobResult)
+	err := workerpool.SubmitJob(ctx, d.WorkManager, jobResult)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (d *Database) GetThumbnail(ctx context.Context, mediaID types.MediaID, widt
 		Height:       height,
 		ResizeMethod: resizeMethod,
 	}
-	mediaMetadata, err := d.mediaRepository.GetByParentIDAndThumbnailSize(ctx, mediaID, &thumbnailSize)
+	mediaMetadata, err := d.MediaRepository.GetByParentIDAndThumbnailSize(ctx, mediaID, &thumbnailSize)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -133,7 +133,7 @@ func (d *Database) GetThumbnail(ctx context.Context, mediaID types.MediaID, widt
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there are no thumbnails associated with this media.
 func (d *Database) GetThumbnails(ctx context.Context, mediaID types.MediaID) ([]*types.ThumbnailMetadata, error) {
-	metadatas, err := d.mediaRepository.GetByParentID(ctx, mediaID)
+	metadatas, err := d.MediaRepository.GetByParentID(ctx, mediaID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

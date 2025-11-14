@@ -1,7 +1,6 @@
 package repository_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -24,9 +23,8 @@ func TestMediaRepositoryTestSuite(t *testing.T) {
 
 func (suite *MediaRepositoryTestSuite) TestSave() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		_, _, res := suite.CreateService(t, dep)
+		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.MediaRepository
 
@@ -89,9 +87,8 @@ func (suite *MediaRepositoryTestSuite) TestSave() {
 
 func (suite *MediaRepositoryTestSuite) TestGetByID() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		_, _, res := suite.CreateService(t, dep)
+		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.MediaRepository
 
@@ -148,9 +145,8 @@ func (suite *MediaRepositoryTestSuite) TestGetByID() {
 
 func (suite *MediaRepositoryTestSuite) TestGetByHash() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		_, _, res := suite.CreateService(t, dep)
+		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.MediaRepository
 
@@ -215,9 +211,8 @@ func (suite *MediaRepositoryTestSuite) TestGetByHash() {
 
 func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		_, _, res := suite.CreateService(t, dep)
+		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.MediaRepository
 
@@ -322,9 +317,8 @@ func (suite *MediaRepositoryTestSuite) TestGetByOwnerID() {
 
 func (suite *MediaRepositoryTestSuite) TestSearch() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		_, _, res := suite.CreateService(t, dep)
+		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.MediaRepository
 
@@ -354,8 +348,8 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 			{
 				name: "basic search query",
 				query: data.NewSearchQuery(
-					data.WithSearchFiltersOrByValue(map[string]interface{}{
-						"owner_id": ownerID,
+					data.WithSearchFiltersAndByValue(map[string]interface{}{
+						"owner_id = ?": ownerID,
 					}),
 					data.WithSearchLimit(10),
 					data.WithSearchOffset(0),
@@ -365,8 +359,8 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 			{
 				name: "empty search query",
 				query: data.NewSearchQuery(
-					data.WithSearchFiltersOrByValue(map[string]interface{}{
-						"owner_id": ownerID,
+					data.WithSearchFiltersAndByValue(map[string]interface{}{
+						"owner_id = ?": ownerID,
 					}),
 					data.WithSearchLimit(10),
 					data.WithSearchOffset(0),
@@ -376,10 +370,10 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 			{
 				name: "search with date range",
 				query: data.NewSearchQuery(
-					data.WithSearchFiltersOrByValue(map[string]interface{}{
-						"owner_id":   ownerID,
-						"start_date": time.Now().Add(-24 * time.Hour).Unix(),
-						"end_date":   time.Now().Add(24 * time.Hour).Unix(),
+					data.WithSearchFiltersAndByValue(map[string]interface{}{
+						"owner_id = ?":    ownerID,
+						"start_date >= ?": time.Now().Add(-24 * time.Hour).Unix(),
+						"end_date < ?":    time.Now().Add(24 * time.Hour).Unix(),
 					}),
 					data.WithSearchLimit(10),
 					data.WithSearchOffset(0),
@@ -390,12 +384,12 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resultPipe, err := repo.Search(ctx, tc.query)
+				resultPipe, searchErr := repo.Search(ctx, tc.query)
 				if tc.wantErr {
-					assert.Error(t, err)
+					assert.Error(t, searchErr)
 					assert.Nil(t, resultPipe)
 				} else {
-					assert.NoError(t, err)
+					assert.NoError(t, searchErr)
 					assert.NotNil(t, resultPipe)
 
 					// Read results from the pipe
@@ -420,9 +414,8 @@ func (suite *MediaRepositoryTestSuite) TestSearch() {
 
 func (suite *MediaRepositoryTestSuite) TestDelete() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx := context.Background()
 
-		_, _, res := suite.CreateService(t, dep)
+		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.MediaRepository
 
