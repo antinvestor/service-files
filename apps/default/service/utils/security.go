@@ -7,7 +7,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"math/big"
 )
+
+// GenerateRandomString generates a random string of specified length
+func GenerateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[num.Int64()]
+	}
+	return string(result)
+}
 
 // CreateHash Generates a sha512 hash any supplied bytes
 func CreateHash(content []byte) string {

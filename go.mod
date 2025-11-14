@@ -3,6 +3,7 @@ module github.com/antinvestor/service-files
 go 1.25.0
 
 require (
+	buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20251104183715-d2644b68c6f4.2
 	buf.build/gen/go/antinvestor/partition/connectrpc/go v1.19.1-20251104183841-abd5e3c3145b.2
 	buf.build/gen/go/antinvestor/partition/protocolbuffers/go v1.36.10-20251104183841-abd5e3c3145b.1
 	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251104183907-bd2327635adb.2
@@ -30,6 +31,7 @@ require (
 
 require (
 	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.10-20251104183629-02dfa9355307.1 // indirect
+	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.10-20251104183715-d2644b68c6f4.1 // indirect
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.10-20250912141014-52f32327d4b0.1 // indirect
 	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.10-20230414000709-087bc8072ce4.1 // indirect
 	cel.dev/expr v0.25.1 // indirect

@@ -258,3 +258,78 @@ func TestEncryptionNonDeterministic(t *testing.T) {
 	assert.Equal(t, data, decrypted2)
 	assert.Equal(t, data, decrypted3)
 }
+
+func TestGenerateRandomString(t *testing.T) {
+	testCases := []struct {
+		name   string
+		length int
+	}{
+		{
+			name:   "generate_10_chars",
+			length: 10,
+		},
+		{
+			name:   "generate_32_chars",
+			length: 32,
+		},
+		{
+			name:   "generate_64_chars",
+			length: 64,
+		},
+		{
+			name:   "generate_0_chars",
+			length: 0,
+		},
+		{
+			name:   "generate_1_char",
+			length: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := GenerateRandomString(tc.length)
+			
+			if tc.length == 0 {
+				assert.Empty(t, result)
+			} else {
+				assert.Len(t, result, tc.length)
+				
+				// Check that all characters are from the expected charset
+				const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+				for _, char := range result {
+					assert.Contains(t, charset, string(char), "Character %q should be from allowed charset", char)
+				}
+			}
+		})
+	}
+
+	// Test uniqueness - generate multiple strings and ensure they're different
+	t.Run("test_uniqueness", func(t *testing.T) {
+		strings := make(map[string]bool)
+		for i := 0; i < 100; i++ {
+			str := GenerateRandomString(32)
+			assert.False(t, strings[str], "Generated string should be unique: %s", str)
+			strings[str] = true
+		}
+	})
+
+	// Test randomness - check that we get different characters
+	t.Run("test_randomness", func(t *testing.T) {
+		results := make([]string, 1000)
+		for i := 0; i < 1000; i++ {
+			results[i] = GenerateRandomString(10)
+		}
+		
+		// Count character frequency
+		charCount := make(map[rune]int)
+		for _, str := range results {
+			for _, char := range str {
+				charCount[char]++
+			}
+		}
+		
+		// Should have used many different characters (not just a few)
+		assert.Greater(t, len(charCount), 20, "Should use variety of characters for randomness")
+	})
+}

@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"net/http"
 
+	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
-	"github.com/antinvestor/service-files/apps/default/service/business/routing"
+	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/events"
+	"github.com/antinvestor/service-files/apps/default/service/handler"
+	"github.com/antinvestor/service-files/apps/default/service/handler/routing"
 	"github.com/antinvestor/service-files/apps/default/service/queue"
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
@@ -14,7 +18,7 @@ import (
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/datastore"
-	"github.com/pitabwire/frame/security/interceptors/http"
+	framehttp "github.com/pitabwire/frame/security/interceptors/http"
 	"github.com/pitabwire/util"
 )
 
@@ -61,22 +65,32 @@ func main() {
 		log.WithError(err).Fatal("main -- failed to setup storage")
 	}
 
+	// Create business service
+	mediaService := business.NewMediaService(metadataStore, storageProvider)
+
+	// Create Connect RPC handler
+	fileServer := handler.NewFileServer(svc, mediaService, metadataStore, storageProvider)
+
 	publicRouter := routing.SetupApiSpecRoute(svc)
 
-	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider)
+	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider, mediaService)
+
+	// Setup Connect RPC routes
+	_, connectHandler := filesv1connect.NewFilesServiceHandler(fileServer)
+
+	// Add Connect router to the public router
+	publicRouter.Handle("/rpc/", http.StripPrefix("/rpc", connectHandler))
 
 	sm := svc.SecurityManager()
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
-		http.AuthenticationMiddleware(router, sm.GetAuthenticator(ctx)))
+		framehttp.AuthenticationMiddleware(router, sm.GetAuthenticator(ctx)))
 
 	publicRouter.Handle("/", authServiceHandlers)
 
 	defaultServer := frame.WithHTTPHandler(publicRouter)
 	serviceOptions = append(serviceOptions, defaultServer)
-
-
 
 	serviceOptions = append(serviceOptions, frame.WithRegisterEvents(
 		events.NewAuditSaveHandler(auditRepo),
