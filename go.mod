@@ -19,7 +19,7 @@ require (
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.66.0
+	github.com/pitabwire/frame v1.66.1
 	github.com/pitabwire/util v0.3.5
 	github.com/stretchr/testify v1.11.1
 	gocloud.dev v0.43.0
