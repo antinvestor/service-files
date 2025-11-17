@@ -136,9 +136,7 @@ func (s *mediaService) SearchMedia(ctx context.Context, req *SearchRequest) (*Se
 
 	// Convert results to API types
 	apiResults := make([]*types.MediaMetadata, len(mediaResults))
-	for i, result := range mediaResults {
-		apiResults[i] = result
-	}
+	copy(apiResults, mediaResults)
 
 	// Determine if there are more results
 	hasMore := len(mediaResults) == int(req.Limit)
@@ -374,7 +372,7 @@ func isValidMediaID(mediaID string) bool {
 	}
 	// Check if all characters are valid
 	for _, r := range mediaID {
-		if !((r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' || r == '=' || r == '-') {
+		if (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' && r != '=' && r != '-' {
 			return false
 		}
 	}

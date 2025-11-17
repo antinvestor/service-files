@@ -132,7 +132,7 @@ func isValidMediaID(mediaID string) bool {
 	}
 	// Check if all characters are valid
 	for _, r := range mediaID {
-		if !((r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' || r == '=' || r == '-') {
+		if (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' && r != '=' && r != '-' {
 			return false
 		}
 	}
