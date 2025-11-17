@@ -12,10 +12,10 @@ import (
 type MediaService interface {
 	// UploadFile handles the business logic for uploading a file
 	UploadFile(ctx context.Context, req *UploadRequest) (*UploadResult, error)
-	
+
 	// DownloadFile handles the business logic for downloading a file
 	DownloadFile(ctx context.Context, req *DownloadRequest) (*DownloadResult, error)
-	
+
 	// SearchMedia handles the business logic for searching media files
 	SearchMedia(ctx context.Context, req *SearchRequest) (*SearchResult, error)
 }

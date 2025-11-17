@@ -289,12 +289,12 @@ func TestGenerateRandomString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := GenerateRandomString(tc.length)
-			
+
 			if tc.length == 0 {
 				assert.Empty(t, result)
 			} else {
 				assert.Len(t, result, tc.length)
-				
+
 				// Check that all characters are from the expected charset
 				const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 				for _, char := range result {
@@ -320,7 +320,7 @@ func TestGenerateRandomString(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			results[i] = GenerateRandomString(10)
 		}
-		
+
 		// Count character frequency
 		charCount := make(map[rune]int)
 		for _, str := range results {
@@ -328,7 +328,7 @@ func TestGenerateRandomString(t *testing.T) {
 				charCount[char]++
 			}
 		}
-		
+
 		// Should have used many different characters (not just a few)
 		assert.Greater(t, len(charCount), 20, "Should use variety of characters for randomness")
 	})

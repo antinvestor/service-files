@@ -24,7 +24,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
@@ -116,12 +115,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				ctx = context.WithValue(ctx, ctxValueString(key), value)
 			}
 			req = req.WithContext(ctx)
-			
+
 			route.Handler.ServeHTTP(w, req)
 			return
 		}
 	}
-	
+
 	// No matching route found
 	http.NotFound(w, req)
 }
@@ -141,7 +140,7 @@ func (r *Router) matchesRoute(route Route, req *http.Request) bool {
 			return false
 		}
 	}
-	
+
 	// Check path pattern
 	return route.Regex.MatchString(req.URL.Path)
 }
@@ -152,27 +151,27 @@ func (r *Router) extractPathVars(route Route, path string) map[string]string {
 	if len(matches) == 0 {
 		return nil
 	}
-	
+
 	// Extract group names from the pattern
 	varNames := []string{"serverName", "mediaId", "downloadName"}
 	vars := make(map[string]string)
-	
+
 	for i, name := range varNames {
 		if i+1 < len(matches) {
 			vars[name] = matches[i+1]
 		}
 	}
-	
+
 	return vars
 }
 
 // SetupApiSpecRoute sets up the OpenAPI spec route
 func SetupApiSpecRoute(service *frame.Service) *Router {
 	apiSpecRouter := NewRouter()
-	
+
 	// Add OpenAPI spec route at root
 	apiSpecRouter.Handle(PublicAPISpecPath, http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
-	
+
 	return apiSpecRouter
 }
 
@@ -247,7 +246,10 @@ func ServeOpenAPISpec(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		errorResponse, _ := json.Marshal(spec.InternalServerError{})
+		errorResponse, _ := json.Marshal(map[string]interface{}{
+			"errcode": "M_INTERNAL_SERVER_ERROR",
+			"error":   "Internal server error",
+		})
 		_, _ = w.Write(errorResponse)
 		return
 	}
@@ -260,7 +262,10 @@ func ServeOpenAPISpec(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		errorResponse, _ := json.Marshal(spec.NotFound("OpenAPI specification not found"))
+		errorResponse, _ := json.Marshal(map[string]interface{}{
+			"errcode": "M_NOT_FOUND",
+			"error":   "OpenAPI specification not found",
+		})
 		_, _ = w.Write(errorResponse)
 		return
 	}
@@ -288,7 +293,7 @@ func makeDownloadAPI(
 		w.Header().Set("Content-Type", "application/json")
 
 		vars, _ := URLDecodeMapValues(GetPathVars(req))
-		_ = spec.ServerName(vars["serverName"])
+		_ = vars["serverName"]
 
 		// CacheOptions media for at least one day.
 		w.Header().Set("Cache-Control", "public,max-age=86400,s-maxage=86400")
@@ -327,7 +332,7 @@ func WrapHandlerInCORS(h http.Handler) http.HandlerFunc {
 func CreateHandler(f func(*http.Request) util.JSONResponse) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		response := f(req)
-		
+
 		// Set headers
 		if response.Headers != nil {
 			for key, value := range response.Headers {
@@ -340,12 +345,12 @@ func CreateHandler(f func(*http.Request) util.JSONResponse) http.Handler {
 				}
 			}
 		}
-		
+
 		// Set content type if not already set
 		if w.Header().Get("Content-Type") == "" {
 			w.Header().Set("Content-Type", "application/json")
 		}
-		
+
 		// Write status code and body
 		w.WriteHeader(response.Code)
 		if response.JSON != nil {
@@ -368,10 +373,10 @@ func GetPathVars(req *http.Request) map[string]string {
 	// This is a simplified implementation - in a real scenario you'd want to
 	// extract variables from the URL pattern matching
 	vars := make(map[string]string)
-	
+
 	// Extract from URL path components
 	pathParts := strings.Split(strings.Trim(req.URL.Path, "/"), "/")
-	
+
 	// Look for Matrix media patterns
 	if len(pathParts) >= 4 && pathParts[0] == "_matrix" && pathParts[1] == "client" && pathParts[2] == "v1" && pathParts[3] == "media" {
 		if len(pathParts) >= 7 && (pathParts[4] == "download" || pathParts[4] == "thumbnail") {
@@ -382,7 +387,7 @@ func GetPathVars(req *http.Request) map[string]string {
 			}
 		}
 	}
-	
+
 	return vars
 }
 

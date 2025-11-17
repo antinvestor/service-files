@@ -22,7 +22,6 @@ func NewMediaAuditRepository(ctx context.Context, dbPool pool.Pool, workMan work
 	return &fileAuditRepo
 }
 
-
 type fileAuditRepository struct {
 	datastore.BaseRepository[*models.MediaAudit]
 }

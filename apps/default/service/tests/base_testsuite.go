@@ -25,7 +25,7 @@ type BaseTestSuite struct {
 	internaltests.BaseTestSuite
 }
 
-func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.DependencyOption, ) (context.Context, *frame.Service, ServiceResources) {
+func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.DependencyOption) (context.Context, *frame.Service, ServiceResources) {
 
 	ctx := t.Context()
 	profileConfig, err := config.FromEnv[aconfig.FilesConfig]()

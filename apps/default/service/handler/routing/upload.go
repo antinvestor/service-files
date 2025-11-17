@@ -20,7 +20,6 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
@@ -44,7 +43,10 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if authClaims == nil {
 		return util.JSONResponse{
 			Code: http.StatusUnauthorized,
-			JSON: spec.Unknown("Unauthorised"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Unauthorised",
+			},
 		}
 	}
 
@@ -52,7 +54,10 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if err != nil {
 		return util.JSONResponse{
 			Code: http.StatusUnauthorized,
-			JSON: spec.Unknown("Unauthorised"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Unauthorised",
+			},
 		}
 	}
 
@@ -79,7 +84,10 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if err != nil {
 		return util.JSONResponse{
 			Code: http.StatusBadRequest,
-			JSON: spec.Unknown(err.Error()),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   err.Error(),
+			},
 		}
 	}
 
@@ -88,7 +96,10 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if err != nil {
 		return util.JSONResponse{
 			Code: http.StatusInternalServerError,
-			JSON: spec.Unknown("Failed to generate thumbnails"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Failed to generate thumbnails",
+			},
 		}
 	}
 
@@ -136,21 +147,27 @@ func parseAndValidateRequest(req *http.Request, cfg *config.FilesConfig, ownerID
 // Validate validates the uploadRequest fields
 func (r *uploadRequest) Validate(maxFileSizeBytes config.FileSizeBytes) *util.JSONResponse {
 	if maxFileSizeBytes > 0 && r.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxFileSizeBytes) {
-		return requestEntityTooLargeJSONResponse(maxFileSizeBytes)
+		return requestEntityTooLargeJSONResponse()
 	}
 	if path.Base(string(r.MediaMetadata.UploadName)) != string(r.MediaMetadata.UploadName) {
 		return &util.JSONResponse{
 			Code: http.StatusBadRequest,
-			JSON: spec.Unknown("Filename must not contain path separators"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Filename must not contain path separators",
+			},
 		}
 	}
 	return nil
 }
 
-func requestEntityTooLargeJSONResponse(maxFileSizeBytes config.FileSizeBytes) *util.JSONResponse {
+func requestEntityTooLargeJSONResponse() *util.JSONResponse {
 	return &util.JSONResponse{
 		Code: http.StatusRequestEntityTooLarge,
-		JSON: spec.Unknown("HTTP Content-Length is greater than the maximum allowed upload size"),
+		JSON: map[string]interface{}{
+			"errcode": "M_UNKNOWN",
+			"error":   "HTTP Content-Length is greater than the maximum allowed upload size",
+		},
 	}
 }
 

@@ -42,5 +42,5 @@ func (fms *MediaMetadataSaveEvent) Execute(ctx context.Context, payload any) err
 }
 
 func NewMetadataSaveHandler(mediaRepository repository.MediaRepository) events.EventI {
-	return &MediaMetadataSaveEvent{ MediaRepository: mediaRepository}
+	return &MediaMetadataSaveEvent{MediaRepository: mediaRepository}
 }

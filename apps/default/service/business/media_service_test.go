@@ -27,13 +27,13 @@ func TestMediaServiceTestSuite(t *testing.T) {
 func (suite *MediaServiceTestSuite) Test_NewMediaService() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, svc, res := suite.CreateService(t, dep)
-		
+
 		// Create database instance
 		db := &connection.Database{
 			WorkManager:     svc.WorkManager(),
 			MediaRepository: res.MediaRepository,
 		}
-		
+
 		// Create storage provider
 		cfg := &config.FilesConfig{
 			MaxFileSizeBytes: config.FileSizeBytes(1024 * 1024),
@@ -52,13 +52,13 @@ func (suite *MediaServiceTestSuite) Test_NewMediaService() {
 func (suite *MediaServiceTestSuite) Test_MediaService_UploadFile() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, svc, res := suite.CreateService(t, dep)
-		
+
 		// Create database instance
 		db := &connection.Database{
 			WorkManager:     svc.WorkManager(),
 			MediaRepository: res.MediaRepository,
 		}
-		
+
 		// Create storage provider
 		cfg := &config.FilesConfig{
 			MaxFileSizeBytes: config.FileSizeBytes(1024 * 1024), // 1MB
@@ -70,9 +70,9 @@ func (suite *MediaServiceTestSuite) Test_MediaService_UploadFile() {
 		service := NewMediaService(db, provider)
 
 		testCases := []struct {
-			name           string
-			request        *UploadRequest
-			expectedError  string
+			name          string
+			request       *UploadRequest
+			expectedError string
 		}{
 			{
 				name: "successful upload",

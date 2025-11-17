@@ -7,8 +7,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/antinvestor/gomatrixserverlib"
-	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -64,9 +62,9 @@ func (s *mediaService) DownloadFile(ctx context.Context, req *DownloadRequest) (
 	var err error
 
 	if req.IsThumbnailRequest {
-		thumbnailMetadata, err := s.db.GetThumbnail(ctx, req.MediaID, req.ThumbnailSize.Width, req.ThumbnailSize.Height, req.ThumbnailSize.ResizeMethod)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get thumbnail metadata: %w", err)
+		thumbnailMetadata, thumbnailErr := s.db.GetThumbnail(ctx, req.MediaID, req.ThumbnailSize.Width, req.ThumbnailSize.Height, req.ThumbnailSize.ResizeMethod)
+		if thumbnailErr != nil {
+			return nil, fmt.Errorf("failed to get thumbnail metadata: %w", thumbnailErr)
 		}
 		if thumbnailMetadata != nil {
 			mediaMetadata = thumbnailMetadata.MediaMetadata
@@ -80,7 +78,7 @@ func (s *mediaService) DownloadFile(ctx context.Context, req *DownloadRequest) (
 	}
 
 	if mediaMetadata == nil {
-		return nil, spec.NotFound("Media not found")
+		return nil, fmt.Errorf("media not found")
 	}
 
 	// Get the file data
@@ -115,9 +113,9 @@ func (s *mediaService) SearchMedia(ctx context.Context, req *SearchRequest) (*Se
 			"owner_id = ?": req.OwnerID,
 		}),
 		data.WithSearchLimit(int(req.Limit)),
-		data.WithSearchOffset(int(req.Page * req.Limit)),
+		data.WithSearchOffset(int(req.Page*req.Limit)),
 	)
-	
+
 	results, err := s.db.Search(ctx, searchQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search media: %w", err)
@@ -157,20 +155,15 @@ func (s *mediaService) SearchMedia(ctx context.Context, req *SearchRequest) (*Se
 func (s *mediaService) validateUploadRequest(req *UploadRequest) error {
 	// Check file size
 	if req.Config.MaxFileSizeBytes > 0 && req.FileSizeBytes > types.FileSizeBytes(req.Config.MaxFileSizeBytes) {
-		return spec.InvalidParam(fmt.Sprintf("HTTP Content-Length is greater than the maximum allowed upload size (%v).", req.Config.MaxFileSizeBytes))
+		return fmt.Errorf("invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", req.Config.MaxFileSizeBytes)
 	}
 
 	// Check filename
 	if strings.HasPrefix(string(req.UploadName), "~") {
-		return spec.InvalidParam("File name must not begin with '~'.")
+		return fmt.Errorf("invalid parameter: File name must not begin with '~'")
 	}
 
 	// Validate user ID
-	if req.OwnerID != "" {
-		if _, _, err := gomatrixserverlib.SplitID('@', string(req.OwnerID)); err != nil {
-			return spec.BadJSON("user id must be in the form @localpart:domain")
-		}
-	}
 
 	return nil
 }
@@ -203,13 +196,13 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 		logger.WithError(err).With(
 			"MaxFileSizeBytes", req.Config.MaxFileSizeBytes,
 		).Warn("Error while transferring file")
-		return nil, spec.InvalidParam("Failed to upload")
+		return nil, fmt.Errorf("invalid parameter: Failed to upload")
 	}
 
 	// Check if file size exceeds limit
 	if req.Config.MaxFileSizeBytes > 0 && bytesWritten > types.FileSizeBytes(req.Config.MaxFileSizeBytes) {
 		utils.RemoveDir(tmpDir, logger)
-		return nil, spec.InvalidParam(fmt.Sprintf("HTTP Content-Length is greater than the maximum allowed upload size (%v).", req.Config.MaxFileSizeBytes))
+		return nil, fmt.Errorf("invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", req.Config.MaxFileSizeBytes)
 	}
 
 	// Check if file already exists by hash
@@ -217,7 +210,7 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	if err != nil {
 		utils.RemoveDir(tmpDir, logger)
 		logger.WithError(err).Error("Error querying the database by hash.")
-		return nil, spec.InternalServerError{}
+		return nil, fmt.Errorf("internal server error")
 	}
 
 	var mediaMetadata *types.MediaMetadata
@@ -228,13 +221,13 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	} else {
 		// New file, create metadata
 		mediaMetadata = &types.MediaMetadata{
-			MediaID:         s.generateMediaID(ctx),
-			UploadName:      req.UploadName,
-			ContentType:     req.ContentType,
-			FileSizeBytes:   bytesWritten,
-			Base64Hash:      hash,
-			OwnerID:         req.OwnerID,
-			ServerName:      spec.ServerName(req.Config.ServerName),
+			MediaID:       s.generateMediaID(ctx),
+			UploadName:    req.UploadName,
+			ContentType:   req.ContentType,
+			FileSizeBytes: bytesWritten,
+			Base64Hash:    hash,
+			OwnerID:       req.OwnerID,
+			ServerName:    req.Config.ServerName,
 		}
 	}
 
@@ -249,7 +242,7 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	err = s.storeFileAndMetadata(ctx, tmpDir, mediaMetadata, req.Config.AbsBasePath)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upload file.")
-		return nil, spec.InvalidParam(err.Error())
+		return nil, fmt.Errorf("invalid parameter: %s", err.Error())
 	}
 
 	return &UploadResult{
@@ -263,16 +256,16 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 func (s *mediaService) validateDownloadRequest(req *DownloadRequest) error {
 	// Validate media ID format
 	if !isValidMediaID(string(req.MediaID)) {
-		return spec.InvalidParam("mediaId must be a non-empty string and contain only characters A-Za-z0-9_=-")
+		return fmt.Errorf("invalid parameter: mediaId must be a non-empty string and contain only characters A-Za-z0-9_=-")
 	}
 
 	// Validate thumbnail parameters if it's a thumbnail request
 	if req.IsThumbnailRequest && req.ThumbnailSize != nil {
 		if req.ThumbnailSize.Width < 0 || req.ThumbnailSize.Height < 0 {
-			return spec.InvalidParam("width and height must be >= 0")
+			return fmt.Errorf("invalid parameter: width and height must be >= 0")
 		}
 		if req.ThumbnailSize.Width > 32 || req.ThumbnailSize.Height > 32 {
-			return spec.InvalidParam("width and height must be <= 32")
+			return fmt.Errorf("invalid parameter: width and height must be <= 32")
 		}
 	}
 
@@ -282,10 +275,10 @@ func (s *mediaService) validateDownloadRequest(req *DownloadRequest) error {
 // validateSearchRequest validates the search request
 func (s *mediaService) validateSearchRequest(req *SearchRequest) error {
 	if req.Page < 0 {
-		return spec.InvalidParam("page must be >= 0")
+		return fmt.Errorf("invalid parameter: page must be >= 0")
 	}
 	if req.Limit <= 0 || req.Limit > 1000 {
-		return spec.InvalidParam("limit must be > 0 and <= 1000")
+		return fmt.Errorf("invalid parameter: limit must be > 0 and <= 1000")
 	}
 	return nil
 }
@@ -297,10 +290,10 @@ func (s *mediaService) getFileData(ctx context.Context, mediaMetadata *types.Med
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("failed to get file path from metadata: %w", err)
 	}
-	
+
 	// Determine bucket based on media properties
 	bucket := s.provider.GetBucket(mediaMetadata.IsPublic)
-	
+
 	// Download file from storage
 	reader, cleanup, err := s.provider.DownloadFile(ctx, bucket, types.Path(filePath))
 	if err != nil {
@@ -357,7 +350,7 @@ func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Pa
 	if err != nil {
 		return err
 	}
-	
+
 	if duplicate {
 		util.Log(ctx).WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
 	}

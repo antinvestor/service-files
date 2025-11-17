@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -51,7 +50,10 @@ func Search(
 	if authClaims == nil {
 		return util.JSONResponse{
 			Code: http.StatusUnauthorized,
-			JSON: spec.Unknown("Unauthorised"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Unauthorised",
+			},
 		}
 	}
 
@@ -59,7 +61,10 @@ func Search(
 	if err != nil {
 		return util.JSONResponse{
 			Code: http.StatusUnauthorized,
-			JSON: spec.Unknown("Unauthorised"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Unauthorised",
+			},
 		}
 	}
 
@@ -76,7 +81,7 @@ func Search(
 
 	// Parse page
 	if pageStr != "" {
-		if p, err := strconv.ParseInt(pageStr, 10, 32); err == nil && p >= 0 {
+		if p, pageErr := strconv.ParseInt(pageStr, 10, 32); pageErr == nil && p >= 0 {
 			page = int32(p)
 		} else {
 			logger.WithField("page", pageStr).Warn("Invalid page parameter, using default")
@@ -85,7 +90,7 @@ func Search(
 
 	// Parse limit
 	if limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 && l <= 1000 {
+		if l, limitErr := strconv.ParseInt(limitStr, 10, 32); limitErr == nil && l > 0 && l <= 1000 {
 			limit = int32(l)
 		} else {
 			logger.WithField("limit", limitStr).Warn("Invalid limit parameter, using default")
@@ -114,7 +119,10 @@ func Search(
 		logger.WithError(err).Error("Search failed")
 		return util.JSONResponse{
 			Code: http.StatusInternalServerError,
-			JSON: spec.Unknown("Search failed"),
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Search failed",
+			},
 		}
 	}
 

@@ -3,15 +3,15 @@ module github.com/antinvestor/service-files
 go 1.25.0
 
 require (
-	buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20251104183715-d2644b68c6f4.2
-	buf.build/gen/go/antinvestor/partition/connectrpc/go v1.19.1-20251104183841-abd5e3c3145b.2
-	buf.build/gen/go/antinvestor/partition/protocolbuffers/go v1.36.10-20251104183841-abd5e3c3145b.1
-	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251104183907-bd2327635adb.2
-	buf.build/gen/go/antinvestor/profile/protocolbuffers/go v1.36.10-20251104183907-bd2327635adb.1
+	buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20251115181047-22d912497a6f.2
+	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.10-20251115181047-22d912497a6f.1
+	buf.build/gen/go/antinvestor/partition/connectrpc/go v1.19.1-20251115181220-b54955485f7e.2
+	buf.build/gen/go/antinvestor/partition/protocolbuffers/go v1.36.10-20251115181220-b54955485f7e.1
+	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251115181258-23365fece788.2
+	buf.build/gen/go/antinvestor/profile/protocolbuffers/go v1.36.10-20251115181258-23365fece788.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/partition v1.47.13
-	github.com/antinvestor/apis/go/profile v1.47.13
-	github.com/antinvestor/gomatrixserverlib v0.2.7
+	github.com/antinvestor/apis/go/partition v1.48.8
+	github.com/antinvestor/apis/go/profile v1.48.8
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.2
@@ -19,19 +19,18 @@ require (
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.65.5
+	github.com/pitabwire/frame v1.66.0
 	github.com/pitabwire/util v0.3.5
-	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 	gocloud.dev v0.43.0
 	golang.org/x/image v0.33.0
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/h2non/bimg.v1 v1.1.9
 	gorm.io/gorm v1.31.1
 )
 
 require (
-	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.10-20251104183629-02dfa9355307.1 // indirect
-	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.10-20251104183715-d2644b68c6f4.1 // indirect
+	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.10-20251115174401-cf993dd61681.1 // indirect
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.10-20250912141014-52f32327d4b0.1 // indirect
 	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.10-20230414000709-087bc8072ce4.1 // indirect
 	cel.dev/expr v0.25.1 // indirect
@@ -97,7 +96,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.7 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
-	github.com/hashicorp/go-set/v3 v3.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.6 // indirect
@@ -122,11 +120,11 @@ require (
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.6.0 // indirect
-	github.com/oleiade/lane/v2 v2.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/panjf2000/ants/v2 v2.11.3 // indirect
 	github.com/pitabwire/natspubsub v0.7.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
@@ -141,10 +139,6 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
 	github.com/testcontainers/testcontainers-go v0.40.0 // indirect
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0 // indirect
-	github.com/tidwall/gjson v1.18.0 // indirect
-	github.com/tidwall/match v1.2.0 // indirect
-	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
@@ -184,7 +178,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.44.0 // indirect
-	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
@@ -197,7 +190,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251111163417-95abcf5c77ba // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba // indirect
 	google.golang.org/grpc v1.76.0 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect

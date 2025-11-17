@@ -16,6 +16,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/security"
+	"github.com/pitabwire/util"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -62,7 +63,7 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 
 	// Read the first message (metadata)
 	if !stream.Receive() {
-		if err := stream.Err(); err != nil {
+		if err = stream.Err(); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no metadata received"))
@@ -84,7 +85,7 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 	}
 
 	// Check for stream errors
-	if err := stream.Err(); err != nil {
+	if err = stream.Err(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
@@ -127,7 +128,7 @@ func (s *FileServer) CreateContent(ctx context.Context, req *connect.Request[fil
 
 	// Generate a new media ID
 	mediaID := utils.GenerateRandomString(32)
-	
+
 	// Get server name from config
 	cfg := s.Service.Config().(*config.FilesConfig)
 
@@ -156,7 +157,7 @@ func (s *FileServer) GetContent(ctx context.Context, req *connect.Request[filesv
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-	defer result.FileData.Close()
+	defer util.CloseAndLogOnError(ctx, result.FileData)
 
 	// Read file data
 	data, err := io.ReadAll(result.FileData)
@@ -222,7 +223,7 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 		default:
 			method = "scale"
 		}
-		
+
 		businessReq.ThumbnailSize = &types.ThumbnailSize{
 			Width:        int(req.Msg.Width),
 			Height:       int(req.Msg.Height),
@@ -235,7 +236,7 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-	defer result.FileData.Close()
+	defer util.CloseAndLogOnError(ctx, result.FileData)
 
 	// Read file data
 	data, err := io.ReadAll(result.FileData)

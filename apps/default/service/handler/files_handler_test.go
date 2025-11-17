@@ -18,6 +18,10 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+type contextKey string
+
+const userIDKey contextKey = "user_id"
+
 type FileServerTestSuite struct {
 	tests.BaseTestSuite
 }
@@ -29,13 +33,13 @@ func TestFileServerTestSuite(t *testing.T) {
 func (suite *FileServerTestSuite) Test_NewFileServer() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, svc, res := suite.CreateService(t, dep)
-		
+
 		// Create database instance
 		db := &connection.Database{
 			WorkManager:     svc.WorkManager(),
 			MediaRepository: res.MediaRepository,
 		}
-		
+
 		// Create storage provider
 		cfg := &config.FilesConfig{
 			MaxFileSizeBytes: config.FileSizeBytes(1024 * 1024),
@@ -43,7 +47,7 @@ func (suite *FileServerTestSuite) Test_NewFileServer() {
 		}
 		provider, err := provider.GetStorageProvider(ctx, cfg)
 		require.NoError(t, err)
-		
+
 		// Create media service
 		mediaService := business.NewMediaService(db, provider)
 
@@ -57,13 +61,13 @@ func (suite *FileServerTestSuite) Test_NewFileServer() {
 func (suite *FileServerTestSuite) Test_FileServer_CreateContent() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, svc, res := suite.CreateService(t, dep)
-		
+
 		// Create database instance
 		db := &connection.Database{
 			WorkManager:     svc.WorkManager(),
 			MediaRepository: res.MediaRepository,
 		}
-		
+
 		// Create storage provider
 		cfg := &config.FilesConfig{
 			MaxFileSizeBytes: config.FileSizeBytes(1024 * 1024),
@@ -71,14 +75,14 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContent() {
 		}
 		provider, err := provider.GetStorageProvider(ctx, cfg)
 		require.NoError(t, err)
-		
+
 		// Create media service
 		mediaService := business.NewMediaService(db, provider)
 
 		handler := NewFileServer(svc, mediaService, db, provider).(*FileServer)
 
 		// Create authenticated context with mock claims
-		ctx = context.WithValue(ctx, "user_id", "@test-user:example.com")
+		ctx = context.WithValue(ctx, userIDKey, "@test-user:example.com")
 
 		req := connect.NewRequest(&filesv1.CreateContentRequest{})
 
@@ -98,13 +102,13 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContent() {
 func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, svc, res := suite.CreateService(t, dep)
-		
+
 		// Create database instance
 		db := &connection.Database{
 			WorkManager:     svc.WorkManager(),
 			MediaRepository: res.MediaRepository,
 		}
-		
+
 		// Create storage provider
 		cfg := &config.FilesConfig{
 			MaxFileSizeBytes: config.FileSizeBytes(1024 * 1024),
@@ -112,7 +116,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 		}
 		provider, err := provider.GetStorageProvider(ctx, cfg)
 		require.NoError(t, err)
-		
+
 		// Create media service
 		mediaService := business.NewMediaService(db, provider)
 
@@ -134,13 +138,13 @@ func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreview() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, svc, res := suite.CreateService(t, dep)
-		
+
 		// Create database instance
 		db := &connection.Database{
 			WorkManager:     svc.WorkManager(),
 			MediaRepository: res.MediaRepository,
 		}
-		
+
 		// Create storage provider
 		cfg := &config.FilesConfig{
 			MaxFileSizeBytes: config.FileSizeBytes(1024 * 1024),
@@ -148,7 +152,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreview() {
 		}
 		provider, err := provider.GetStorageProvider(ctx, cfg)
 		require.NoError(t, err)
-		
+
 		// Create media service
 		mediaService := business.NewMediaService(db, provider)
 

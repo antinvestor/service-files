@@ -15,20 +15,18 @@
 package routing
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/antinvestor/gomatrixserverlib/spec"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/util"
 )
-
-const mediaIDCharacters = "A-Za-z0-9_=-"
 
 // Download implements GET /download and GET /thumbnail
 // Files from remote servers (i.e. origin != cfg.ServerName) are cached locally.
@@ -76,10 +74,10 @@ func Download(
 	// Execute business logic
 	result, err := mediaService.DownloadFile(req.Context(), businessReq)
 	if err != nil {
-		handleDownloadError(w, err)
+		handleDownloadError(req.Context(), w, err)
 		return
 	}
-	defer result.FileData.Close()
+	defer util.CloseAndLogOnError(req.Context(), result.FileData)
 
 	// Set response headers
 	addDownloadHeaders(w, result, customFilename, isThumbnailRequest)
@@ -117,26 +115,14 @@ func addDownloadHeaders(w http.ResponseWriter, result *business.DownloadResult, 
 }
 
 // handleDownloadError handles errors during download and sets appropriate HTTP responses
-func handleDownloadError(w http.ResponseWriter, err error) {
-	switch e := err.(type) {
-	case spec.MatrixError:
-		switch e.ErrCode {
-		case "M_NOT_FOUND":
-			w.WriteHeader(http.StatusNotFound)
-		case "M_FORBIDDEN":
-			w.WriteHeader(http.StatusForbidden)
-		case "M_INVALID_PARAM":
-			w.WriteHeader(http.StatusBadRequest)
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	
+func handleDownloadError(ctx context.Context, w http.ResponseWriter, err error) {
+	w.WriteHeader(http.StatusInternalServerError)
+
 	// Write error response
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"error":"` + err.Error() + `"}`))
+	if _, writeErr := w.Write([]byte(`{"error":"` + err.Error() + `"}`)); writeErr != nil {
+		util.Log(ctx).WithError(writeErr).Warn("Failed to write error response")
+	}
 }
 
 // isValidMediaID checks if the media ID is valid
