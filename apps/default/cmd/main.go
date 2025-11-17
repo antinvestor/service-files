@@ -36,14 +36,17 @@ func main() {
 		cfg.ServerName = "service_files"
 	}
 
-	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithRegisterServerOauth2Client())
+	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithRegisterServerOauth2Client(), frame.WithDatastore())
 
 	log := svc.Log(ctx)
 
-	serviceOptions := []frame.Option{frame.WithDatastore()}
+	// Create repositories for the database
+	dbManager := svc.DatastoreManager()
+	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
+	workManager := svc.WorkManager()
 
 	// Handle database migration if requested
-	if handleDatabaseMigration(ctx, svc, cfg, log) {
+	if handleDatabaseMigration(ctx, dbManager, cfg) {
 		return
 	}
 
@@ -51,11 +54,6 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("main -- Could not setup or access storage")
 	}
-
-	// Create repositories for the database
-	dbManager := svc.DatastoreManager()
-	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
-	workManager := svc.WorkManager()
 
 	mediaRepo := repository.NewMediaRepository(ctx, dbPool, workManager)
 	auditRepo := repository.NewMediaAuditRepository(ctx, dbPool, workManager)
@@ -90,12 +88,10 @@ func main() {
 	publicRouter.Handle("/", authServiceHandlers)
 
 	defaultServer := frame.WithHTTPHandler(publicRouter)
-	serviceOptions = append(serviceOptions, defaultServer)
-
-	serviceOptions = append(serviceOptions, frame.WithRegisterEvents(
+	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(
 		events.NewAuditSaveHandler(auditRepo),
 		events.NewMetadataSaveHandler(mediaRepo),
-	))
+	)}
 
 	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(svc, metadataStore, storageProvider)
 	thumbnailGenerateQueue := frame.WithRegisterSubscriber(cfg.QueueThumbnailsGenerateName, cfg.QueueThumbnailsGenerateURL, &thumbnailQueueHandler)
@@ -118,18 +114,15 @@ func main() {
 // handleDatabaseMigration performs database migration if configured to do so.
 func handleDatabaseMigration(
 	ctx context.Context,
-	svc *frame.Service,
+	dbManager datastore.Manager,
 	cfg aconfig.FilesConfig,
-	log *util.LogEntry,
 ) bool {
-	serviceOptions := []frame.Option{frame.WithDatastore()}
 
 	if cfg.DoDatabaseMigrate() {
-		svc.Init(ctx, serviceOptions...)
 
-		err := repository.Migrate(ctx, svc.DatastoreManager(), cfg.GetDatabaseMigrationPath())
+		err := repository.Migrate(ctx, dbManager, cfg.GetDatabaseMigrationPath())
 		if err != nil {
-			log.WithError(err).Fatal("main -- Could not migrate successfully")
+			util.Log(ctx).WithError(err).Fatal("main -- Could not migrate successfully")
 		}
 		return true
 	}
