@@ -10,8 +10,8 @@ require (
 	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251115181258-23365fece788.2
 	buf.build/gen/go/antinvestor/profile/protocolbuffers/go v1.36.10-20251115181258-23365fece788.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/partition v1.48.11
-	github.com/antinvestor/apis/go/profile v1.48.11
+	github.com/antinvestor/apis/go/partition v1.48.14
+	github.com/antinvestor/apis/go/profile v1.48.14
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.2
@@ -19,7 +19,7 @@ require (
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.66.2
+	github.com/pitabwire/frame v1.66.6
 	github.com/pitabwire/util v0.3.5
 	github.com/stretchr/testify v1.11.1
 	gocloud.dev v0.43.0
@@ -130,7 +130,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.2 // indirect
+	github.com/prometheus/common v0.67.3 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/rs/xid v1.6.0 // indirect
