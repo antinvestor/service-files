@@ -12,14 +12,14 @@ require (
 	connectrpc.com/connect v1.19.1
 	github.com/antinvestor/apis/go/partition v1.48.16
 	github.com/antinvestor/apis/go/profile v1.48.16
-	github.com/aws/aws-sdk-go-v2 v1.39.6
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.24
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.2
+	github.com/aws/aws-sdk-go-v2 v1.40.0
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.92.0
 	github.com/containerd/log v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/pitabwire/frame v1.67.2
+	github.com/pitabwire/frame v1.67.10
 	github.com/pitabwire/util v0.3.5
 	github.com/stretchr/testify v1.11.1
 	gocloud.dev v0.43.0
@@ -50,20 +50,21 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.3 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.31.20 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.13 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.13 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.32.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.14 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.14 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.13 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.40.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.41.1 // indirect
 	github.com/aws/smithy-go v1.23.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
@@ -176,7 +177,7 @@ require (
 	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/crypto v0.44.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
