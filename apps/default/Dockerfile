@@ -1,6 +1,15 @@
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+
+# ---------- Builder ----------
 FROM golang:1.25 AS builder
 
 WORKDIR /app
+
+ARG REPOSITORY
+ARG VERSION=dev
+ARG REVISION=none
+ARG BUILDTIME
 
 # Copy go.mod and go.sum files from the project root
 COPY go.mod go.sum ./
@@ -10,14 +19,35 @@ RUN go mod download
 COPY ./apps/default ./apps/default
 COPY ./internal ./internal
 
-# Build the binary from the cmd directory
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o /app/binary ./apps/default/cmd/main.go
+# Build static binary for target platform
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath \
+     -ldflags="-s -w \
+         -X github.com/pitabwire/frame/version.Repository=${REPOSITORY} \
+         -X github.com/pitabwire/frame/version.Version=${VERSION} \
+         -X github.com/pitabwire/frame/version.Commit=${REVISION} \
+         -X github.com/pitabwire/frame/version.Date=${BUILDTIME}" \
+     -o /app/binary ./apps/default/cmd/main.go
 
-FROM gcr.io/distroless/static:nonroot
+# ---------- Final ----------
+FROM cgr.dev/chainguard/static:latest
+# Add Maintainer Info
+LABEL maintainer="Bwire Peter <bwire517@gmail.com>"
 
 USER 65532:65532
+
 EXPOSE 80
-EXPOSE 50051
+
+# Add OCI metadata labels
+ARG REPOSITORY
+ARG VERSION
+ARG REVISION
+ARG BUILDTIME
+LABEL org.opencontainers.image.title="Files Service"
+LABEL org.opencontainers.image.version=$VERSION
+LABEL org.opencontainers.image.revision=$REVISION
+LABEL org.opencontainers.image.created=$BUILDTIME
+LABEL org.opencontainers.image.source=$REPOSITORY
 
 WORKDIR /
 

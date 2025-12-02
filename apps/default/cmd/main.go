@@ -100,10 +100,7 @@ func main() {
 
 	svc.Init(ctx, serviceOptions...)
 
-	log.WithField("server http port", cfg.HTTPPort()).
-		WithField("server grpc port", cfg.HTTPPort()).
-		Info(" Initiating server operations")
-
+	// Startup service
 	err = svc.Run(ctx, "")
 	if err != nil {
 		log.WithError(err).Fatal("main -- Could not run Server : %v", err)
