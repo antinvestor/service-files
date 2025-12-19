@@ -18,7 +18,7 @@ import (
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/datastore"
-	framehttp "github.com/pitabwire/frame/security/interceptors/http"
+	framehttp "github.com/pitabwire/frame/security/interceptors/httptor"
 	"github.com/pitabwire/util"
 )
 
