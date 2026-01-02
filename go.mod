@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20251216061357-8ca245a21a30.2
-	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20251216061357-8ca245a21a30.1
+	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20251223175512-7a3fcba332ca.1
 	buf.build/gen/go/antinvestor/partition/connectrpc/go v1.19.1-20251216063854-8a831e5d0734.2
 	buf.build/gen/go/antinvestor/partition/protocolbuffers/go v1.36.11-20251216063854-8a831e5d0734.1
 	buf.build/gen/go/antinvestor/profile/connectrpc/go v1.19.1-20251216063931-513b05dc5e70.2
@@ -30,7 +30,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20251216061047-d524d0f6d60c.1 // indirect
+	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20260102104630-5c57561a771f.1 // indirect
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20251209175733-2a1774d88802.1 // indirect
 	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.11-20230414000709-087bc8072ce4.1 // indirect
 	cel.dev/expr v0.25.1 // indirect
