@@ -24,4 +24,26 @@ One requires :
 
     - To regenerate the server you need to run the command
         `docker run --rm   -v ${PWD}:/local -e GO_POST_PROCESS_FILE="/usr/local/bin/gofmt -w" openapitools/openapi-generator-cli generate  -i /local/v1/file.yaml   -g go-server --package-name file_v1 --additional-properties=sourceFolder=openapi  -o /local/service-file`
+
+## Development Setup
+
+### Git Hooks
+
+This repository includes a pre-commit hook that automatically runs `make format` before each commit to ensure consistent code formatting.
+
+**Enable the hook:**
+```bash
+git config core.hooksPath .githooks
+```
+
+**What it does:**
+- Detects staged `.go` files
+- Runs `make format` to apply gofmt/goimports
+- If formatting changes any files, the commit is blocked
+- You must review and stage the formatted files before committing again
+
+**To disable temporarily:**
+```bash
+git commit --no-verify
+```
     
