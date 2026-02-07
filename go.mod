@@ -15,10 +15,10 @@ require (
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260102123502-9be03cdb3904.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260102123502-9be03cdb3904.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.53.1
-	github.com/antinvestor/apis/go/files v1.53.4
-	github.com/antinvestor/apis/go/partition v1.53.4
-	github.com/antinvestor/apis/go/profile v1.53.4
+	github.com/antinvestor/apis/go/common v1.53.5
+	github.com/antinvestor/apis/go/files v1.53.6
+	github.com/antinvestor/apis/go/partition v1.53.6
+	github.com/antinvestor/apis/go/profile v1.53.6
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
@@ -27,17 +27,17 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame v1.71.0
+	github.com/pitabwire/frame v1.72.0
 	github.com/pitabwire/util v0.4.0
 	github.com/stretchr/testify v1.11.1
-	github.com/twpayne/go-geom v1.4.1
+	github.com/twpayne/go-geom v1.6.1
 	gocloud.dev v0.44.0
 	golang.org/x/image v0.35.0
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/api v0.265.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/h2non/bimg.v1 v1.1.9
-	gorm.io/datatypes v1.2.0
+	gorm.io/datatypes v1.2.7
 	gorm.io/gorm v1.31.1
 )
 
@@ -138,6 +138,7 @@ require (
 	github.com/nicksnyder/go-i18n/v2 v2.6.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
+	github.com/ory/keto/proto v0.13.0-alpha.0 // indirect
 	github.com/panjf2000/ants/v2 v2.11.4 // indirect
 	github.com/pitabwire/natspubsub v0.7.12 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -205,6 +206,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/mysql v1.4.7 // indirect
+	gorm.io/driver/mysql v1.5.6 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
 )
