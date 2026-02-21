@@ -77,7 +77,7 @@ func main() {
 	_, connectHandler := filesv1connect.NewFilesServiceHandler(fileServer)
 
 	// Add Connect router to the public router
-	publicRouter.Handle("/rpc/", http.StripPrefix("/rpc", connectHandler))
+	publicRouter.Handle("/", http.StripPrefix("/", connectHandler))
 
 	sm := svc.SecurityManager()
 

@@ -195,7 +195,7 @@ func SetupMatrixRoutes(
 		func(req *http.Request) util.JSONResponse {
 			return Search(req, service, db, mediaService)
 		})
-	matrixPathsRouter.Handle("/media/search", searchHandler).Methods(http.MethodGet, http.MethodOptions)
+	matrixPathsRouter.Handle("/v1/media/search", searchHandler).Methods(http.MethodGet, http.MethodOptions)
 
 	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix)
 	v1mux := ClientRouters.PathPrefix("/v1/media/")
