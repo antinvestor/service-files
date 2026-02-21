@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -29,9 +28,7 @@ type Provider interface {
 // If the final path exists and the file size matches, the file does not need to be moved.
 // In error cases where the file is not a duplicate, the caller may decide to remove the final path.
 // Returns the final path of the file, whether it is a duplicate and an error.
-func UploadFileWithHashCheck(ctx context.Context, provider Provider, tmpDir types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *util.LogEntry) (types.Path, bool, error) {
-	// Note: in all error and success cases, we need to remove the temporary directory
-	defer utils.RemoveDir(tmpDir, logger)
+func UploadFileWithHashCheck(ctx context.Context, provider Provider, sourcePath types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *util.LogEntry) (types.Path, bool, error) {
 	duplicate := false
 	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
 	if err != nil {
@@ -41,7 +38,7 @@ func UploadFileWithHashCheck(ctx context.Context, provider Provider, tmpDir type
 	uploadBucket := provider.GetBucket(mediaMetadata.IsPublic)
 
 	duplicate, err = provider.UploadFile(ctx, uploadBucket,
-		types.Path(filepath.Join(string(tmpDir), "content")),
+		sourcePath,
 		types.Path(finalPath),
 	)
 	if err != nil {

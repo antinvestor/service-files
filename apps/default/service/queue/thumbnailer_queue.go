@@ -32,6 +32,9 @@ func (fq *ThumbnailQueueHandler) Handle(ctx context.Context, _ map[string]string
 	if err != nil {
 		return err
 	}
+	if mediaMetadata == nil {
+		return nil
+	}
 
 	if !strings.HasPrefix(string(mediaMetadata.ContentType), "image") {
 		return nil
@@ -42,7 +45,7 @@ func (fq *ThumbnailQueueHandler) Handle(ctx context.Context, _ map[string]string
 	thumbnailSizes := cfg.ThumbnailSizes
 
 	err = thumbnailer.GenerateThumbnails(
-		ctx, thumbnailSizes, mediaMetadata, cfg.AbsBasePath, fq.mediaDatabase, fq.provider, logger,
+		ctx, thumbnailSizes, mediaMetadata, cfg.AbsBasePath, fq.mediaDatabase, fq.provider, logger, cfg.EnvStorageEncryptionPhrase,
 	)
 	if err != nil {
 		logger.WithError(err).Warn("Error generating thumbnails")

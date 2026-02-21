@@ -3,37 +3,86 @@ package main
 import (
 	"testing"
 
+	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/pitabwire/frame/frametests/definition"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-type SystemTestSuite struct {
+type MainTestSuite struct {
 	tests.BaseTestSuite
 }
 
-func TestSystemTestSuite(t *testing.T) {
-	suite.Run(t, new(SystemTestSuite))
+func TestMainTestSuite(t *testing.T) {
+	suite.Run(t, new(MainTestSuite))
 }
 
-// Test started when the test binary is started. Only calls main.
-func (suite *SystemTestSuite) TestSystem() {
+func (suite *MainTestSuite) TestValidateEncryptionConfig() {
 	testCases := []struct {
-		name        string
-		description string
+		name      string
+		phrase    string
+		shouldErr bool
 	}{
 		{
-			name:        "system test placeholder",
-			description: "placeholder test for system functionality",
+			name:      "empty_phrase",
+			phrase:    "",
+			shouldErr: true,
+		},
+		{
+			name:      "short_phrase",
+			phrase:    "short",
+			shouldErr: true,
+		},
+		{
+			name:      "valid_32_byte_phrase",
+			phrase:    "0123456789abcdef0123456789abcdef",
+			shouldErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			cfg := &aconfig.FilesConfig{EnvStorageEncryptionPhrase: tc.phrase}
+			err := validateEncryptionConfig(cfg)
+			if tc.shouldErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func (suite *MainTestSuite) TestHandleDatabaseMigration() {
+	testCases := []struct {
+		name     string
+		migrate  bool
+		wantTrue bool
+	}{
+		{
+			name:     "no_migration_requested",
+			migrate:  false,
+			wantTrue: false,
+		},
+		{
+			name:     "migration_requested",
+			migrate:  true,
+			wantTrue: true,
 		},
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				// This is a placeholder test that was originally empty
-				// Add actual system test logic here when needed
-				t.Log(tc.description)
+				ctx, svc, _ := suite.CreateService(t, dep)
+				cfg := *(svc.Config().(*aconfig.FilesConfig))
+				cfg.DatabaseMigrate = tc.migrate
+				cfg.DatabaseMigrationPath = "apps/default/migrations/0001"
+
+				result := handleDatabaseMigration(ctx, svc.DatastoreManager(), cfg)
+				assert.Equal(t, tc.wantTrue, result)
 			})
 		}
 	})

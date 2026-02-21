@@ -4,21 +4,28 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/antinvestor/service-files/apps/default/config"
+	"github.com/antinvestor/service-files/apps/default/service/queue/thumbnailer"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/frame/data"
 	"github.com/pitabwire/util"
+	"golang.org/x/sync/singleflight"
 )
 
 // mediaService implements the MediaService interface
 type mediaService struct {
 	db       storage.Database
 	provider storage.Provider
+
+	thumbnailGroup singleflight.Group
 }
 
 // NewMediaService creates a new instance of the media service
@@ -57,32 +64,24 @@ func (s *mediaService) DownloadFile(ctx context.Context, req *DownloadRequest) (
 		return nil, err
 	}
 
-	// Get media metadata
-	var mediaMetadata *types.MediaMetadata
-	var err error
-
-	if req.IsThumbnailRequest {
-		thumbnailMetadata, thumbnailErr := s.db.GetThumbnail(ctx, req.MediaID, req.ThumbnailSize.Width, req.ThumbnailSize.Height, req.ThumbnailSize.ResizeMethod)
-		if thumbnailErr != nil {
-			return nil, fmt.Errorf("failed to get thumbnail metadata: %w", thumbnailErr)
-		}
-		if thumbnailMetadata != nil {
-			mediaMetadata = thumbnailMetadata.MediaMetadata
-		}
-	} else {
-		mediaMetadata, err = s.db.GetMediaMetadata(ctx, req.MediaID)
-	}
-
+	mediaMetadata, err := s.db.GetMediaMetadata(ctx, req.MediaID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get media metadata: %w", err)
 	}
-
 	if mediaMetadata == nil {
 		return nil, fmt.Errorf("media not found")
 	}
 
+	if req.IsThumbnailRequest {
+		thumbnailMetadata, err := s.resolveThumbnail(ctx, req, mediaMetadata)
+		if err != nil {
+			return nil, err
+		}
+		mediaMetadata = thumbnailMetadata.MediaMetadata
+	}
+
 	// Get the file data
-	fileData, contentLength, contentType, err := s.getFileData(ctx, mediaMetadata)
+	fileData, contentLength, contentType, err := s.getFileData(ctx, mediaMetadata, req.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -107,14 +106,34 @@ func (s *mediaService) SearchMedia(ctx context.Context, req *SearchRequest) (*Se
 		return nil, err
 	}
 
-	// Perform search
+	filtersAnd := map[string]interface{}{
+		"owner_id = ?": req.OwnerID,
+	}
+	if req.ParentID != "" {
+		filtersAnd["parent_id = ?"] = req.ParentID
+	}
+	if req.StartDate != nil {
+		filtersAnd["created_at >= ?"] = *req.StartDate
+	}
+	if req.EndDate != nil {
+		filtersAnd["created_at <= ?"] = *req.EndDate
+	}
+	filtersOr := map[string]any{}
+	if strings.TrimSpace(req.Query) != "" {
+		query := strings.TrimSpace(req.Query)
+		likeQuery := "%" + query + "%"
+		filtersOr["name ILIKE ?"] = likeQuery
+		filtersOr["mimetype ILIKE ?"] = likeQuery
+		filtersOr["search_properties @@ plainto_tsquery(?)"] = query
+	}
+
 	searchQuery := data.NewSearchQuery(
-		data.WithSearchFiltersAndByValue(map[string]interface{}{
-			"owner_id = ?": req.OwnerID,
-		}),
-		data.WithSearchLimit(int(req.Limit)),
+		data.WithSearchFiltersAndByValue(filtersAnd),
+		data.WithSearchFiltersOrByValue(filtersOr),
+		data.WithSearchLimit(int(req.Limit)+1),
 		data.WithSearchOffset(int(req.Page*req.Limit)),
 	)
+	searchQuery.OrderBy = "created_at DESC"
 
 	results, err := s.db.Search(ctx, searchQuery)
 	if err != nil {
@@ -129,21 +148,20 @@ func (s *mediaService) SearchMedia(ctx context.Context, req *SearchRequest) (*Se
 			break
 		}
 		if result.IsError() {
-			continue // Skip error results
+			return nil, result.Error()
 		}
 		mediaResults = append(mediaResults, result.Item())
 	}
 
-	// Convert results to API types
-	apiResults := make([]*types.MediaMetadata, len(mediaResults))
-	copy(apiResults, mediaResults)
-
 	// Determine if there are more results
-	hasMore := len(mediaResults) == int(req.Limit)
+	hasMore := len(mediaResults) > int(req.Limit)
+	if hasMore {
+		mediaResults = mediaResults[:int(req.Limit)]
+	}
 
 	return &SearchResult{
-		Results: apiResults,
-		Count:   len(apiResults),
+		Results: mediaResults,
+		Count:   len(mediaResults),
 		Page:    int(req.Page),
 		HasMore: hasMore,
 	}, nil
@@ -159,6 +177,13 @@ func (s *mediaService) validateUploadRequest(req *UploadRequest) error {
 	// Check filename
 	if strings.HasPrefix(string(req.UploadName), "~") {
 		return fmt.Errorf("invalid parameter: File name must not begin with '~'")
+	}
+	if path.Base(string(req.UploadName)) != string(req.UploadName) {
+		return fmt.Errorf("invalid parameter: File name must not contain path separators")
+	}
+
+	if req.MediaID != "" && !isValidMediaID(string(req.MediaID)) {
+		return fmt.Errorf("invalid parameter: mediaId must be a non-empty string and contain only characters A-Za-z0-9_=-")
 	}
 
 	// Validate user ID
@@ -211,21 +236,41 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 		return nil, fmt.Errorf("internal server error")
 	}
 
+	if req.MediaID != "" {
+		existingByID, err := s.db.GetMediaMetadata(ctx, req.MediaID)
+		if err != nil {
+			utils.RemoveDir(tmpDir, logger)
+			return nil, fmt.Errorf("internal server error")
+		}
+		if existingByID != nil {
+			utils.RemoveDir(tmpDir, logger)
+			return nil, fmt.Errorf("media already exists")
+		}
+	}
+
 	var mediaMetadata *types.MediaMetadata
+	reusedExistingMetadata := false
 	if existingMetadata != nil {
 		// File already exists, use existing metadata
 		defer utils.RemoveDir(tmpDir, logger)
 		mediaMetadata = existingMetadata
+		reusedExistingMetadata = true
 	} else {
 		// New file, create metadata
+		mediaID := req.MediaID
+		if mediaID == "" {
+			mediaID = s.generateMediaID(ctx)
+		}
 		mediaMetadata = &types.MediaMetadata{
-			MediaID:       s.generateMediaID(ctx),
-			UploadName:    req.UploadName,
-			ContentType:   req.ContentType,
-			FileSizeBytes: bytesWritten,
-			Base64Hash:    hash,
-			OwnerID:       req.OwnerID,
-			ServerName:    req.Config.ServerName,
+			MediaID:           mediaID,
+			UploadName:        req.UploadName,
+			ContentType:       req.ContentType,
+			FileSizeBytes:     bytesWritten,
+			Base64Hash:        hash,
+			OwnerID:           req.OwnerID,
+			ServerName:        req.Config.ServerName,
+			IsPublic:          req.IsPublic,
+			CreationTimestamp: uint64(time.Now().UnixMilli()),
 		}
 	}
 
@@ -236,8 +281,16 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 		"ContentType", mediaMetadata.ContentType,
 	).Info("File uploaded")
 
+	if reusedExistingMetadata {
+		return &UploadResult{
+			MediaID:    mediaMetadata.MediaID,
+			ServerName: string(mediaMetadata.ServerName),
+			ContentURI: fmt.Sprintf("mxc://%s/%s", mediaMetadata.ServerName, mediaMetadata.MediaID),
+		}, nil
+	}
+
 	// Store file and metadata
-	err = s.storeFileAndMetadata(ctx, tmpDir, mediaMetadata, req.Config.AbsBasePath)
+	err = s.storeFileAndMetadata(ctx, tmpDir, mediaMetadata, req.Config)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upload file.")
 		return nil, fmt.Errorf("invalid parameter: %s", err.Error())
@@ -258,12 +311,22 @@ func (s *mediaService) validateDownloadRequest(req *DownloadRequest) error {
 	}
 
 	// Validate thumbnail parameters if it's a thumbnail request
-	if req.IsThumbnailRequest && req.ThumbnailSize != nil {
-		if req.ThumbnailSize.Width < 0 || req.ThumbnailSize.Height < 0 {
-			return fmt.Errorf("invalid parameter: width and height must be >= 0")
+	if req.IsThumbnailRequest {
+		if req.ThumbnailSize == nil {
+			return fmt.Errorf("invalid parameter: thumbnail size is required")
 		}
-		if req.ThumbnailSize.Width > 32 || req.ThumbnailSize.Height > 32 {
-			return fmt.Errorf("invalid parameter: width and height must be <= 32")
+		if req.ThumbnailSize.Width <= 0 || req.ThumbnailSize.Height <= 0 {
+			return fmt.Errorf("invalid parameter: width and height must be > 0")
+		}
+		maxDim := req.Config.MaxThumbnailDimension
+		if maxDim == 0 {
+			maxDim = 2048
+		}
+		if req.ThumbnailSize.Width > maxDim || req.ThumbnailSize.Height > maxDim {
+			return fmt.Errorf("invalid parameter: width and height must be <= %d", maxDim)
+		}
+		if req.ThumbnailSize.ResizeMethod != types.Crop && req.ThumbnailSize.ResizeMethod != types.Scale {
+			return fmt.Errorf("invalid parameter: unsupported resize method")
 		}
 	}
 
@@ -282,9 +345,9 @@ func (s *mediaService) validateSearchRequest(req *SearchRequest) error {
 }
 
 // getFileData retrieves the file data for the given media metadata
-func (s *mediaService) getFileData(ctx context.Context, mediaMetadata *types.MediaMetadata) (io.ReadCloser, int64, string, error) {
+func (s *mediaService) getFileData(ctx context.Context, mediaMetadata *types.MediaMetadata, cfg *config.FilesConfig) (io.ReadCloser, int64, string, error) {
 	// Get the file path from media metadata hash
-	filePath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, "/tmp") // Base path doesn't matter for getting the path structure
+	filePath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, cfg.AbsBasePath)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("failed to get file path from metadata: %w", err)
 	}
@@ -302,6 +365,18 @@ func (s *mediaService) getFileData(ctx context.Context, mediaMetadata *types.Med
 	readCloser := &readCloserWithCleanup{
 		Reader:  reader,
 		cleanup: cleanup,
+	}
+
+	if mediaMetadata.Encryption != nil {
+		decryptingReader, err := storage.NewDecryptingReader(reader, []byte(cfg.EnvStorageEncryptionPhrase), mediaMetadata.Encryption)
+		if err != nil {
+			cleanup()
+			return nil, 0, "", fmt.Errorf("failed to initialise decrypting reader: %w", err)
+		}
+		readCloser = &readCloserWithCleanup{
+			Reader:  decryptingReader,
+			cleanup: cleanup,
+		}
 	}
 
 	// Determine content type
@@ -342,22 +417,113 @@ func (s *mediaService) generateMediaID(ctx context.Context) types.MediaID {
 	return types.MediaID(model.GetID())
 }
 
+func (s *mediaService) encryptToPath(
+	ctx context.Context,
+	sourcePath types.Path,
+	encryptedPath types.Path,
+	mediaMetadata *types.MediaMetadata,
+	cfg *config.FilesConfig,
+) error {
+	srcFile, err := os.Open(string(sourcePath))
+	if err != nil {
+		return err
+	}
+	defer util.CloseAndLogOnError(ctx, srcFile)
+
+	dstFile, err := os.Create(string(encryptedPath))
+	if err != nil {
+		return err
+	}
+	defer util.CloseAndLogOnError(ctx, dstFile)
+
+	info, err := storage.EncryptStream(ctx, srcFile, dstFile, []byte(cfg.EnvStorageEncryptionPhrase))
+	if err != nil {
+		return err
+	}
+	mediaMetadata.Encryption = info
+	return nil
+}
+
+func (s *mediaService) resolveThumbnail(ctx context.Context, req *DownloadRequest, mediaMetadata *types.MediaMetadata) (*types.ThumbnailMetadata, error) {
+	cfg := req.Config
+	thumbnailSize := req.ThumbnailSize
+	if thumbnailSize == nil {
+		return nil, fmt.Errorf("thumbnail size is required")
+	}
+
+	thumbnails, err := s.db.GetThumbnails(ctx, req.MediaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get thumbnails: %w", err)
+	}
+
+	chosenThumbnail, sizeToGenerate := thumbnailer.SelectThumbnail(*thumbnailSize, thumbnails, cfg.ThumbnailSizes)
+	if chosenThumbnail != nil {
+		return chosenThumbnail, nil
+	}
+
+	if sizeToGenerate == nil {
+		return nil, fmt.Errorf("thumbnail not found")
+	}
+
+	if !cfg.DynamicThumbnails {
+		if !thumbnailSizeEqual(*sizeToGenerate, *thumbnailSize) {
+			return nil, fmt.Errorf("thumbnail not found")
+		}
+	}
+
+	_, err, _ = s.thumbnailGroup.Do(thumbnailKey(req.MediaID, *sizeToGenerate), func() (any, error) {
+		return nil, thumbnailer.GenerateThumbnail(ctx, *sizeToGenerate, mediaMetadata, cfg.AbsBasePath, s.db, s.provider, util.Log(ctx), cfg.EnvStorageEncryptionPhrase)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	thumbnailMetadata, err := s.db.GetThumbnail(ctx, req.MediaID, sizeToGenerate.Width, sizeToGenerate.Height, sizeToGenerate.ResizeMethod)
+	if err != nil {
+		return nil, err
+	}
+	if thumbnailMetadata == nil {
+		return nil, fmt.Errorf("thumbnail generation failed")
+	}
+	return thumbnailMetadata, nil
+}
+
+func thumbnailKey(mediaID types.MediaID, size types.ThumbnailSize) string {
+	return fmt.Sprintf("%s:%dx%d:%s", mediaID, size.Width, size.Height, size.ResizeMethod)
+}
+
+func thumbnailSizeEqual(a types.ThumbnailSize, b types.ThumbnailSize) bool {
+	return a.Width == b.Width && a.Height == b.Height && a.ResizeMethod == b.ResizeMethod
+}
+
 // storeFileAndMetadata stores the file and metadata in the database and storage
-func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path) error {
-	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, s.provider, tmpDir, mediaMetadata, absBasePath, util.Log(ctx))
+func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Path, mediaMetadata *types.MediaMetadata, cfg *config.FilesConfig) error {
+	logger := util.Log(ctx)
+	defer utils.RemoveDir(tmpDir, logger)
+
+	sourcePath := types.Path(filepath.Join(string(tmpDir), "content"))
+	if !mediaMetadata.IsPublic {
+		encryptedPath := types.Path(filepath.Join(string(tmpDir), "content.encrypted"))
+		if err := s.encryptToPath(ctx, sourcePath, encryptedPath, mediaMetadata, cfg); err != nil {
+			return err
+		}
+		sourcePath = encryptedPath
+	}
+
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, s.provider, sourcePath, mediaMetadata, cfg.AbsBasePath, logger)
 	if err != nil {
 		return err
 	}
 
 	if duplicate {
-		util.Log(ctx).WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
+		logger.WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
 	}
 
 	if err = s.db.StoreMediaMetadata(ctx, mediaMetadata); err != nil {
-		util.Log(ctx).WithError(err).Warn("Failed to store metadata")
+		logger.WithError(err).Warn("Failed to store metadata")
 		// Clean up file if it's not a duplicate
 		if !duplicate {
-			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), util.Log(ctx))
+			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), logger)
 		}
 		return err
 	}

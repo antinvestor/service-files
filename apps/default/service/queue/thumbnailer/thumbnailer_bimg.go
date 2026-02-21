@@ -18,159 +18,205 @@ package thumbnailer
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
 	"time"
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/containerd/log"
+	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/util"
 	"gopkg.in/h2non/bimg.v1"
 )
 
-// GenerateThumbnails generates the configured thumbnail sizes for the source file
+// GenerateThumbnails generates the configured thumbnail sizes for the source file.
 func GenerateThumbnails(
 	ctx context.Context,
-	src types.Path,
 	configs []config.ThumbnailSize,
 	mediaMetadata *types.MediaMetadata,
-	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
-	maxThumbnailGenerators int,
+	absBasePath config.Path,
 	db storage.Database,
+	provider storage.Provider,
 	logger *util.LogEntry,
-) (busy bool, errorReturn error) {
-	buffer, err := bimg.Read(string(src))
+	encryptionKey string,
+) error {
+	img, err := readFile(ctx, provider, absBasePath, mediaMetadata)
 	if err != nil {
-		logger.WithError(err).WithField("src", src).Error("Failed to read src file")
-		return false, err
+		return err
 	}
-	img := bimg.NewImage(buffer)
-	for _, config := range configs {
-		// Note: createThumbnail does locking based on activeThumbnailGeneration
-		busy, err = createThumbnail(
-			ctx, src, img, types.ThumbnailSize(config), mediaMetadata, activeThumbnailGeneration,
-			maxThumbnailGenerators, db, logger,
-		)
-		if err != nil {
-			logger.WithError(err).WithField("src", src).Error("Failed to generate thumbnails")
-			return false, err
-		}
-		if busy {
-			return true, nil
+
+	tempDir, err := utils.CreateTempDir(absBasePath)
+	if err != nil {
+		return err
+	}
+	defer utils.RemoveDir(tempDir, logger)
+
+	for _, singleConfig := range configs {
+		if err := createThumbnail(ctx, absBasePath, tempDir, img, types.ThumbnailSize(singleConfig), mediaMetadata, db, provider, logger, encryptionKey); err != nil {
+			return err
 		}
 	}
-	return false, nil
+	return nil
 }
 
-// GenerateThumbnail generates the configured thumbnail size for the source file
+// GenerateThumbnail generates a specific thumbnail size for the source file.
 func GenerateThumbnail(
 	ctx context.Context,
-	src types.Path,
 	config types.ThumbnailSize,
 	mediaMetadata *types.MediaMetadata,
-	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
-	maxThumbnailGenerators int,
+	absBasePath config.Path,
 	db storage.Database,
-	logger *log.Entry,
-) (busy bool, errorReturn error) {
-	buffer, err := bimg.Read(string(src))
+	provider storage.Provider,
+	logger *util.LogEntry,
+	encryptionKey string,
+) error {
+	img, err := readFile(ctx, provider, absBasePath, mediaMetadata)
 	if err != nil {
-		logger.WithError(err).WithFields(log.Fields{
-			"src": src,
-		}).Error("Failed to read src file")
-		return false, err
+		return err
 	}
-	img := bimg.NewImage(buffer)
-	// Note: createThumbnail does locking based on activeThumbnailGeneration
-	busy, err = createThumbnail(
-		ctx, src, img, config, mediaMetadata, activeThumbnailGeneration,
-		maxThumbnailGenerators, db, logger,
-	)
+
+	tempDir, err := utils.CreateTempDir(absBasePath)
 	if err != nil {
-		logger.WithError(err).WithFields(log.Fields{
-			"src": src,
-		}).Error("Failed to generate thumbnails")
-		return false, err
+		return err
 	}
-	if busy {
-		return true, nil
-	}
-	return false, nil
+	defer utils.RemoveDir(tempDir, logger)
+
+	return createThumbnail(ctx, absBasePath, tempDir, img, config, mediaMetadata, db, provider, logger, encryptionKey)
 }
 
-// createThumbnail checks if the thumbnail exists, and if not, generates it
-// Thumbnail generation is only done once for each non-existing thumbnail.
+func readFile(ctx context.Context, provider storage.Provider, absBasePath config.Path, mediaMetadata *types.MediaMetadata) (*bimg.Image, error) {
+	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	downloadBucket := provider.GetBucket(mediaMetadata.IsPublic)
+	reader, cleanup, err := provider.DownloadFile(ctx, downloadBucket, types.Path(finalPath))
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+
+	buffer, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	return bimg.NewImage(buffer), nil
+}
+
+// createThumbnail checks if the thumbnail exists, and if not, generates it.
 func createThumbnail(
 	ctx context.Context,
-	src types.Path,
+	absBasePath config.Path,
+	temporaryPath types.Path,
 	img *bimg.Image,
 	config types.ThumbnailSize,
 	mediaMetadata *types.MediaMetadata,
-	activeThumbnailGeneration *types.ActiveThumbnailGeneration,
-	maxThumbnailGenerators int,
 	db storage.Database,
-	logger *log.Entry,
-) (busy bool, errorReturn error) {
-	logger = logger.WithFields(log.Fields{
-		"Width":        config.Width,
-		"Height":       config.Height,
-		"ResizeMethod": config.ResizeMethod,
-	})
+	provider storage.Provider,
+	logger *util.LogEntry,
+	encryptionKey string,
+) error {
+	logger = logger.With(
+		"Width", config.Width,
+		"Height", config.Height,
+		"ResizeMethod", config.ResizeMethod,
+	)
 
-	// Check if request is larger than original
 	if isLargerThanOriginal(config, img) {
-		return false, nil
+		return nil
 	}
 
-	dst := GetThumbnailPath(src, config)
+	tempThumbnailPath, err := GetTempThumbnailPath(temporaryPath, config)
+	if err != nil {
+		return err
+	}
 
 	exists, err := isThumbnailExists(ctx, config, mediaMetadata, db, logger)
 	if err != nil || exists {
-		return false, err
+		return err
 	}
 
 	start := time.Now()
-	width, height, err := resize(dst, img, config.Width, config.Height, config.ResizeMethod == "crop", logger)
+	width, height, err := resize(tempThumbnailPath, img, config.Width, config.Height, config.ResizeMethod == "crop", logger)
 	if err != nil {
-		return false, err
+		return err
 	}
-	logger.WithFields(log.Fields{
-		"ActualWidth":  width,
-		"ActualHeight": height,
-		"processTime":  time.Now().Sub(start),
-	}).Info("Generated thumbnail")
+	logger.With(
+		"ActualWidth", width,
+		"ActualHeight", height,
+		"processTime", time.Since(start),
+	).Info("Generated thumbnail")
 
-	stat, err := os.Stat(string(dst))
+	hash, size, err := utils.ComputeHashAndSize(tempThumbnailPath)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	thumbnailMetadata := &types.ThumbnailMetadata{
 		MediaMetadata: &types.MediaMetadata{
-			MediaID: mediaMetadata.MediaID,
-			Origin:  mediaMetadata.Origin,
-			// Note: the code currently always creates a JPEG thumbnail
-			ContentType:   types.ContentType("image/jpeg"),
-			FileSizeBytes: types.FileSizeBytes(stat.Size()),
-		},
-		ThumbnailSize: types.ThumbnailSize{
-			Width:        config.Width,
-			Height:       config.Height,
-			ResizeMethod: config.ResizeMethod,
+			MediaID:           types.MediaID(utils.GenerateRandomString(32)),
+			ParentID:          mediaMetadata.MediaID,
+			ContentType:       types.ContentType("image/jpeg"),
+			FileSizeBytes:     size,
+			Base64Hash:        hash,
+			OwnerID:           mediaMetadata.OwnerID,
+			ServerName:        mediaMetadata.ServerName,
+			IsPublic:          mediaMetadata.IsPublic,
+			CreationTimestamp: uint64(time.Now().UnixMilli()),
+			ThumbnailSize: &types.ThumbnailSize{
+				Width:        config.Width,
+				Height:       config.Height,
+				ResizeMethod: config.ResizeMethod,
+			},
 		},
 	}
 
-	err = db.StoreThumbnail(ctx, thumbnailMetadata)
+	sourcePath := tempThumbnailPath
+	if !mediaMetadata.IsPublic {
+		if len(encryptionKey) != 32 {
+			return fmt.Errorf("invalid encryption key length")
+		}
+		encryptedPath := types.Path(string(tempThumbnailPath) + ".encrypted")
+		srcFile, err := os.Open(string(tempThumbnailPath))
+		if err != nil {
+			return err
+		}
+		defer util.CloseAndLogOnError(ctx, srcFile)
+
+		dstFile, err := os.Create(string(encryptedPath))
+		if err != nil {
+			return err
+		}
+		defer util.CloseAndLogOnError(ctx, dstFile)
+
+		info, err := storage.EncryptStream(ctx, srcFile, dstFile, []byte(encryptionKey))
+		if err != nil {
+			return err
+		}
+		thumbnailMetadata.MediaMetadata.Encryption = info
+		sourcePath = encryptedPath
+	}
+
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata, absBasePath, logger)
 	if err != nil {
-		logger.WithError(err).WithFields(log.Fields{
-			"ActualWidth":  width,
-			"ActualHeight": height,
-		}).Error("Failed to store thumbnail metadata in database.")
-		return false, err
+		return err
+	}
+	if duplicate {
+		logger.WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
 	}
 
-	return false, nil
+	if err = db.StoreThumbnail(ctx, thumbnailMetadata); err != nil {
+		logger.WithError(err).With(
+			"ActualWidth", width,
+			"ActualHeight", height,
+		).Error("Failed to store thumbnail metadata in database.")
+		return err
+	}
+
+	return nil
 }
 
 func isLargerThanOriginal(config types.ThumbnailSize, img *bimg.Image) bool {
@@ -181,10 +227,8 @@ func isLargerThanOriginal(config types.ThumbnailSize, img *bimg.Image) bool {
 	return false
 }
 
-// resize scales an image to fit within the provided width and height
-// If the source aspect ratio is different to the target dimensions, one edge will be smaller than requested
-// If crop is set to true, the image will be scaled to fill the width and height with any excess being cropped off
-func resize(dst types.Path, inImage *bimg.Image, w, h int, crop bool, logger *log.Entry) (int, int, error) {
+// resize scales an image to fit within the provided width and height.
+func resize(dst types.Path, inImage *bimg.Image, w, h int, crop bool, logger *util.LogEntry) (int, int, error) {
 	inSize, err := inImage.Size()
 	if err != nil {
 		return -1, -1, err
@@ -203,11 +247,9 @@ func resize(dst types.Path, inImage *bimg.Image, w, h int, crop bool, logger *lo
 		outAR := float64(w) / float64(h)
 
 		if inAR > outAR {
-			// input has wider AR than requested output so use requested width and calculate height to match input AR
 			options.Width = w
 			options.Height = int(float64(w) / inAR)
 		} else {
-			// input has narrower AR than requested output so use requested height and calculate width to match input AR
 			options.Width = int(float64(h) * inAR)
 			options.Height = h
 		}

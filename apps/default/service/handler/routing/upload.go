@@ -16,11 +16,15 @@ package routing
 
 import (
 	"context"
+	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"path"
+	"strings"
 
 	"github.com/antinvestor/service-files/apps/default/config"
+	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -34,7 +38,7 @@ import (
 // This implementation supports a configurable maximum file size limit in bytes. If a user tries to upload more than this, they will receive an error that their upload is too large.
 // Uploaded files are processed piece-wise to avoid DoS attacks which would starve the server of memory.
 // TODO: We should time out requests if they have not received any data within a configured timeout period.
-func Upload(req *http.Request, service *frame.Service, db storage.Database, provider storage.Provider, mediaService business.MediaService) util.JSONResponse {
+func Upload(req *http.Request, service *frame.Service, db storage.Database, provider storage.Provider, mediaService business.MediaService, authzMiddleware authz.Middleware) util.JSONResponse {
 	ctx := req.Context()
 	authClaims := security.ClaimsFromContext(ctx)
 
@@ -61,6 +65,16 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 		}
 	}
 
+	if err = authzMiddleware.CanUploadFile(ctx, sub); err != nil {
+		return util.JSONResponse{
+			Code: http.StatusForbidden,
+			JSON: map[string]interface{}{
+				"errcode": "M_FORBIDDEN",
+				"error":   "Forbidden",
+			},
+		}
+	}
+
 	ownerID := types.OwnerID(sub)
 
 	// Parse upload request
@@ -68,6 +82,7 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 	if resErr != nil {
 		return *resErr
 	}
+	defer func() { _ = uploadReq.Close() }()
 
 	// Create business request
 	businessReq := &business.UploadRequest{
@@ -75,8 +90,9 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 		UploadName:    uploadReq.MediaMetadata.UploadName,
 		ContentType:   uploadReq.MediaMetadata.ContentType,
 		FileSizeBytes: uploadReq.MediaMetadata.FileSizeBytes,
-		FileData:      req.Body,
+		FileData:      uploadReq.FileData,
 		Config:        cfg,
+		IsPublic:      false,
 	}
 
 	// Execute business logic
@@ -116,6 +132,8 @@ func Upload(req *http.Request, service *frame.Service, db storage.Database, prov
 // NOTE: The members come from HTTP request metadata such as headers, query parameters or can be derived from such
 type uploadRequest struct {
 	MediaMetadata *types.MediaMetadata
+	FileData      io.Reader
+	closeFn       func() error
 }
 
 // uploadResponse defines the format of the JSON response
@@ -128,25 +146,142 @@ type uploadResponse struct {
 // all the metadata about the media being uploaded.
 // Returns either an uploadRequest or an error formatted as a util.JSONResponse
 func parseAndValidateRequest(req *http.Request, cfg *config.FilesConfig, ownerID types.OwnerID) (*uploadRequest, *util.JSONResponse) {
+	filename := strings.TrimSpace(req.URL.Query().Get("filename"))
+
 	r := &uploadRequest{
 		MediaMetadata: &types.MediaMetadata{
 			FileSizeBytes: types.FileSizeBytes(req.ContentLength),
 			ContentType:   types.ContentType(req.Header.Get("Content-Type")),
-			UploadName:    types.Filename(url.PathEscape(req.FormValue("filename"))),
+			UploadName:    types.Filename(filename),
 			OwnerID:       ownerID,
 		},
+		FileData: req.Body,
+		closeFn:  req.Body.Close,
+	}
+
+	contentTypeHeader := req.Header.Get("Content-Type")
+	contentType, _, err := mime.ParseMediaType(contentTypeHeader)
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(contentTypeHeader)), "multipart/form-data") {
+		if err != nil {
+			return nil, &util.JSONResponse{
+				Code: http.StatusBadRequest,
+				JSON: map[string]interface{}{
+					"errcode": "M_UNKNOWN",
+					"error":   "Invalid multipart payload",
+				},
+			}
+		}
+	}
+	if err == nil && strings.EqualFold(contentType, "multipart/form-data") {
+		multipartReq, parseErr := parseMultipartUpload(req, ownerID, types.Filename(filename))
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		r = multipartReq
 	}
 
 	if resErr := r.Validate(cfg.MaxFileSizeBytes); resErr != nil {
+		_ = r.Close()
 		return nil, resErr
 	}
 
 	return r, nil
 }
 
+func parseMultipartUpload(req *http.Request, ownerID types.OwnerID, fallbackFilename types.Filename) (*uploadRequest, *util.JSONResponse) {
+	reader, err := req.MultipartReader()
+	if err != nil {
+		return nil, &util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Invalid multipart payload",
+			},
+		}
+	}
+
+	request := &uploadRequest{
+		MediaMetadata: &types.MediaMetadata{
+			FileSizeBytes: -1,
+			OwnerID:       ownerID,
+			UploadName:    fallbackFilename,
+		},
+		closeFn: req.Body.Close,
+	}
+
+	var filePart *multipart.Part
+	for {
+		part, nextErr := reader.NextPart()
+		if nextErr == io.EOF {
+			break
+		}
+		if nextErr != nil {
+			return nil, &util.JSONResponse{
+				Code: http.StatusBadRequest,
+				JSON: map[string]interface{}{
+					"errcode": "M_UNKNOWN",
+					"error":   "Invalid multipart payload",
+				},
+			}
+		}
+
+		formName := strings.TrimSpace(part.FormName())
+		if formName == "filename" && request.MediaMetadata.UploadName == "" {
+			limited := io.LimitReader(part, 4096)
+			content, _ := io.ReadAll(limited)
+			name := strings.TrimSpace(string(content))
+			if name != "" {
+				request.MediaMetadata.UploadName = types.Filename(name)
+			}
+			_ = part.Close()
+			continue
+		}
+
+		if part.FileName() == "" {
+			_ = part.Close()
+			continue
+		}
+
+		if filePart != nil {
+			_ = part.Close()
+			_ = filePart.Close()
+			return nil, &util.JSONResponse{
+				Code: http.StatusBadRequest,
+				JSON: map[string]interface{}{
+					"errcode": "M_UNKNOWN",
+					"error":   "Multipart payload must contain exactly one file part",
+				},
+			}
+		}
+
+		filePart = part
+		request.FileData = filePart
+
+		if request.MediaMetadata.UploadName == "" {
+			request.MediaMetadata.UploadName = types.Filename(part.FileName())
+		}
+
+		if contentType := part.Header.Get("Content-Type"); contentType != "" {
+			request.MediaMetadata.ContentType = types.ContentType(contentType)
+		}
+	}
+
+	if filePart == nil {
+		return nil, &util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: map[string]interface{}{
+				"errcode": "M_UNKNOWN",
+				"error":   "Multipart payload does not include a file",
+			},
+		}
+	}
+
+	return request, nil
+}
+
 // Validate validates the uploadRequest fields
 func (r *uploadRequest) Validate(maxFileSizeBytes config.FileSizeBytes) *util.JSONResponse {
-	if maxFileSizeBytes > 0 && r.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxFileSizeBytes) {
+	if maxFileSizeBytes > 0 && r.MediaMetadata.FileSizeBytes >= 0 && r.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxFileSizeBytes) {
 		return requestEntityTooLargeJSONResponse()
 	}
 	if path.Base(string(r.MediaMetadata.UploadName)) != string(r.MediaMetadata.UploadName) {
@@ -159,6 +294,13 @@ func (r *uploadRequest) Validate(maxFileSizeBytes config.FileSizeBytes) *util.JS
 		}
 	}
 	return nil
+}
+
+func (r *uploadRequest) Close() error {
+	if r == nil || r.closeFn == nil {
+		return nil
+	}
+	return r.closeFn()
 }
 
 func requestEntityTooLargeJSONResponse() *util.JSONResponse {

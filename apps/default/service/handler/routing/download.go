@@ -22,9 +22,11 @@ import (
 	"strings"
 
 	"github.com/antinvestor/service-files/apps/default/config"
+	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
+	"github.com/pitabwire/frame/security"
 	"github.com/pitabwire/util"
 )
 
@@ -41,9 +43,27 @@ func Download(
 	db storage.Database,
 	provider storage.Provider,
 	mediaService business.MediaService,
+	authzMiddleware authz.Middleware,
 	isThumbnailRequest bool,
 	customFilename string,
 ) {
+	authClaims := security.ClaimsFromContext(req.Context())
+	if authClaims == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	sub, err := authClaims.GetSubject()
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if err = authzMiddleware.CanViewFile(req.Context(), sub, string(mediaID)); err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	// Parse thumbnail parameters if this is a thumbnail request
 	var thumbnailSize *types.ThumbnailSize
 	if isThumbnailRequest {

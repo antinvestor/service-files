@@ -1,23 +1,34 @@
-package models
+package models_test
 
 import (
 	"testing"
 
+	"github.com/antinvestor/service-files/apps/default/service/storage/models"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestMediaMetadata_ToApi(t *testing.T) {
+type ModelsTestSuite struct {
+	tests.BaseTestSuite
+}
+
+func TestModelsTestSuite(t *testing.T) {
+	suite.Run(t, new(ModelsTestSuite))
+}
+
+func (s *ModelsTestSuite) TestMediaMetadata_ToApi() {
 	testCases := []struct {
 		name     string
-		model    *MediaMetadata
+		model    *models.MediaMetadata
 		expected *types.MediaMetadata
 	}{
 		{
 			name: "basic_media_metadata_conversion",
-			model: &MediaMetadata{
+			model: &models.MediaMetadata{
 				BaseModel: data.BaseModel{ID: "test-id-123"},
 				OwnerID:   "owner-123",
 				Name:      "test-file.jpg",
@@ -38,7 +49,7 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 		},
 		{
 			name: "media_with_parent_and_thumbnail_properties",
-			model: &MediaMetadata{
+			model: &models.MediaMetadata{
 				BaseModel: data.BaseModel{ID: "thumb-id-456"},
 				OwnerID:   "owner-456",
 				ParentID:  "parent-id-789",
@@ -71,7 +82,7 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 		},
 		{
 			name: "media_with_invalid_thumbnail_properties",
-			model: &MediaMetadata{
+			model: &models.MediaMetadata{
 				BaseModel: data.BaseModel{ID: "invalid-thumb-id"},
 				OwnerID:   "owner-789",
 				ParentID:  "parent-id-abc",
@@ -96,15 +107,15 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 				OwnerID:           types.OwnerID("owner-789"),
 				ParentID:          types.MediaID("parent-id-abc"),
 				ThumbnailSize: &types.ThumbnailSize{
-					Height:       0, // Invalid conversion results in 0
-					Width:        0, // Invalid conversion results in 0
+					Height:       0,
+					Width:        0,
 					ResizeMethod: "scale",
 				},
 			},
 		},
 		{
 			name: "media_without_parent_id",
-			model: &MediaMetadata{
+			model: &models.MediaMetadata{
 				BaseModel: data.BaseModel{ID: "no-parent-id"},
 				OwnerID:   "owner-no-parent",
 				Name:      "standalone-file.png",
@@ -121,14 +132,12 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 				UploadName:        types.Filename("standalone-file.png"),
 				Base64Hash:        types.Base64Hash("standalone-hash"),
 				OwnerID:           types.OwnerID("owner-no-parent"),
-				// ParentID should be empty
-				// ThumbnailSize should be nil
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		s.T().Run(tc.name, func(t *testing.T) {
 			result := tc.model.ToApi()
 
 			require.NotNil(t, result)
@@ -153,11 +162,11 @@ func TestMediaMetadata_ToApi(t *testing.T) {
 	}
 }
 
-func TestMediaMetadata_Fill(t *testing.T) {
+func (s *ModelsTestSuite) TestMediaMetadata_Fill() {
 	testCases := []struct {
 		name     string
 		input    *types.MediaMetadata
-		expected *MediaMetadata
+		expected *models.MediaMetadata
 	}{
 		{
 			name: "basic_api_to_model_conversion",
@@ -170,7 +179,7 @@ func TestMediaMetadata_Fill(t *testing.T) {
 				Base64Hash:        types.Base64Hash("api-hash-123"),
 				OwnerID:           types.OwnerID("api-owner-123"),
 			},
-			expected: &MediaMetadata{
+			expected: &models.MediaMetadata{
 				OwnerID:  "api-owner-123",
 				Name:     "api-file.jpg",
 				Size:     1024,
@@ -196,7 +205,7 @@ func TestMediaMetadata_Fill(t *testing.T) {
 					ResizeMethod: "fit",
 				},
 			},
-			expected: &MediaMetadata{
+			expected: &models.MediaMetadata{
 				OwnerID:  "api-owner-456",
 				ParentID: "api-parent-id",
 				Name:     "api-thumbnail.png",
@@ -222,7 +231,7 @@ func TestMediaMetadata_Fill(t *testing.T) {
 				Base64Hash:        types.Base64Hash("video-hash"),
 				OwnerID:           types.OwnerID("video-owner"),
 			},
-			expected: &MediaMetadata{
+			expected: &models.MediaMetadata{
 				OwnerID:  "video-owner",
 				Name:     "video.mp4",
 				Size:     10240,
@@ -234,8 +243,8 @@ func TestMediaMetadata_Fill(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			model := &MediaMetadata{}
+		s.T().Run(tc.name, func(t *testing.T) {
+			model := &models.MediaMetadata{}
 			model.Fill(tc.input)
 
 			assert.Equal(t, tc.expected.OwnerID, model.OwnerID)
@@ -256,75 +265,170 @@ func TestMediaMetadata_Fill(t *testing.T) {
 	}
 }
 
-func TestMediaMetadata_RoundTripConversion(t *testing.T) {
-	// Test that converting from model to API and back preserves data
-	original := &MediaMetadata{
-		BaseModel: data.BaseModel{ID: "round-trip-id"},
-		OwnerID:   "round-trip-owner",
-		ParentID:  "round-trip-parent",
-		Name:      "round-trip.jpg",
-		Size:      4096,
-		OriginTs:  1640995600,
-		Mimetype:  "image/jpeg",
-		Hash:      "round-trip-hash",
-		Properties: map[string]interface{}{
-			"h": "400",
-			"w": "600",
-			"m": "crop",
+func (s *ModelsTestSuite) TestMediaMetadata_RoundTripConversion() {
+	testCases := []struct {
+		name     string
+		original *models.MediaMetadata
+	}{
+		{
+			name: "round_trip",
+			original: &models.MediaMetadata{
+				BaseModel: data.BaseModel{ID: "round-trip-id"},
+				OwnerID:   "round-trip-owner",
+				ParentID:  "round-trip-parent",
+				Name:      "round-trip.jpg",
+				Size:      4096,
+				OriginTs:  1640995600,
+				Mimetype:  "image/jpeg",
+				Hash:      "round-trip-hash",
+				Properties: map[string]interface{}{
+					"h": "400",
+					"w": "600",
+					"m": "crop",
+				},
+			},
 		},
 	}
 
-	// Convert to API
-	apiModel := original.ToApi()
-	require.NotNil(t, apiModel)
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			apiModel := tc.original.ToApi()
+			require.NotNil(t, apiModel)
 
-	// Convert back to model
-	backToModel := &MediaMetadata{}
-	backToModel.Fill(apiModel)
+			backToModel := &models.MediaMetadata{}
+			backToModel.Fill(apiModel)
 
-	// Verify key fields are preserved
-	assert.Equal(t, original.OwnerID, backToModel.OwnerID)
-	assert.Equal(t, original.ParentID, backToModel.ParentID)
-	assert.Equal(t, original.Name, backToModel.Name)
-	assert.Equal(t, original.Size, backToModel.Size)
-	assert.Equal(t, original.OriginTs, backToModel.OriginTs)
-	assert.Equal(t, original.Mimetype, backToModel.Mimetype)
-	assert.Equal(t, original.Hash, backToModel.Hash)
+			assert.Equal(t, tc.original.OwnerID, backToModel.OwnerID)
+			assert.Equal(t, tc.original.ParentID, backToModel.ParentID)
+			assert.Equal(t, tc.original.Name, backToModel.Name)
+			assert.Equal(t, tc.original.Size, backToModel.Size)
+			assert.Equal(t, tc.original.OriginTs, backToModel.OriginTs)
+			assert.Equal(t, tc.original.Mimetype, backToModel.Mimetype)
+			assert.Equal(t, tc.original.Hash, backToModel.Hash)
 
-	// Verify properties are preserved
-	require.NotNil(t, backToModel.Properties)
-	assert.Equal(t, "400", backToModel.Properties["h"])
-	assert.Equal(t, "600", backToModel.Properties["w"])
-	assert.Equal(t, "crop", backToModel.Properties["m"])
+			require.NotNil(t, backToModel.Properties)
+			assert.Equal(t, "400", backToModel.Properties["h"])
+			assert.Equal(t, "600", backToModel.Properties["w"])
+			assert.Equal(t, "crop", backToModel.Properties["m"])
+		})
+	}
 }
 
-func TestMediaMetadata_EmptyValues(t *testing.T) {
-	// Test behaviour with empty/nil values
-	model := &MediaMetadata{}
-
-	apiModel := model.ToApi()
-	require.NotNil(t, apiModel)
-
-	// Should handle empty values gracefully
-	assert.Empty(t, apiModel.MediaID)
-	assert.Empty(t, apiModel.OwnerID)
-	assert.Empty(t, apiModel.ParentID)
-	assert.Nil(t, apiModel.ThumbnailSize)
-}
-
-func TestMediaAudit_StructureAndFields(t *testing.T) {
-	// Test that MediaAudit struct can be created and fields are accessible
-	audit := &MediaAudit{
-		BaseModel: data.BaseModel{ID: "audit-id-123"},
-		FileID:    "file-id-456",
-		AccessID:  "access-id-789",
-		Action:    "download",
-		Source:    "web-client",
+func (s *ModelsTestSuite) TestMediaMetadata_EmptyValues() {
+	testCases := []struct {
+		name  string
+		model *models.MediaMetadata
+	}{
+		{
+			name:  "empty_values",
+			model: &models.MediaMetadata{},
+		},
 	}
 
-	assert.Equal(t, "audit-id-123", audit.GetID())
-	assert.Equal(t, "file-id-456", audit.FileID)
-	assert.Equal(t, "access-id-789", audit.AccessID)
-	assert.Equal(t, "download", audit.Action)
-	assert.Equal(t, "web-client", audit.Source)
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			apiModel := tc.model.ToApi()
+			require.NotNil(t, apiModel)
+
+			assert.Empty(t, apiModel.MediaID)
+			assert.Empty(t, apiModel.OwnerID)
+			assert.Empty(t, apiModel.ParentID)
+			assert.Nil(t, apiModel.ThumbnailSize)
+		})
+	}
+}
+
+func (s *ModelsTestSuite) TestMediaAudit_StructureAndFields() {
+	testCases := []struct {
+		name  string
+		audit *models.MediaAudit
+	}{
+		{
+			name: "audit_fields",
+			audit: &models.MediaAudit{
+				BaseModel: data.BaseModel{ID: "audit-id-123"},
+				FileID:    "file-id-456",
+				Action:    "download",
+				Source:    "web-client",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, "audit-id-123", tc.audit.GetID())
+			assert.Equal(t, "file-id-456", tc.audit.FileID)
+			assert.Equal(t, "download", tc.audit.Action)
+			assert.Equal(t, "web-client", tc.audit.Source)
+		})
+	}
+}
+
+func (s *ModelsTestSuite) TestMediaMetadata_EncryptionRoundTrip() {
+	testCases := []struct {
+		name        string
+		model       *models.MediaMetadata
+		input       *types.MediaMetadata
+		expectNil   bool
+		expectChunk int
+	}{
+		{
+			name: "fill_writes_encryption_properties",
+			input: &types.MediaMetadata{
+				MediaID:           "enc-media",
+				ContentType:       "application/octet-stream",
+				FileSizeBytes:     12,
+				CreationTimestamp: 100,
+				UploadName:        "enc.bin",
+				Base64Hash:        "abcde12345",
+				OwnerID:           "owner",
+				Encryption: &types.EncryptionInfo{
+					Version:         1,
+					Algorithm:       "aes-256-gcm",
+					ChunkSizeBytes:  65536,
+					WrappedKey:      "wk",
+					WrappedKeyNonce: "wn",
+					NoncePrefix:     "np",
+				},
+			},
+			expectNil:   false,
+			expectChunk: 65536,
+		},
+		{
+			name: "to_api_ignores_invalid_encryption_version",
+			model: &models.MediaMetadata{
+				BaseModel: data.BaseModel{ID: "enc-media-2"},
+				Properties: map[string]interface{}{
+					"enc_v": "bad",
+				},
+			},
+			expectNil: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			if tc.input != nil {
+				model := &models.MediaMetadata{}
+				model.Fill(tc.input)
+				api := model.ToApi()
+				if tc.expectNil {
+					assert.Nil(t, api.Encryption)
+					return
+				}
+				require.NotNil(t, api.Encryption)
+				assert.Equal(t, tc.expectChunk, api.Encryption.ChunkSizeBytes)
+				assert.Equal(t, "aes-256-gcm", api.Encryption.Algorithm)
+				assert.Equal(t, "wk", api.Encryption.WrappedKey)
+				return
+			}
+
+			api := tc.model.ToApi()
+			if tc.expectNil {
+				assert.Nil(t, api.Encryption)
+			} else {
+				require.NotNil(t, api.Encryption)
+			}
+		})
+	}
 }

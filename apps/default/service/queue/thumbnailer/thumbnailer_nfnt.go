@@ -50,6 +50,7 @@ func GenerateThumbnails(
 	db storage2.Database,
 	provider storage2.Provider,
 	logger *util.LogEntry,
+	encryptionKey string,
 ) (errorReturn error) {
 
 	img, err := readFile(ctx, provider, absBasePath, mediaMetadata)
@@ -61,11 +62,12 @@ func GenerateThumbnails(
 	if err != nil {
 		return err
 	}
+	defer utils.RemoveDir(tempDir, logger)
 
 	for _, singleConfig := range configs {
 		// Note: createThumbnail does locking based on activeThumbnailGeneration
 		err = createThumbnail(
-			ctx, absBasePath, tempDir, img, types.ThumbnailSize(singleConfig), mediaMetadata, db, provider, logger,
+			ctx, absBasePath, tempDir, img, types.ThumbnailSize(singleConfig), mediaMetadata, db, provider, logger, encryptionKey,
 		)
 		if err != nil {
 			return err
@@ -83,6 +85,7 @@ func GenerateThumbnail(
 	db storage2.Database,
 	provider storage2.Provider,
 	logger *util.LogEntry,
+	encryptionKey string,
 ) (errorReturn error) {
 
 	img, err := readFile(ctx, provider, absBasePath, mediaMetadata)
@@ -94,10 +97,11 @@ func GenerateThumbnail(
 	if err != nil {
 		return err
 	}
+	defer utils.RemoveDir(tempDir, logger)
 
 	// Note: createThumbnail does locking based on activeThumbnailGeneration
 	err = createThumbnail(
-		ctx, absBasePath, tempDir, img, config, mediaMetadata, db, provider, logger,
+		ctx, absBasePath, tempDir, img, config, mediaMetadata, db, provider, logger, encryptionKey,
 	)
 	if err != nil {
 		return err
@@ -151,6 +155,7 @@ func createThumbnail(
 	db storage2.Database,
 	provider storage2.Provider,
 	logger *util.LogEntry,
+	encryptionKey string,
 ) (errorReturn error) {
 	logger = logger.With(
 		"Width", config.Width,
@@ -183,19 +188,24 @@ func createThumbnail(
 		"processTime", time.Since(start),
 	).Info("Generated thumbnail")
 
-	stat, err := os.Stat(string(tempThumbnailPath))
+	hash, size, err := utils.ComputeHashAndSize(tempThumbnailPath)
 	if err != nil {
 		return err
 	}
 
 	thumbnailMetadata := &types.ThumbnailMetadata{
 		MediaMetadata: &types.MediaMetadata{
-			MediaID:  mediaMetadata.MediaID,
+			MediaID:  types.MediaID(utils.GenerateRandomString(32)),
 			ParentID: mediaMetadata.MediaID,
 
 			// Note: the code currently always creates a JPEG thumbnail
-			ContentType:   types.ContentType("image/jpeg"),
-			FileSizeBytes: types.FileSizeBytes(stat.Size()),
+			ContentType:       types.ContentType("image/jpeg"),
+			FileSizeBytes:     size,
+			Base64Hash:        hash,
+			OwnerID:           mediaMetadata.OwnerID,
+			ServerName:        mediaMetadata.ServerName,
+			IsPublic:          mediaMetadata.IsPublic,
+			CreationTimestamp: uint64(time.Now().UnixMilli()),
 			ThumbnailSize: &types.ThumbnailSize{
 				Width:        config.Width,
 				Height:       config.Height,
@@ -204,7 +214,33 @@ func createThumbnail(
 		},
 	}
 
-	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, tempThumbnailPath, thumbnailMetadata.MediaMetadata, absBasePath, logger)
+	sourcePath := tempThumbnailPath
+	if !mediaMetadata.IsPublic {
+		if len(encryptionKey) != 32 {
+			return fmt.Errorf("invalid encryption key length")
+		}
+		encryptedPath := types.Path(string(tempThumbnailPath) + ".encrypted")
+		srcFile, err := os.Open(string(tempThumbnailPath))
+		if err != nil {
+			return err
+		}
+		defer util.CloseAndLogOnError(ctx, srcFile)
+
+		dstFile, err := os.Create(string(encryptedPath))
+		if err != nil {
+			return err
+		}
+		defer util.CloseAndLogOnError(ctx, dstFile)
+
+		info, err := storage2.EncryptStream(ctx, srcFile, dstFile, []byte(encryptionKey))
+		if err != nil {
+			return err
+		}
+		thumbnailMetadata.Encryption = info
+		sourcePath = encryptedPath
+	}
+
+	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata, absBasePath, logger)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package business
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -23,11 +24,13 @@ type MediaService interface {
 // UploadRequest contains all the data needed for an upload operation
 type UploadRequest struct {
 	OwnerID       types.OwnerID
+	MediaID       types.MediaID
 	UploadName    types.Filename
 	ContentType   types.ContentType
 	FileSizeBytes types.FileSizeBytes
 	FileData      io.Reader
 	Config        *config.FilesConfig
+	IsPublic      bool
 }
 
 // UploadResult contains the result of an upload operation
@@ -58,10 +61,13 @@ type DownloadResult struct {
 
 // SearchRequest contains all the data needed for a search operation
 type SearchRequest struct {
-	OwnerID types.OwnerID
-	Query   string
-	Page    int32
-	Limit   int32
+	OwnerID   types.OwnerID
+	Query     string
+	Page      int32
+	Limit     int32
+	ParentID  types.MediaID
+	StartDate *time.Time
+	EndDate   *time.Time
 }
 
 // SearchResult contains the result of a search operation

@@ -12,8 +12,9 @@ import (
 
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
+	"github.com/antinvestor/service-files/apps/default/service/storage/provider/local"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/internal/tests"
 	"github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/suite"
@@ -105,4 +106,25 @@ func (suite *LocalProviderTestSuite) TestProviderLocal_UploadFile() {
 			})
 		}
 	})
+}
+
+func (suite *LocalProviderTestSuite) TestProviderLocal_Metadata() {
+	testCases := []struct {
+		name       string
+		isPublic   bool
+		wantBucket string
+	}{
+		{name: "public_bucket", isPublic: true, wantBucket: "public-bucket"},
+		{name: "private_bucket", isPublic: false, wantBucket: "private-bucket"},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			prov := local.NewProvider("local-provider", "private-bucket", "public-bucket")
+			suite.Equal("local-provider", prov.Name())
+			suite.Equal("private-bucket", prov.PrivateBucket())
+			suite.Equal("public-bucket", prov.PublicBucket())
+			suite.Equal(tc.wantBucket, prov.GetBucket(tc.isPublic))
+		})
+	}
 }

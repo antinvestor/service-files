@@ -25,6 +25,7 @@ func NewMediaRepository(ctx context.Context, dbPool pool.Pool, workMan workerpoo
 			ctx, dbPool, workMan, func() *models.MediaMetadata { return &models.MediaMetadata{} },
 		),
 	}
+	fileRepo.ExtendFieldsAllowed("search_properties")
 	return &fileRepo
 }
 

@@ -110,6 +110,10 @@ func WriteTempFile(
 	ctx context.Context, reqReader io.Reader, absBasePath config.Path,
 ) (hash types.Base64Hash, size types.FileSizeBytes, path types.Path, err error) {
 	size = -1
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		err = ctxErr
+		return
+	}
 	logger := util.Log(ctx)
 	tmpFileWriter, tmpFile, tmpDir, err := createTempFileWriter(absBasePath)
 	if err != nil {
@@ -196,4 +200,22 @@ func createFileWriter(directory types.Path) (*bufio.Writer, *os.File, error) {
 	}
 
 	return bufio.NewWriter(file), file, nil
+}
+
+// ComputeHashAndSize computes the base64url-encoded SHA-256 hash and size for a file.
+func ComputeHashAndSize(filePath types.Path) (types.Base64Hash, types.FileSizeBytes, error) {
+	file, err := os.Open(string(filePath))
+	if err != nil {
+		return "", 0, err
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	size, err := io.Copy(hasher, file)
+	if err != nil {
+		return "", 0, err
+	}
+
+	hash := base64.RawURLEncoding.EncodeToString(hasher.Sum(nil)[:])
+	return types.Base64Hash(hash), types.FileSizeBytes(size), nil
 }

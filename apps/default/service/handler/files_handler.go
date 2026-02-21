@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	filesv1 "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
@@ -47,7 +48,6 @@ func NewFileServer(
 
 // UploadContent handles file uploads via Connect RPC streaming
 func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientStream[filesv1.UploadContentRequest]) (*connect.Response[filesv1.UploadContentResponse], error) {
-	// Get authenticated user
 	authClaims := security.ClaimsFromContext(ctx)
 	if authClaims == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -58,10 +58,8 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
-	// Get configuration
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	// Read the first message (metadata)
 	if !stream.Receive() {
 		if err = stream.Err(); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
@@ -75,7 +73,6 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("metadata is required"))
 	}
 
-	// Collect all chunks
 	var fileData []byte
 	for stream.Receive() {
 		req := stream.Msg()
@@ -84,12 +81,10 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 		}
 	}
 
-	// Check for stream errors
 	if err = stream.Err(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// Create business request
 	businessReq := &business.UploadRequest{
 		OwnerID:       types.OwnerID(sub),
 		UploadName:    types.Filename(metadata.Filename),
@@ -99,13 +94,11 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 		Config:        cfg,
 	}
 
-	// Execute business logic
 	result, err := s.mediaService.UploadFile(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
 	}
 
-	// Return response
 	return connect.NewResponse(&filesv1.UploadContentResponse{
 		MediaId:    string(result.MediaID),
 		ServerName: result.ServerName,
@@ -115,7 +108,6 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 
 // CreateContent creates a new MXC URI without uploading content
 func (s *FileServer) CreateContent(ctx context.Context, req *connect.Request[filesv1.CreateContentRequest]) (*connect.Response[filesv1.CreateContentResponse], error) {
-	// Get authenticated user
 	authClaims := security.ClaimsFromContext(ctx)
 	if authClaims == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -126,13 +118,10 @@ func (s *FileServer) CreateContent(ctx context.Context, req *connect.Request[fil
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
-	// Generate a new media ID
 	mediaID := utils.GenerateRandomString(32)
 
-	// Get server name from config
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	// Return response with new MXC URI
 	return connect.NewResponse(&filesv1.CreateContentResponse{
 		MediaId:    mediaID,
 		ServerName: cfg.ServerName,
@@ -142,30 +131,25 @@ func (s *FileServer) CreateContent(ctx context.Context, req *connect.Request[fil
 
 // GetContent downloads content from the content repository
 func (s *FileServer) GetContent(ctx context.Context, req *connect.Request[filesv1.GetContentRequest]) (*connect.Response[filesv1.GetContentResponse], error) {
-	// Get configuration
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	// Create business request
 	businessReq := &business.DownloadRequest{
 		MediaID:            types.MediaID(req.Msg.MediaId),
 		IsThumbnailRequest: false,
 		Config:             cfg,
 	}
 
-	// Execute business logic
 	result, err := s.mediaService.DownloadFile(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
-	// Read file data
 	data, err := io.ReadAll(result.FileData)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// Return response
 	return connect.NewResponse(&filesv1.GetContentResponse{
 		Content:     data,
 		ContentType: result.ContentType,
@@ -175,21 +159,18 @@ func (s *FileServer) GetContent(ctx context.Context, req *connect.Request[filesv
 
 // GetContentOverrideName downloads content with a specified filename override
 func (s *FileServer) GetContentOverrideName(ctx context.Context, req *connect.Request[filesv1.GetContentOverrideNameRequest]) (*connect.Response[filesv1.GetContentOverrideNameResponse], error) {
-	// This is similar to GetContent but with filename override
-	// For now, delegate to GetContent
 	response, err := s.GetContent(ctx, &connect.Request[filesv1.GetContentRequest]{
 		Msg: &filesv1.GetContentRequest{
-			MediaId: req.Msg.MediaId,
+			ServerName: req.Msg.ServerName,
+			MediaId:    req.Msg.MediaId,
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Override filename if provided
 	filename := req.Msg.FileName
 	if filename == "" {
-		// Use original filename from response
 		filename = response.Msg.Filename
 	}
 
@@ -202,10 +183,8 @@ func (s *FileServer) GetContentOverrideName(ctx context.Context, req *connect.Re
 
 // GetContentThumbnail retrieves a thumbnail of the content
 func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Request[filesv1.GetContentThumbnailRequest]) (*connect.Response[filesv1.GetContentThumbnailResponse], error) {
-	// Get configuration
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	// Create business request
 	businessReq := &business.DownloadRequest{
 		MediaID:            types.MediaID(req.Msg.MediaId),
 		IsThumbnailRequest: true,
@@ -213,7 +192,6 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 	}
 
 	if req.Msg.Width > 0 && req.Msg.Height > 0 {
-		// Convert ThumbnailMethod enum to string
 		var method string
 		switch req.Msg.Method {
 		case filesv1.ThumbnailMethod_SCALE:
@@ -231,20 +209,17 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 		}
 	}
 
-	// Execute business logic
 	result, err := s.mediaService.DownloadFile(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
-	// Read file data
 	data, err := io.ReadAll(result.FileData)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// Return response
 	return connect.NewResponse(&filesv1.GetContentThumbnailResponse{
 		Content:     data,
 		ContentType: result.ContentType,
@@ -253,29 +228,25 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 
 // GetUrlPreview gets OpenGraph preview information for a URL
 func (s *FileServer) GetUrlPreview(ctx context.Context, req *connect.Request[filesv1.GetUrlPreviewRequest]) (*connect.Response[filesv1.GetUrlPreviewResponse], error) {
-	// This is not implemented in the current business logic
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
 // GetConfig retrieves the content repository configuration
 func (s *FileServer) GetConfig(ctx context.Context, req *connect.Request[filesv1.GetConfigRequest]) (*connect.Response[filesv1.GetConfigResponse], error) {
-	// Get configuration
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	// Convert to protobuf format
 	extra := &structpb.Struct{
 		Fields: make(map[string]*structpb.Value),
 	}
 
 	return connect.NewResponse(&filesv1.GetConfigResponse{
-		MaxUploadSize: int64(cfg.MaxFileSizeBytes),
-		Extra:         extra,
+		MaxUploadBytes: int64(cfg.MaxFileSizeBytes),
+		Extra:          extra,
 	}), nil
 }
 
 // SearchMedia searches for media files matching specified criteria
 func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[filesv1.SearchMediaRequest]) (*connect.Response[filesv1.SearchMediaResponse], error) {
-	// Get authenticated user
 	authClaims := security.ClaimsFromContext(ctx)
 	if authClaims == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -286,25 +257,59 @@ func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[files
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
-	// Create business request
-	businessReq := &business.SearchRequest{
-		OwnerID: types.OwnerID(sub),
-		Query:   req.Msg.Query,
-		Page:    int32(req.Msg.Page),
-		Limit:   int32(req.Msg.Limit),
+	ownerID := sub
+	if req.Msg.OwnerId != "" && req.Msg.OwnerId != sub {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("owner_id must match authenticated user"))
 	}
 
-	// Execute business logic
+	var startDate *time.Time
+	var endDate *time.Time
+
+	if req.Msg.StartDate != "" {
+		t, err := time.Parse(time.RFC3339, req.Msg.StartDate)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid start_date"))
+		}
+		startDate = &t
+	}
+
+	if req.Msg.EndDate != "" {
+		t, err := time.Parse(time.RFC3339, req.Msg.EndDate)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid end_date"))
+		}
+		endDate = &t
+	}
+
+	if startDate != nil && endDate != nil && endDate.Before(*startDate) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("end_date must be >= start_date"))
+	}
+
+	limit := int32(req.Msg.Limit)
+	if limit == 0 {
+		limit = 20
+	}
+
+	businessReq := &business.SearchRequest{
+		OwnerID:   types.OwnerID(ownerID),
+		Query:     req.Msg.Query,
+		Page:      int32(req.Msg.Page),
+		Limit:     limit,
+		ParentID:  types.MediaID(req.Msg.ParentId),
+		StartDate: startDate,
+		EndDate:   endDate,
+	}
+
 	result, err := s.mediaService.SearchMedia(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
 	}
 
-	// Convert results to protobuf messages
 	results := make([]*filesv1.MediaMetadata, len(result.Results))
 	for i, media := range result.Results {
 		results[i] = &filesv1.MediaMetadata{
-			MediaId:           string(media.MediaID),
+			MediaId: string(media.MediaID),
+
 			ServerName:        string(media.ServerName),
 			ContentType:       string(media.ContentType),
 			FileSizeBytes:     int64(media.FileSizeBytes),
@@ -315,7 +320,6 @@ func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[files
 		}
 	}
 
-	// Return response
 	return connect.NewResponse(&filesv1.SearchMediaResponse{
 		Results: results,
 		Total:   int32(result.Count),

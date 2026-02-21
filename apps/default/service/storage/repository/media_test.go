@@ -468,3 +468,97 @@ func (suite *MediaRepositoryTestSuite) TestDelete() {
 		}
 	})
 }
+
+func (suite *MediaRepositoryTestSuite) TestGetByParentMethods() {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+		ctx, _, res := suite.CreateService(t, dep)
+		repo := res.MediaRepository
+
+		parentID := "parent-media-1"
+		items := []*models.MediaMetadata{
+			{
+				OwnerID:    "owner-parent",
+				ParentID:   parentID,
+				Name:       "thumb-100.jpg",
+				Mimetype:   "image/jpeg",
+				Hash:       "parent-hash-100",
+				OriginTs:   time.Now().Unix(),
+				Properties: data.JSONMap{"h": "100", "w": "100", "m": "crop"},
+			},
+			{
+				OwnerID:    "owner-parent",
+				ParentID:   parentID,
+				Name:       "thumb-200.jpg",
+				Mimetype:   "image/jpeg",
+				Hash:       "parent-hash-200",
+				OriginTs:   time.Now().Unix(),
+				Properties: data.JSONMap{"h": "200", "w": "200", "m": "scale"},
+			},
+		}
+		for _, item := range items {
+			assert.NoError(t, repo.Create(ctx, item))
+		}
+
+		testCases := []struct {
+			name         string
+			queryParent  types.MediaID
+			thumbnail    *types.ThumbnailSize
+			expectCount  int
+			expectSingle bool
+			expectError  bool
+		}{
+			{
+				name:         "get_by_parent_returns_all",
+				queryParent:  types.MediaID(parentID),
+				expectCount:  2,
+				expectSingle: false,
+			},
+			{
+				name:        "get_by_parent_empty",
+				queryParent: "missing-parent",
+				expectCount: 0,
+			},
+			{
+				name:        "get_by_parent_and_thumbnail_match",
+				queryParent: types.MediaID(parentID),
+				thumbnail: &types.ThumbnailSize{
+					Height:       100,
+					Width:        100,
+					ResizeMethod: "crop",
+				},
+				expectSingle: true,
+			},
+			{
+				name:        "get_by_parent_and_thumbnail_missing",
+				queryParent: types.MediaID(parentID),
+				thumbnail: &types.ThumbnailSize{
+					Height:       999,
+					Width:        999,
+					ResizeMethod: "crop",
+				},
+				expectError: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.thumbnail == nil {
+					out, err := repo.GetByParentID(ctx, tc.queryParent)
+					assert.NoError(t, err)
+					assert.Len(t, out, tc.expectCount)
+					return
+				}
+
+				out, err := repo.GetByParentIDAndThumbnailSize(ctx, tc.queryParent, tc.thumbnail)
+				if tc.expectError {
+					assert.Error(t, err)
+					assert.Nil(t, out)
+					return
+				}
+				assert.NoError(t, err)
+				assert.NotNil(t, out)
+				assert.Equal(t, string(tc.queryParent), out.ParentID)
+			})
+		}
+	})
+}

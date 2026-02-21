@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/antinvestor/service-files/apps/default/config"
+	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
@@ -47,32 +48,34 @@ type Route struct {
 	Handler http.Handler
 	Methods []string
 	Regex   *regexp.Regexp
+	Prefix  bool
 }
 
 // Router is a custom router that replaces mux functionality
 type Router struct {
-	routes []Route
+	routes *[]Route
 	prefix string
 }
 
 // NewRouter creates a new custom router
 func NewRouter() *Router {
+	routes := make([]Route, 0)
 	return &Router{
-		routes: make([]Route, 0),
+		routes: &routes,
 	}
 }
 
 // PathPrefix creates a subrouter with the given prefix
 func (r *Router) PathPrefix(prefix string) *Router {
 	return &Router{
-		routes: make([]Route, 0),
-		prefix: r.prefix + prefix,
+		routes: r.routes,
+		prefix: joinRoutePath(r.prefix, prefix),
 	}
 }
 
 // Handle adds a route with the given pattern and handler
 func (r *Router) Handle(pattern string, handler http.Handler) *RouteBuilder {
-	fullPattern := r.prefix + pattern
+	fullPattern := joinRoutePath(r.prefix, pattern)
 	route := Route{
 		Pattern: fullPattern,
 		Handler: handler,
@@ -80,16 +83,42 @@ func (r *Router) Handle(pattern string, handler http.Handler) *RouteBuilder {
 	}
 
 	// Convert pattern to regex for path variable extraction
-	regexPattern := regexp.QuoteMeta(fullPattern)
+	patternForRegex := fullPattern
+	if strings.HasSuffix(fullPattern, "*") {
+		route.Prefix = true
+		patternForRegex = strings.TrimSuffix(fullPattern, "*")
+	}
+
+	regexPattern := regexp.QuoteMeta(patternForRegex)
 	regexPattern = strings.ReplaceAll(regexPattern, "\\{serverName\\}", "([^/]+)")
 	regexPattern = strings.ReplaceAll(regexPattern, "\\{mediaId\\}", "([^/]+)")
 	regexPattern = strings.ReplaceAll(regexPattern, "\\{downloadName\\}", "([^/]+)")
-	regexPattern = "^" + regexPattern + "$"
+	if route.Prefix {
+		regexPattern = "^" + regexPattern + ".*$"
+	} else {
+		regexPattern = "^" + regexPattern + "$"
+	}
 
 	route.Regex = regexp.MustCompile(regexPattern)
-	r.routes = append(r.routes, route)
+	*r.routes = append(*r.routes, route)
 
-	return &RouteBuilder{router: r, routeIndex: len(r.routes) - 1}
+	return &RouteBuilder{router: r, routeIndex: len(*r.routes) - 1}
+}
+
+func joinRoutePath(base, segment string) string {
+	if base == "" {
+		if segment == "" {
+			return "/"
+		}
+		if strings.HasPrefix(segment, "/") {
+			return segment
+		}
+		return "/" + segment
+	}
+	if segment == "" {
+		return base
+	}
+	return strings.TrimSuffix(base, "/") + "/" + strings.TrimPrefix(segment, "/")
 }
 
 // RouteBuilder allows method chaining for route configuration
@@ -100,13 +129,13 @@ type RouteBuilder struct {
 
 // Methods sets the HTTP methods for the route
 func (rb *RouteBuilder) Methods(methods ...string) *RouteBuilder {
-	rb.router.routes[rb.routeIndex].Methods = methods
+	(*rb.router.routes)[rb.routeIndex].Methods = methods
 	return rb
 }
 
 // ServeHTTP implements the http.Handler interface
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	for _, route := range r.routes {
+	for _, route := range *r.routes {
 		if r.matchesRoute(route, req) {
 			// Extract path variables and add them to request context
 			vars := r.extractPathVars(route, req.URL.Path)
@@ -183,6 +212,7 @@ func SetupMatrixRoutes(
 	db storage2.Database,
 	provider storage2.Provider,
 	mediaService business.MediaService,
+	authzMiddleware authz.Middleware,
 ) *Router {
 	cfg := service.Config().(*config.FilesConfig)
 	matrixPathsRouter := NewRouter()
@@ -202,7 +232,7 @@ func SetupMatrixRoutes(
 
 	uploadHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
-			return Upload(req, service, db, provider, mediaService)
+			return Upload(req, service, db, provider, mediaService, authzMiddleware)
 		})
 
 	configHandler := CreateHandler(
@@ -221,11 +251,11 @@ func SetupMatrixRoutes(
 	v1mux.Handle("/config", configHandler).Methods(http.MethodGet, http.MethodOptions)
 
 	// Download endpoints
-	downloadHandlerAuthed := makeDownloadAPI("download_client", cfg, db, provider, mediaService)
+	downloadHandlerAuthed := makeDownloadAPI("download_client", cfg, db, provider, mediaService, authzMiddleware)
 	v1mux.Handle("/download/{serverName}/{mediaId}", downloadHandlerAuthed).Methods(http.MethodGet, http.MethodOptions)
 	v1mux.Handle("/download/{serverName}/{mediaId}/{downloadName}", downloadHandlerAuthed).Methods(http.MethodGet, http.MethodOptions)
 
-	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, provider, mediaService)).Methods(http.MethodGet, http.MethodOptions)
+	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, provider, mediaService, authzMiddleware)).Methods(http.MethodGet, http.MethodOptions)
 
 	return matrixPathsRouter
 }
@@ -256,6 +286,9 @@ func ServeOpenAPISpec(w http.ResponseWriter, req *http.Request) {
 
 	// Construct path to openapi.yaml
 	openAPIPath := filepath.Join(wd, "api", "openapi.yaml")
+	if _, statErr := os.Stat(openAPIPath); statErr != nil {
+		openAPIPath = filepath.Join(wd, "apps", "default", "api", "openapi.yaml")
+	}
 
 	// Read the OpenAPI spec file
 	content, err := os.ReadFile(openAPIPath)
@@ -282,6 +315,7 @@ func makeDownloadAPI(
 	db storage2.Database,
 	provider storage2.Provider,
 	mediaService business.MediaService,
+	authzMiddleware authz.Middleware,
 ) http.HandlerFunc {
 	httpHandler := func(w http.ResponseWriter, req *http.Request) {
 		req = util.RequestWithLogging(req)
@@ -299,7 +333,7 @@ func makeDownloadAPI(
 		w.Header().Set("Cache-Control", "public,max-age=86400,s-maxage=86400")
 
 		Download(w, req, types.MediaID(vars["mediaId"]),
-			cfg, db, provider, mediaService,
+			cfg, db, provider, mediaService, authzMiddleware,
 			strings.HasPrefix(name, "thumbnail"), vars["downloadName"],
 		)
 	}

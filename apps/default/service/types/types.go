@@ -57,6 +57,7 @@ type MediaMetadata struct {
 	ThumbnailSize     *ThumbnailSize
 	ServerName        string
 	IsPublic          bool
+	Encryption        *EncryptionInfo
 }
 
 // RemoteRequestResult is used for broadcasting the result of a request for a remote file to routines waiting on the condition
@@ -106,3 +107,13 @@ const Crop = "crop"
 
 // Scale indicates we should scale the thumbnail on resize
 const Scale = "scale"
+
+// EncryptionInfo captures metadata required to decrypt content at rest.
+type EncryptionInfo struct {
+	Version         int
+	Algorithm       string
+	ChunkSizeBytes  int
+	WrappedKey      string
+	WrappedKeyNonce string
+	NoncePrefix     string
+}

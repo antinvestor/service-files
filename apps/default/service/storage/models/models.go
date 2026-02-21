@@ -8,6 +8,15 @@ import (
 	"github.com/pitabwire/frame/data"
 )
 
+const (
+	encVersionKey      = "enc_v"
+	encAlgKey          = "enc_alg"
+	encChunkSizeKey    = "enc_chunk"
+	encWrappedKeyKey   = "enc_key"
+	encWrappedNonceKey = "enc_key_nonce"
+	encNoncePrefixKey  = "enc_nonce_prefix"
+)
+
 // MediaMetadata Our model responsible for holding uploaded file data
 type MediaMetadata struct {
 	data.BaseModel
@@ -18,10 +27,11 @@ type MediaMetadata struct {
 	Name string `gorm:"type:TEXT"`
 	Ext  string `gorm:"type:TEXT"`
 
-	Size     int64
-	OriginTs int64
-	Public   bool
-	Mimetype string `gorm:"type:TEXT"`
+	Size       int64
+	OriginTs   int64
+	Public     bool
+	Mimetype   string `gorm:"type:TEXT"`
+	ServerName string `gorm:"type:TEXT"`
 
 	Hash       string `gorm:"type:TEXT"`
 	BucketName string `gorm:"type:TEXT"`
@@ -40,6 +50,8 @@ func (mm *MediaMetadata) ToApi() *types.MediaMetadata {
 		UploadName:        types.Filename(mm.Name),
 		Base64Hash:        types.Base64Hash(mm.Hash),
 		OwnerID:           types.OwnerID(mm.OwnerID),
+		ServerName:        mm.ServerName,
+		IsPublic:          mm.Public,
 	}
 
 	if mm.ParentID != "" {
@@ -66,6 +78,10 @@ func (mm *MediaMetadata) ToApi() *types.MediaMetadata {
 		}
 	}
 
+	if mm.Properties != nil {
+		tmm.Encryption = readEncryptionInfo(mm.Properties)
+	}
+
 	return &tmm
 
 }
@@ -79,6 +95,8 @@ func (mm *MediaMetadata) Fill(tmm *types.MediaMetadata) {
 	mm.OwnerID = string(tmm.OwnerID)
 	mm.Hash = string(tmm.Base64Hash)
 	mm.OriginTs = int64(tmm.CreationTimestamp)
+	mm.Public = tmm.IsPublic
+	mm.ServerName = tmm.ServerName
 
 	if tmm.ThumbnailSize != nil {
 		if mm.Properties == nil {
@@ -89,13 +107,61 @@ func (mm *MediaMetadata) Fill(tmm *types.MediaMetadata) {
 		mm.Properties["m"] = tmm.ThumbnailSize.ResizeMethod
 	}
 
+	if tmm.Encryption != nil {
+		if mm.Properties == nil {
+			mm.Properties = make(data.JSONMap)
+		}
+		writeEncryptionInfo(mm.Properties, tmm.Encryption)
+	}
+
+}
+
+func readEncryptionInfo(props data.JSONMap) *types.EncryptionInfo {
+	if props == nil {
+		return nil
+	}
+
+	versionStr := props.GetString(encVersionKey)
+	if versionStr == "" {
+		return nil
+	}
+	version, err := strconv.Atoi(versionStr)
+	if err != nil {
+		return nil
+	}
+
+	chunkStr := props.GetString(encChunkSizeKey)
+	chunkSize := 0
+	if chunkStr != "" {
+		chunkSize, _ = strconv.Atoi(chunkStr)
+	}
+
+	return &types.EncryptionInfo{
+		Version:         version,
+		Algorithm:       props.GetString(encAlgKey),
+		ChunkSizeBytes:  chunkSize,
+		WrappedKey:      props.GetString(encWrappedKeyKey),
+		WrappedKeyNonce: props.GetString(encWrappedNonceKey),
+		NoncePrefix:     props.GetString(encNoncePrefixKey),
+	}
+}
+
+func writeEncryptionInfo(props data.JSONMap, info *types.EncryptionInfo) {
+	if props == nil || info == nil {
+		return
+	}
+	props[encVersionKey] = fmt.Sprintf("%d", info.Version)
+	props[encAlgKey] = info.Algorithm
+	props[encChunkSizeKey] = fmt.Sprintf("%d", info.ChunkSizeBytes)
+	props[encWrappedKeyKey] = info.WrappedKey
+	props[encWrappedNonceKey] = info.WrappedKeyNonce
+	props[encNoncePrefixKey] = info.NoncePrefix
 }
 
 // MediaAudit model responsible for holding events on a file
 type MediaAudit struct {
 	data.BaseModel
-	FileID   string `gorm:"type:TEXT"`
-	AccessID string `gorm:"type:TEXT"`
-	Action   string `gorm:"type:TEXT"`
-	Source   string `gorm:"type:TEXT"`
+	FileID string `gorm:"type:TEXT"`
+	Action string `gorm:"type:TEXT"`
+	Source string `gorm:"type:TEXT"`
 }

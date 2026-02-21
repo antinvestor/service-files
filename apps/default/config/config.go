@@ -1,6 +1,8 @@
 package config
 
 import (
+	"path/filepath"
+
 	"github.com/pitabwire/frame/config"
 )
 
@@ -55,7 +57,7 @@ type FilesConfig struct {
 	NotificationServiceURI string `envDefault:"127.0.0.1:7020" env:"NOTIFICATION_SERVICE_URI"`
 
 	StorageProvider            string `envDefault:"LOCAL" env:"STORAGE_PROVIDER"`
-	EnvStorageEncryptionPhrase string `envDefault:"AES256Key-XihgT047PgfrbYZJB4Rf2K" env:"ENCRYPTION_PHRASE"`
+	EnvStorageEncryptionPhrase string `envDefault:"" env:"ENCRYPTION_PHRASE"`
 
 	FileAccessServerUrl string `envDefault:"" env:"FILE_ACCESS_SERVER_URL"`
 
@@ -93,6 +95,44 @@ type FilesConfig struct {
 	// The maximum number of simultaneous thumbnail generators. default: 10
 	MaxThumbnailGenerators int `yaml:"max_thumbnail_generators"`
 
+	// Maximum allowed thumbnail width/height in pixels. Default: 2048
+	MaxThumbnailDimension int `envDefault:"2048" env:"MAX_THUMBNAIL_DIMENSION"`
+
 	// A list of thumbnail sizes to be pre-generated for downloaded remote / uploaded content
 	ThumbnailSizes []ThumbnailSize `yaml:"thumbnail_sizes"`
+}
+
+// Normalise applies defaults and validates configuration values.
+func (c *FilesConfig) Normalise() error {
+	if c.MaxFileSizeBytes == 0 {
+		c.MaxFileSizeBytes = DefaultMaxFileSizeBytes
+	}
+
+	if c.MaxThumbnailGenerators == 0 {
+		c.MaxThumbnailGenerators = 10
+	}
+
+	if c.MaxThumbnailDimension == 0 {
+		c.MaxThumbnailDimension = 2048
+	}
+
+	if len(c.ThumbnailSizes) == 0 {
+		c.ThumbnailSizes = []ThumbnailSize{
+			{Width: 32, Height: 32, ResizeMethod: "crop"},
+			{Width: 96, Height: 96, ResizeMethod: "crop"},
+			{Width: 640, Height: 480, ResizeMethod: "scale"},
+		}
+	}
+
+	if c.BasePath == "" {
+		c.BasePath = "/tmp/media_store"
+	}
+
+	abs, err := filepath.Abs(string(c.BasePath))
+	if err != nil {
+		return err
+	}
+	c.AbsBasePath = Path(abs)
+
+	return nil
 }

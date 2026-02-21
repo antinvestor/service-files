@@ -35,6 +35,7 @@ func initResources(_ context.Context) []definition.TestResource {
 }
 
 func (bs *BaseTestSuite) SetupSuite() {
+
 	bs.InitResourceFunc = initResources
 	bs.mc = minimock.NewController(bs.T())
 	bs.FrameBaseTestSuite.SetupSuite()

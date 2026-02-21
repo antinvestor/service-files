@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
+	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/events"
 	"github.com/antinvestor/service-files/apps/default/service/handler"
@@ -36,16 +38,22 @@ func main() {
 		cfg.ServerName = "service_files"
 	}
 
+	if err = cfg.Normalise(); err != nil {
+		util.Log(ctx).WithError(err).Fatal("invalid configuration")
+	}
+
+	if err = validateEncryptionConfig(&cfg); err != nil {
+		util.Log(ctx).WithError(err).Fatal("invalid encryption configuration")
+	}
+
 	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithRegisterServerOauth2Client(), frame.WithDatastore())
 
 	log := svc.Log(ctx)
 
-	// Create repositories for the database
 	dbManager := svc.DatastoreManager()
 	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
 	workManager := svc.WorkManager()
 
-	// Handle database migration if requested
 	if handleDatabaseMigration(ctx, dbManager, cfg) {
 		return
 	}
@@ -63,29 +71,43 @@ func main() {
 		log.WithError(err).Fatal("main -- failed to setup storage")
 	}
 
-	// Create business service
 	mediaService := business.NewMediaService(metadataStore, storageProvider)
 
-	// Create Connect RPC handler
-	fileServer := handler.NewFileServer(svc, mediaService, metadataStore, storageProvider)
+	sm := svc.SecurityManager()
+	authorizer := sm.GetAuthorizer(ctx)
+	authzMiddleware := authz.NewMiddleware(authorizer, metadataStore)
+
+	fileServer := handler.NewFileServer(svc, mediaService, authzMiddleware, metadataStore, storageProvider)
 
 	publicRouter := routing.SetupApiSpecRoute(svc)
 
-	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider, mediaService)
+	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider, mediaService, authzMiddleware)
 
-	// Setup Connect RPC routes
 	_, connectHandler := filesv1connect.NewFilesServiceHandler(fileServer)
 
-	// Add Connect router to the public router
-	publicRouter.Handle("/", http.StripPrefix("/", connectHandler))
+	connectAuthHandler := handlers.RecoveryHandler(
+		handlers.PrintRecoveryStack(true))(
+		framehttp.AuthenticationMiddleware(connectHandler, sm.GetAuthenticator(ctx)))
 
-	sm := svc.SecurityManager()
+	connectProcedures := []string{
+		filesv1connect.FilesServiceUploadContentProcedure,
+		filesv1connect.FilesServiceCreateContentProcedure,
+		filesv1connect.FilesServiceGetContentProcedure,
+		filesv1connect.FilesServiceGetContentOverrideNameProcedure,
+		filesv1connect.FilesServiceGetContentThumbnailProcedure,
+		filesv1connect.FilesServiceGetUrlPreviewProcedure,
+		filesv1connect.FilesServiceGetConfigProcedure,
+		filesv1connect.FilesServiceSearchMediaProcedure,
+	}
+	for _, procedure := range connectProcedures {
+		publicRouter.Handle(procedure, connectAuthHandler).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
+	}
 
 	authServiceHandlers := handlers.RecoveryHandler(
 		handlers.PrintRecoveryStack(true))(
 		framehttp.AuthenticationMiddleware(router, sm.GetAuthenticator(ctx)))
 
-	publicRouter.Handle("/", authServiceHandlers)
+	publicRouter.Handle("/*", authServiceHandlers)
 
 	defaultServer := frame.WithHTTPHandler(publicRouter)
 	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(
@@ -100,7 +122,6 @@ func main() {
 
 	svc.Init(ctx, serviceOptions...)
 
-	// Startup service
 	err = svc.Run(ctx, "")
 	if err != nil {
 		log.WithError(err).Fatal("main -- Could not run Server : %v", err)
@@ -108,7 +129,6 @@ func main() {
 
 }
 
-// handleDatabaseMigration performs database migration if configured to do so.
 func handleDatabaseMigration(
 	ctx context.Context,
 	dbManager datastore.Manager,
@@ -124,4 +144,14 @@ func handleDatabaseMigration(
 		return true
 	}
 	return false
+}
+
+func validateEncryptionConfig(cfg *aconfig.FilesConfig) error {
+	if cfg.EnvStorageEncryptionPhrase == "" {
+		return fmt.Errorf("ENCRYPTION_PHRASE must be set for private file encryption")
+	}
+	if len(cfg.EnvStorageEncryptionPhrase) != 32 {
+		return fmt.Errorf("ENCRYPTION_PHRASE must be 32 bytes for AES-256-GCM")
+	}
+	return nil
 }
