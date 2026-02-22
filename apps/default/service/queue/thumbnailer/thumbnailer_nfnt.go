@@ -220,21 +220,21 @@ func createThumbnail(
 			return fmt.Errorf("invalid encryption key length")
 		}
 		encryptedPath := types.Path(string(tempThumbnailPath) + ".encrypted")
-		srcFile, err := os.Open(string(tempThumbnailPath))
-		if err != nil {
-			return err
+		srcFile, openErr := os.Open(string(tempThumbnailPath))
+		if openErr != nil {
+			return openErr
 		}
 		defer util.CloseAndLogOnError(ctx, srcFile)
 
-		dstFile, err := os.Create(string(encryptedPath))
-		if err != nil {
-			return err
+		dstFile, createErr := os.Create(string(encryptedPath))
+		if createErr != nil {
+			return createErr
 		}
 		defer util.CloseAndLogOnError(ctx, dstFile)
 
-		info, err := storage2.EncryptStream(ctx, srcFile, dstFile, []byte(encryptionKey))
-		if err != nil {
-			return err
+		info, encryptErr := storage2.EncryptStream(ctx, srcFile, dstFile, []byte(encryptionKey))
+		if encryptErr != nil {
+			return encryptErr
 		}
 		thumbnailMetadata.Encryption = info
 		sourcePath = encryptedPath

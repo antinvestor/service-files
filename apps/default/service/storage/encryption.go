@@ -27,13 +27,13 @@ func EncryptStream(ctx context.Context, src io.Reader, dst io.Writer, masterKey 
 	}
 
 	dataKey := make([]byte, 32)
-	if _, err := rand.Read(dataKey); err != nil {
-		return nil, err
+	if _, randErr := rand.Read(dataKey); randErr != nil {
+		return nil, randErr
 	}
 
 	wrapNonce := make([]byte, 12)
-	if _, err := rand.Read(wrapNonce); err != nil {
-		return nil, err
+	if _, randErr := rand.Read(wrapNonce); randErr != nil {
+		return nil, randErr
 	}
 
 	masterGCM, err := newGCM(masterKey)
@@ -43,8 +43,8 @@ func EncryptStream(ctx context.Context, src io.Reader, dst io.Writer, masterKey 
 	wrappedKey := masterGCM.Seal(nil, wrapNonce, dataKey, nil)
 
 	noncePrefix := make([]byte, 4)
-	if _, err := rand.Read(noncePrefix); err != nil {
-		return nil, err
+	if _, randErr := rand.Read(noncePrefix); randErr != nil {
+		return nil, randErr
 	}
 
 	dataGCM, err := newGCM(dataKey)
@@ -174,8 +174,8 @@ func (dr *decryptingReader) readNextChunk() ([]byte, error) {
 	}
 
 	ciphertext := make([]byte, chunkLen)
-	if _, err := io.ReadFull(dr.src, ciphertext); err != nil {
-		return nil, err
+	if _, readErr := io.ReadFull(dr.src, ciphertext); readErr != nil {
+		return nil, readErr
 	}
 
 	nonce := makeNonce(dr.noncePrefix, dr.counter)

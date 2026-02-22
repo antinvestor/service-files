@@ -67,12 +67,12 @@ func Download(
 	// Parse thumbnail parameters if this is a thumbnail request
 	var thumbnailSize *types.ThumbnailSize
 	if isThumbnailRequest {
-		width, err := strconv.Atoi(req.FormValue("width"))
-		if err != nil {
+		width, widthErr := strconv.Atoi(req.FormValue("width"))
+		if widthErr != nil {
 			width = -1
 		}
-		height, err := strconv.Atoi(req.FormValue("height"))
-		if err != nil {
+		height, heightErr := strconv.Atoi(req.FormValue("height"))
+		if heightErr != nil {
 			height = -1
 		}
 		thumbnailSize = &types.ThumbnailSize{

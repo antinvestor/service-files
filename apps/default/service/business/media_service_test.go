@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"image"
-	"image/colour"
+	color "image/color" //nolint:misspell
 	"image/jpeg"
 	"io"
 	"testing"
@@ -293,7 +293,7 @@ func (suite *MediaServiceTestSuite) Test_MediaService_DownloadAndThumbnail() {
 				img := image.NewRGBA(image.Rect(0, 0, 128, 128))
 				for y := 0; y < 128; y++ {
 					for x := 0; x < 128; x++ {
-						img.Set(x, y, colour.RGBA{R: 200, G: 20, B: 20, A: 255})
+						img.Set(x, y, color.RGBA{R: 200, G: 20, B: 20, A: 255}) //nolint:misspell
 					}
 				}
 				require.NoError(t, jpeg.Encode(imgBuf, img, nil))

@@ -73,9 +73,9 @@ func (s *mediaService) DownloadFile(ctx context.Context, req *DownloadRequest) (
 	}
 
 	if req.IsThumbnailRequest {
-		thumbnailMetadata, err := s.resolveThumbnail(ctx, req, mediaMetadata)
-		if err != nil {
-			return nil, err
+		thumbnailMetadata, resolveErr := s.resolveThumbnail(ctx, req, mediaMetadata)
+		if resolveErr != nil {
+			return nil, resolveErr
 		}
 		mediaMetadata = thumbnailMetadata.MediaMetadata
 	}
@@ -117,6 +117,12 @@ func (s *mediaService) SearchMedia(ctx context.Context, req *SearchRequest) (*Se
 	}
 	if req.EndDate != nil {
 		filtersAnd["created_at <= ?"] = *req.EndDate
+	}
+	if strings.TrimSpace(req.ContentTypePrefix) != "" {
+		filtersAnd["mimetype ILIKE ?"] = strings.TrimSpace(req.ContentTypePrefix) + "%"
+	}
+	if req.Visibility != nil {
+		filtersAnd["public = ?"] = *req.Visibility
 	}
 	filtersOr := map[string]any{}
 	if strings.TrimSpace(req.Query) != "" {
@@ -237,8 +243,8 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	}
 
 	if req.MediaID != "" {
-		existingByID, err := s.db.GetMediaMetadata(ctx, req.MediaID)
-		if err != nil {
+		existingByID, fetchErr := s.db.GetMediaMetadata(ctx, req.MediaID)
+		if fetchErr != nil {
 			utils.RemoveDir(tmpDir, logger)
 			return nil, fmt.Errorf("internal server error")
 		}

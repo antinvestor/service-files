@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"image"
-	"image/colour"
+	color "image/color" //nolint:misspell
 	"image/jpeg"
 	"io"
 	"net"
@@ -32,7 +33,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type FileServerTestSuite struct {
@@ -102,7 +105,7 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContent() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, _, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				authClaims := &security.AuthenticationClaims{
@@ -142,16 +145,10 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentValidation() {
 			request:   &filesv1.GetContentRequest{MediaId: "bad id"},
 			expectErr: connect.CodeInvalidArgument,
 		},
-		{
-			name:      "server_name_mismatch",
-			userID:    "@test-user:example.com",
-			request:   &filesv1.GetContentRequest{MediaId: "abc123", ServerName: "other.example.com"},
-			expectErr: connect.CodeInvalidArgument,
-		},
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, _, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := ctx
@@ -187,7 +184,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentSuccess() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, mediaService, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				uploadRes, err := mediaService.UploadFile(ctx, &business.UploadRequest{
@@ -204,13 +201,13 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentSuccess() {
 
 				caseCtx := claimsCtx(ctx, tc.userID)
 				resp, err := handler.GetContent(caseCtx, connect.NewRequest(&filesv1.GetContentRequest{
-					MediaId:    string(uploadRes.MediaID),
-					ServerName: cfg.ServerName,
+					MediaId: string(uploadRes.MediaID),
 				}))
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Equal(t, tc.mimeType, resp.Msg.ContentType)
-				assert.Equal(t, tc.filename, resp.Msg.Filename)
+				require.NotNil(t, resp.Msg.Metadata)
+				assert.Equal(t, tc.mimeType, resp.Msg.Metadata.ContentType)
+				assert.Equal(t, tc.filename, resp.Msg.Metadata.Filename)
 				assert.Equal(t, tc.content, string(resp.Msg.Content))
 			})
 		}
@@ -227,36 +224,29 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaValidation() {
 		{
 			name:      "owner_mismatch",
 			userID:    "@owner:example.com",
-			request:   &filesv1.SearchMediaRequest{OwnerId: "@other:example.com", Limit: 10, Page: 0},
+			request:   &filesv1.SearchMediaRequest{OwnerId: "@other:example.com", Limit: 10},
 			expectErr: connect.CodePermissionDenied,
 		},
 		{
-			name:      "invalid_start_date",
+			name:      "invalid_cursor",
 			userID:    "@owner:example.com",
-			request:   &filesv1.SearchMediaRequest{StartDate: "bad-date", Limit: 10, Page: 0},
-			expectErr: connect.CodeInvalidArgument,
-		},
-		{
-			name:      "invalid_end_date",
-			userID:    "@owner:example.com",
-			request:   &filesv1.SearchMediaRequest{EndDate: "bad-date", Limit: 10, Page: 0},
+			request:   &filesv1.SearchMediaRequest{AfterCursor: "invalid", Limit: 10},
 			expectErr: connect.CodeInvalidArgument,
 		},
 		{
 			name:   "end_before_start",
 			userID: "@owner:example.com",
 			request: &filesv1.SearchMediaRequest{
-				StartDate: "2026-02-21T09:00:00Z",
-				EndDate:   "2026-02-20T09:00:00Z",
-				Limit:     10,
-				Page:      0,
+				CreatedAfter:  timestamppb.New(time.Date(2026, 2, 21, 9, 0, 0, 0, time.UTC)),
+				CreatedBefore: timestamppb.New(time.Date(2026, 2, 20, 9, 0, 0, 0, time.UTC)),
+				Limit:         10,
 			},
 			expectErr: connect.CodeInvalidArgument,
 		},
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, _, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := claimsCtx(ctx, tc.userID)
@@ -302,7 +292,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewValidation() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, _, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := ctx
@@ -341,14 +331,21 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewSuccess() {
 		authzMiddleware := authz.NewMiddleware(svc.SecurityManager().GetAuthorizer(ctx), db)
 		handler := NewFileServer(svc, mediaService, authzMiddleware, db, storageProvider).(*FileServer)
 
+		imagePayload := createJPEGPayload(t, 32, 32)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
+				if r.URL.Path == "/image.jpg" {
+					w.Header().Set("Content-Type", "image/jpeg")
+					_, _ = w.Write(imagePayload)
+					return
+				}
 				w.Header().Set("Content-Type", "text/html")
 				_, _ = w.Write([]byte(`<html><head><meta property="og:title" content="Preview Title"><meta property="og:image" content="http://8.8.8.8/image.jpg"><title>Fallback</title></head></html>`))
 			case http.MethodHead:
 				if r.URL.Path == "/image.jpg" {
-					w.Header().Set("Content-Length", "123")
+					w.Header().Set("Content-Length", fmt.Sprintf("%d", len(imagePayload)))
+					w.Header().Set("Content-Type", "image/jpeg")
 				}
 				w.WriteHeader(http.StatusOK)
 			default:
@@ -376,8 +373,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewSuccess() {
 				}))
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Equal(t, "http://8.8.8.8/image.jpg", resp.Msg.OgImage)
-				assert.Equal(t, int64(123), resp.Msg.MatrixImageSize)
+				assert.NotEmpty(t, resp.Msg.OgImageMediaId)
 				require.NotNil(t, resp.Msg.OgData)
 				assert.Equal(t, "Preview Title", resp.Msg.OgData.AsMap()["og:title"])
 			})
@@ -387,10 +383,10 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewSuccess() {
 
 func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewAdditionalCases() {
 	testCases := []struct {
-		name          string
-		setupClient   func(t *testing.T, svcCtx context.Context, svc *frame.Service) string
-		expectErr     connect.Code
-		expectOgImage string
+		name                 string
+		setupClient          func(t *testing.T, svcCtx context.Context, svc *frame.Service) string
+		expectErr            connect.Code
+		expectOgImageMediaID string
 	}{
 		{
 			name: "private_og_image_is_filtered",
@@ -411,7 +407,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewAdditionalCases()
 				})
 				return "http://8.8.8.8/page"
 			},
-			expectOgImage: "",
+			expectOgImageMediaID: "",
 		},
 		{
 			name: "http_client_error_returns_unavailable",
@@ -455,7 +451,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewAdditionalCases()
 				}
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Equal(t, tc.expectOgImage, resp.Msg.OgImage)
+				assert.Equal(t, tc.expectOgImageMediaID, resp.Msg.OgImageMediaId)
 			})
 		}
 	})
@@ -472,7 +468,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := ctx
@@ -487,7 +483,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 				}
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Equal(t, int64(cfg.MaxFileSizeBytes), resp.Msg.MaxUploadSize)
+				assert.Equal(t, int64(cfg.MaxFileSizeBytes), resp.Msg.MaxUploadBytes)
 				require.NotNil(t, resp.Msg.Extra)
 			})
 		}
@@ -505,7 +501,7 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContentValidation() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, _, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := ctx
@@ -537,7 +533,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentOverrideName() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, mediaService, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				mediaID := "overrideMedia123" + tc.name
@@ -556,13 +552,13 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentOverrideName() {
 
 				caseCtx := claimsCtx(ctx, "@owner:example.com")
 				resp, err := handler.GetContentOverrideName(caseCtx, connect.NewRequest(&filesv1.GetContentOverrideNameRequest{
-					ServerName: cfg.ServerName,
-					MediaId:    mediaID,
-					FileName:   tc.overrideName,
+					MediaId:  mediaID,
+					FileName: tc.overrideName,
 				}))
 				require.NoError(t, err)
-				assert.Equal(t, tc.expectedName, resp.Msg.Filename)
-				assert.Equal(t, "text/plain", resp.Msg.ContentType)
+				require.NotNil(t, resp.Msg.Metadata)
+				assert.Equal(t, tc.expectedName, resp.Msg.Metadata.Filename)
+				assert.Equal(t, "text/plain", resp.Msg.Metadata.ContentType)
 			})
 		}
 	})
@@ -586,16 +582,10 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailValidation(
 			request:   &filesv1.GetContentThumbnailRequest{MediaId: "bad id"},
 			expectErr: connect.CodeInvalidArgument,
 		},
-		{
-			name:      "server_name_mismatch",
-			userID:    "@owner:example.com",
-			request:   &filesv1.GetContentThumbnailRequest{MediaId: "abc123", ServerName: "bad.example.com"},
-			expectErr: connect.CodeInvalidArgument,
-		},
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, handler := suite.setupFileServer(t, dep)
+		ctx, _, _, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := ctx
@@ -621,8 +611,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailBusinessVal
 			name:   "missing_thumbnail_size",
 			userID: "@owner:example.com",
 			request: &filesv1.GetContentThumbnailRequest{
-				MediaId:    "thumbnailMediaX",
-				ServerName: "service_test",
+				MediaId: "thumbnailMediaX",
 			},
 			expectErr: connect.CodeInvalidArgument,
 		},
@@ -630,17 +619,16 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailBusinessVal
 			name:   "invalid_thumbnail_dimensions",
 			userID: "@owner:example.com",
 			request: &filesv1.GetContentThumbnailRequest{
-				MediaId:    "thumbnailMediaX",
-				ServerName: "service_test",
-				Width:      5000,
-				Height:     5000,
+				MediaId: "thumbnailMediaX",
+				Width:   5000,
+				Height:  5000,
 			},
 			expectErr: connect.CodeInvalidArgument,
 		},
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, mediaService, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				mediaID := "thumbnailMediaX" + tc.name
@@ -658,7 +646,6 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailBusinessVal
 
 				req := protoCloneGetContentThumbnailRequest(tc.request)
 				req.MediaId = mediaID
-				req.ServerName = cfg.ServerName
 				caseCtx := claimsCtx(ctx, tc.userID)
 				_, err = handler.GetContentThumbnail(caseCtx, connect.NewRequest(req))
 				require.Error(t, err)
@@ -988,7 +975,7 @@ func (suite *FileServerTestSuite) Test_FileServer_UploadContentStream() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, _, _, _, fileHandler := suite.setupFileServer(t, dep)
+		ctx, _, _, fileHandler := suite.setupFileServer(t, dep)
 		_, connectHandler := filesv1connect.NewFilesServiceHandler(fileHandler)
 
 		for _, tc := range testCases {
@@ -1009,10 +996,10 @@ func (suite *FileServerTestSuite) Test_FileServer_UploadContentStream() {
 				var err error
 
 				if tc.metadata != nil {
-					meta := *tc.metadata
+					meta := proto.Clone(tc.metadata).(*filesv1.UploadMetadata)
 					err = stream.Send(&filesv1.UploadContentRequest{
 						Data: &filesv1.UploadContentRequest_Metadata{
-							Metadata: &meta,
+							Metadata: meta,
 						},
 					})
 					require.NoError(t, err)
@@ -1067,7 +1054,7 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaSuccess() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, mediaService, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				content := "search payload"
@@ -1085,14 +1072,12 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaSuccess() {
 				caseCtx := claimsCtx(ctx, tc.userID)
 				resp, err := handler.SearchMedia(caseCtx, connect.NewRequest(&filesv1.SearchMediaRequest{
 					Query:   tc.query,
-					Page:    0,
 					Limit:   10,
 					OwnerId: tc.userID,
 				}))
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 				assert.NotEmpty(t, resp.Msg.Results)
-				assert.Equal(t, int32(0), resp.Msg.Page)
 			})
 		}
 	})
@@ -1118,7 +1103,7 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaResultBounds() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, mediaService, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -1152,7 +1137,6 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaResultBounds() {
 				resp, err := handler.SearchMedia(caseCtx, connect.NewRequest(&filesv1.SearchMediaRequest{
 					OwnerId: tc.ownerID,
 					Query:   "invoice",
-					Page:    0,
 					Limit:   tc.limit,
 				}))
 				require.NoError(t, err)
@@ -1219,7 +1203,6 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaSharedEdgeCases() {
 
 				resp, err := handler.SearchMedia(claimsCtx(ctx, "@owner:example.com"), connect.NewRequest(&filesv1.SearchMediaRequest{
 					Query: tc.query,
-					Page:  0,
 					Limit: 0, // Exercise default limit branch.
 				}))
 				require.NoError(t, err)
@@ -1258,7 +1241,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailSuccess() {
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		ctx, cfg, mediaService, _, handler := suite.setupFileServer(t, dep)
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -1278,16 +1261,16 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailSuccess() {
 				require.NoError(t, err)
 
 				resp, err := handler.GetContentThumbnail(claimsCtx(ctx, "@owner:example.com"), connect.NewRequest(&filesv1.GetContentThumbnailRequest{
-					ServerName: cfg.ServerName,
-					MediaId:    mediaID,
-					Width:      tc.width,
-					Height:     tc.height,
-					Method:     tc.method,
+					MediaId: mediaID,
+					Width:   tc.width,
+					Height:  tc.height,
+					Method:  tc.method,
 				}))
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 				assert.NotEmpty(t, resp.Msg.Content)
-				assert.Equal(t, "image/jpeg", resp.Msg.ContentType)
+				require.NotNil(t, resp.Msg.Metadata)
+				assert.Equal(t, "image/jpeg", resp.Msg.Metadata.ContentType)
 			})
 		}
 	})
@@ -1354,7 +1337,7 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchQueryAndQueueHelpers() {
 func (suite *FileServerTestSuite) setupFileServer(
 	t *testing.T,
 	dep *definition.DependencyOption,
-) (context.Context, *config.FilesConfig, business.MediaService, *connection.Database, *FileServer) {
+) (context.Context, *config.FilesConfig, business.MediaService, *FileServer) {
 	ctx, svc, res := suite.CreateService(t, dep)
 	cfg := svc.Config().(*config.FilesConfig)
 
@@ -1371,7 +1354,7 @@ func (suite *FileServerTestSuite) setupFileServer(
 	authzMiddleware := authz.NewMiddleware(authorizer, db)
 	handler := NewFileServer(svc, mediaService, authzMiddleware, db, storageProvider).(*FileServer)
 
-	return ctx, cfg, mediaService, db, handler
+	return ctx, cfg, mediaService, handler
 }
 
 func claimsCtx(ctx context.Context, userID string) context.Context {
@@ -1387,8 +1370,7 @@ func protoCloneGetContentThumbnailRequest(in *filesv1.GetContentThumbnailRequest
 	if in == nil {
 		return &filesv1.GetContentThumbnailRequest{}
 	}
-	out := *in
-	return &out
+	return proto.Clone(in).(*filesv1.GetContentThumbnailRequest)
 }
 
 func createJPEGPayload(t *testing.T, width, height int) []byte {
@@ -1397,7 +1379,7 @@ func createJPEGPayload(t *testing.T, width, height int) []byte {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			img.Set(x, y, colour.RGBA{
+			img.Set(x, y, color.RGBA{ //nolint:misspell
 				R: uint8((x + y) % 255),
 				G: uint8((2 * y) % 255),
 				B: 180,

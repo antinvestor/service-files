@@ -61,13 +61,15 @@ type DownloadResult struct {
 
 // SearchRequest contains all the data needed for a search operation
 type SearchRequest struct {
-	OwnerID   types.OwnerID
-	Query     string
-	Page      int32
-	Limit     int32
-	ParentID  types.MediaID
-	StartDate *time.Time
-	EndDate   *time.Time
+	OwnerID           types.OwnerID
+	Query             string
+	Page              int32
+	Limit             int32
+	ParentID          types.MediaID
+	StartDate         *time.Time
+	EndDate           *time.Time
+	ContentTypePrefix string
+	Visibility        *bool
 }
 
 // SearchResult contains the result of a search operation

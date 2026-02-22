@@ -2,7 +2,7 @@ package thumbnailer
 
 import (
 	"image"
-	"image/colour"
+	color "image/color" //nolint:misspell
 	"image/jpeg"
 	"os"
 	"testing"
@@ -314,7 +314,7 @@ func createTestImageFile(t *testing.T, width, height int) string {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			img.Set(x, y, colour.RGBA{R: uint8(x % 255), G: uint8(y % 255), B: 200, A: 255})
+			img.Set(x, y, color.RGBA{R: uint8(x % 255), G: uint8(y % 255), B: 200, A: 255}) //nolint:misspell
 		}
 	}
 

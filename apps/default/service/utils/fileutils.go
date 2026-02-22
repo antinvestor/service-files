@@ -208,7 +208,7 @@ func ComputeHashAndSize(filePath types.Path) (types.Base64Hash, types.FileSizeBy
 	if err != nil {
 		return "", 0, err
 	}
-	defer file.Close()
+	defer util.CloseAndLogOnError(context.Background(), file)
 
 	hasher := sha256.New()
 	size, err := io.Copy(hasher, file)
