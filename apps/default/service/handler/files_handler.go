@@ -39,6 +39,10 @@ const (
 	maxPreviewBodyBytes   = int64(2 << 20) // 2 MiB
 	maxPreviewImageBytes  = int64(5 << 20) // 5 MiB
 	maxSearchWindow       = 1000
+	// Memory limits for content endpoints to prevent OOM
+	maxContentBytes       = int64(100 << 20) // 100 MiB - max file size for GetContent
+	maxThumbnailBytes     = int64(10 << 20)  // 10 MiB - max file size for GetContentThumbnail
+	contentReadBufferSize = 64 << 10         // 64 KiB buffer for reading content
 )
 
 // FileServer implements the Connect RPC handler for files service
@@ -204,9 +208,23 @@ func (s *FileServer) GetContent(ctx context.Context, req *connect.Request[filesv
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
-	data, err := io.ReadAll(result.FileData)
+	// Check file size before reading to prevent OOM
+	if result.MediaMetadata != nil && result.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxContentBytes) {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("file size %d exceeds maximum allowed %d bytes", result.MediaMetadata.FileSizeBytes, maxContentBytes))
+	}
+
+	// Use a size-limited reader to prevent memory issues
+	limitedReader := &io.LimitedReader{R: result.FileData, N: maxContentBytes + 1}
+	data, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Check if we hit the limit
+	if limitedReader.N <= 0 {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("file size exceeds maximum allowed %d bytes", maxContentBytes))
 	}
 
 	return connect.NewResponse(&filesv1.GetContentResponse{
@@ -289,9 +307,24 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
-	data, err := io.ReadAll(result.FileData)
+	// Check file size before reading to prevent OOM
+	// Thumbnails should be small, so use a strict limit
+	if result.MediaMetadata != nil && result.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxThumbnailBytes) {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("thumbnail size %d exceeds maximum allowed %d bytes", result.MediaMetadata.FileSizeBytes, maxThumbnailBytes))
+	}
+
+	// Use a size-limited reader to prevent memory issues
+	limitedReader := &io.LimitedReader{R: result.FileData, N: maxThumbnailBytes + 1}
+	data, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Check if we hit the limit
+	if limitedReader.N <= 0 {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("thumbnail size exceeds maximum allowed %d bytes", maxThumbnailBytes))
 	}
 
 	return connect.NewResponse(&filesv1.GetContentThumbnailResponse{

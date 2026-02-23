@@ -1413,16 +1413,16 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUserUsage() {
 
 			t.Run("success", func(t *testing.T) {
 				userID := "@test-user-usage:example.com"
-				ctx := claimsCtx(ctx, userID)
+				authCtx := claimsCtx(ctx, userID)
 
-				resp, err := handler.GetUserUsage(ctx, connect.NewRequest(&filesv1.GetUserUsageRequest{}))
+				resp, err := handler.GetUserUsage(authCtx, connect.NewRequest(&filesv1.GetUserUsageRequest{}))
 				require.NoError(t, err)
 				require.NotNil(t, resp.Msg.Usage)
 			})
 
 			t.Run("other_user_forbidden", func(t *testing.T) {
-				ctx := claimsCtx(ctx, "@test-user:example.com")
-				_, err := handler.GetUserUsage(ctx, connect.NewRequest(&filesv1.GetUserUsageRequest{
+				authCtx := claimsCtx(ctx, "@test-user:example.com")
+				_, err := handler.GetUserUsage(authCtx, connect.NewRequest(&filesv1.GetUserUsageRequest{
 					UserId: "@other-user:example.com",
 				}))
 				require.Error(t, err)
@@ -1444,9 +1444,9 @@ func (suite *FileServerTestSuite) Test_FileServer_GetStorageStats() {
 			})
 
 			t.Run("returns_zero_when_no_stats", func(t *testing.T) {
-				ctx := claimsCtx(ctx, "@test-user:example.com")
+				authCtx := claimsCtx(ctx, "@test-user:example.com")
 
-				resp, err := handler.GetStorageStats(ctx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				resp, err := handler.GetStorageStats(authCtx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
 				require.NoError(t, err)
 				require.Equal(t, int64(0), resp.Msg.TotalBytes)
 				require.Equal(t, int64(0), resp.Msg.TotalFiles)
