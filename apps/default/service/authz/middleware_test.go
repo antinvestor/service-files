@@ -100,12 +100,12 @@ func (s *AuthzMiddlewareTestSuite) SetupSuite() {
 	mediaDB, err := connection.NewMediaDatabase(
 		svc.WorkManager(),
 		mediaRepo,
-		repository.NewMultipartUploadRepository(ctx, dbPool),
-		repository.NewMultipartUploadPartRepository(ctx, dbPool),
-		repository.NewFileVersionRepository(ctx, dbPool),
-		repository.NewRetentionPolicyRepository(ctx, dbPool),
-		repository.NewFileRetentionRepository(ctx, dbPool),
-		repository.NewStorageStatsRepository(ctx, dbPool),
+		repository.NewMultipartUploadRepository(ctx, dbPool, svc.WorkManager()),
+		repository.NewMultipartUploadPartRepository(ctx, dbPool, svc.WorkManager()),
+		repository.NewFileVersionRepository(ctx, dbPool, svc.WorkManager()),
+		repository.NewRetentionPolicyRepository(ctx, dbPool, svc.WorkManager()),
+		repository.NewFileRetentionRepository(ctx, dbPool, svc.WorkManager()),
+		repository.NewStorageStatsRepository(ctx, dbPool, svc.WorkManager()),
 	)
 	require.NoError(s.T(), err)
 

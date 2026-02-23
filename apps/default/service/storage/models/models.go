@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/data"
@@ -164,4 +165,81 @@ type MediaAudit struct {
 	FileID string `gorm:"type:TEXT"`
 	Action string `gorm:"type:TEXT"`
 	Source string `gorm:"type:TEXT"`
+}
+
+// MultipartUpload model for tracking multipart file uploads
+type MultipartUpload struct {
+	data.BaseModel
+	OwnerID       string `gorm:"type:TEXT;not null"`
+	MediaID       string `gorm:"type:TEXT;not null"`
+	UploadName    string `gorm:"type:TEXT"`
+	ContentType   string `gorm:"type:TEXT"`
+	TotalSize     int64
+	PartSize      int64
+	PartCount     int
+	UploadedParts int    `gorm:"default:0"`
+	UploadState   string `gorm:"type:VARCHAR(20);default:'pending'"`
+	ExpiresAt     *time.Time
+	Metadata      data.JSONMap
+}
+
+// MultipartUploadPart model for individual upload parts
+type MultipartUploadPart struct {
+	data.BaseModel
+	UploadID    string `gorm:"type:VARCHAR(50);not null;index:idx_multipart_upload_parts_upload_id"`
+	PartNumber  int    `gorm:"not null;index:idx_multipart_upload_parts_upload_part,priority:1"`
+	Etag        string `gorm:"type:TEXT"`
+	Size        int64
+	ContentHash string `gorm:"type:TEXT"`
+	StoragePath string `gorm:"type:TEXT"`
+	IsUploaded  bool   `gorm:"default:false"`
+}
+
+// FileVersion model for tracking file version history
+type FileVersion struct {
+	data.BaseModel
+	MediaID            string `gorm:"type:TEXT;not null;index:idx_file_versions_media_id"`
+	VersionNumber      int    `gorm:"not null;index:idx_file_versions_media_version,priority:2"`
+	ContentHash        string `gorm:"type:TEXT;not null"`
+	FileSize           int64
+	UploadName         string `gorm:"type:TEXT"`
+	ContentType        string `gorm:"type:TEXT"`
+	StoragePath        string `gorm:"type:TEXT"`
+	CreatedBy          string `gorm:"type:TEXT"`
+	RestoreFromVersion int
+}
+
+// RetentionPolicy model for retention policies
+type RetentionPolicy struct {
+	data.BaseModel
+	Name          string `gorm:"type:TEXT;not null"`
+	Description   string `gorm:"type:TEXT"`
+	RetentionDays int    `gorm:"not null"`
+	IsDefault     bool   `gorm:"default:false;index:idx_retention_policies_is_default"`
+	IsSystem      bool   `gorm:"default:false"`
+	OwnerID       string `gorm:"type:TEXT;index:idx_retention_policies_owner_id"`
+	Metadata      data.JSONMap
+}
+
+// FileRetention model for tracking retention assignments to files
+type FileRetention struct {
+	data.BaseModel
+	MediaID   string     `gorm:"type:TEXT;not null;index:idx_file_retention_media_id"`
+	PolicyID  string     `gorm:"type:VARCHAR(50);not null;index:idx_file_retention_policy_id"`
+	AppliedAt time.Time  `gorm:"default:now()"`
+	ExpiresAt *time.Time `gorm:"index:idx_file_retention_expires_at"`
+	IsLocked  bool       `gorm:"default:false"`
+	Metadata  data.JSONMap
+}
+
+// StorageStats model for tracking storage statistics
+type StorageStats struct {
+	data.BaseModel
+	RecordDate   time.Time `gorm:"type:DATE;not null;index:idx_storage_stats_record_date"`
+	TotalBytes   int64     `gorm:"default:0"`
+	FileCount    int       `gorm:"default:0"`
+	UserCount    int       `gorm:"default:0"`
+	PublicBytes  int64     `gorm:"default:0"`
+	PrivateBytes int64     `gorm:"default:0"`
+	Metadata     data.JSONMap
 }

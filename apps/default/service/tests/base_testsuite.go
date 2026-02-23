@@ -37,7 +37,7 @@ func initResources(_ context.Context) []definition.TestResource {
 		definition.WithUserName("test"),
 		definition.WithEnableLogging(true),
 		definition.WithEnvironment(map[string]string{
-			"POSTGRES_MAX_CONNECTIONS": "500",
+			"POSTGRES_MAX_CONNECTIONS": "50",
 		}))
 
 	return []definition.TestResource{pg}
@@ -89,12 +89,12 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	deps := ServiceResources{
 		MediaRepository:         repository.NewMediaRepository(ctx, dbPool, workMan),
 		AuditRepository:         repository.NewMediaAuditRepository(ctx, dbPool, workMan),
-		MultipartUploadRepo:     repository.NewMultipartUploadRepository(ctx, dbPool),
-		MultipartUploadPartRepo: repository.NewMultipartUploadPartRepository(ctx, dbPool),
-		FileVersionRepo:         repository.NewFileVersionRepository(ctx, dbPool),
-		RetentionPolicyRepo:     repository.NewRetentionPolicyRepository(ctx, dbPool),
-		FileRetentionRepo:       repository.NewFileRetentionRepository(ctx, dbPool),
-		StorageStatsRepo:        repository.NewStorageStatsRepository(ctx, dbPool),
+		MultipartUploadRepo:     repository.NewMultipartUploadRepository(ctx, dbPool, workMan),
+		MultipartUploadPartRepo: repository.NewMultipartUploadPartRepository(ctx, dbPool, workMan),
+		FileVersionRepo:         repository.NewFileVersionRepository(ctx, dbPool, workMan),
+		RetentionPolicyRepo:     repository.NewRetentionPolicyRepository(ctx, dbPool, workMan),
+		FileRetentionRepo:       repository.NewFileRetentionRepository(ctx, dbPool, workMan),
+		StorageStatsRepo:        repository.NewStorageStatsRepository(ctx, dbPool, workMan),
 	}
 
 	svc.Init(ctx, frame.WithRegisterEvents(
