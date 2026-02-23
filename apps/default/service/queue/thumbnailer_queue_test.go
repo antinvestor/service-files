@@ -81,7 +81,16 @@ func (suite *ThumbnailQueueTestSuite) TestHandle() {
 		storageProvider, err := provider.GetStorageProvider(ctx, cfg)
 		require.NoError(t, err)
 
-		db, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
+		db, err := connection.NewMediaDatabase(
+			svc.WorkManager(),
+			res.MediaRepository,
+			res.MultipartUploadRepo,
+			res.MultipartUploadPartRepo,
+			res.FileVersionRepo,
+			res.RetentionPolicyRepo,
+			res.FileRetentionRepo,
+			res.StorageStatsRepo,
+		)
 		require.NoError(t, err)
 
 		handler := NewThumbnailQueueHandler(svc, db, storageProvider)

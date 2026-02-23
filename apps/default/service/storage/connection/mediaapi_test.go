@@ -603,7 +603,16 @@ func (suite *ConnectionTestSuite) TestNewMediaDatabase() {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				db, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
+				db, err := connection.NewMediaDatabase(
+					svc.WorkManager(),
+					res.MediaRepository,
+					res.MultipartUploadRepo,
+					res.MultipartUploadPartRepo,
+					res.FileVersionRepo,
+					res.RetentionPolicyRepo,
+					res.FileRetentionRepo,
+					res.StorageStatsRepo,
+				)
 				if tc.wantErr {
 					assert.Error(t, err)
 					assert.Nil(t, db)

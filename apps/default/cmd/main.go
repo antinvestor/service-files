@@ -66,7 +66,16 @@ func main() {
 	mediaRepo := repository.NewMediaRepository(ctx, dbPool, workManager)
 	auditRepo := repository.NewMediaAuditRepository(ctx, dbPool, workManager)
 
-	metadataStore, err := connection.NewMediaDatabase(workManager, mediaRepo)
+	metadataStore, err := connection.NewMediaDatabase(
+		workManager,
+		mediaRepo,
+		repository.NewMultipartUploadRepository(ctx, dbPool),
+		repository.NewMultipartUploadPartRepository(ctx, dbPool),
+		repository.NewFileVersionRepository(ctx, dbPool),
+		repository.NewRetentionPolicyRepository(ctx, dbPool),
+		repository.NewFileRetentionRepository(ctx, dbPool),
+		repository.NewStorageStatsRepository(ctx, dbPool),
+	)
 	if err != nil {
 		log.WithError(err).Fatal("main -- failed to setup storage")
 	}

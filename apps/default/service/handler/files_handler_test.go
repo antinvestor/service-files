@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -1342,8 +1343,14 @@ func (suite *FileServerTestSuite) setupFileServer(
 	cfg := svc.Config().(*config.FilesConfig)
 
 	db := &connection.Database{
-		WorkManager:     svc.WorkManager(),
-		MediaRepository: res.MediaRepository,
+		WorkManager:             svc.WorkManager(),
+		MediaRepository:         res.MediaRepository,
+		MultipartUploadRepo:     res.MultipartUploadRepo,
+		MultipartUploadPartRepo: res.MultipartUploadPartRepo,
+		FileVersionRepo:         res.FileVersionRepo,
+		RetentionPolicyRepo:     res.RetentionPolicyRepo,
+		FileRetentionRepo:       res.FileRetentionRepo,
+		StorageStatsRepo:        res.StorageStatsRepo,
 	}
 
 	storageProvider, err := provider.GetStorageProvider(ctx, cfg)
@@ -1391,4 +1398,369 @@ func createJPEGPayload(t *testing.T, width, height int) []byte {
 	var buf bytes.Buffer
 	require.NoError(t, jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}))
 	return buf.Bytes()
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_GetUserUsage() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			t.Run("unauthenticated", func(t *testing.T) {
+				_, err := handler.GetUserUsage(t.Context(), connect.NewRequest(&filesv1.GetUserUsageRequest{}))
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+			})
+
+			t.Run("success", func(t *testing.T) {
+				userID := "@test-user-usage:example.com"
+				ctx := claimsCtx(ctx, userID)
+
+				resp, err := handler.GetUserUsage(ctx, connect.NewRequest(&filesv1.GetUserUsageRequest{}))
+				require.NoError(t, err)
+				require.NotNil(t, resp.Msg.Usage)
+			})
+
+			t.Run("other_user_forbidden", func(t *testing.T) {
+				ctx := claimsCtx(ctx, "@test-user:example.com")
+				_, err := handler.GetUserUsage(ctx, connect.NewRequest(&filesv1.GetUserUsageRequest{
+					UserId: "@other-user:example.com",
+				}))
+				require.Error(t, err)
+				require.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
+			})
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_GetStorageStats() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			t.Run("unauthenticated", func(t *testing.T) {
+				_, err := handler.GetStorageStats(t.Context(), connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+			})
+
+			t.Run("returns_zero_when_no_stats", func(t *testing.T) {
+				ctx := claimsCtx(ctx, "@test-user:example.com")
+
+				resp, err := handler.GetStorageStats(ctx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				require.NoError(t, err)
+				require.Equal(t, int64(0), resp.Msg.TotalBytes)
+				require.Equal(t, int64(0), resp.Msg.TotalFiles)
+				require.Equal(t, int64(0), resp.Msg.TotalUsers)
+			})
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_DeleteContent() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				mediaID   string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "invalid_media_id",
+					mediaID:   "bad id",
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
+				{
+					name:      "media_not_found_returns_permission_denied",
+					mediaID:   "nonexistent123",
+					userID:    "@test:example.com",
+					expectErr: connect.CodePermissionDenied,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					_, err := handler.HeadContent(caseCtx, connect.NewRequest(&filesv1.HeadContentRequest{
+						MediaId: tc.mediaID,
+					}))
+					require.Error(t, err)
+					require.Equal(t, tc.expectErr, connect.CodeOf(err))
+				})
+			}
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_GetSignedUploadUrl() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				mediaID   string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "unauthenticated",
+					mediaID:   "abc123",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "invalid_media_id",
+					mediaID:   "bad id",
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					_, err := handler.GetSignedUploadUrl(caseCtx, connect.NewRequest(&filesv1.GetSignedUploadUrlRequest{
+						MediaId: tc.mediaID,
+					}))
+					require.Error(t, err)
+					require.Equal(t, tc.expectErr, connect.CodeOf(err))
+				})
+			}
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_GetSignedDownloadUrl() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				mediaID   string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "unauthenticated",
+					mediaID:   "abc123",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "invalid_media_id",
+					mediaID:   "bad id",
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
+				{
+					name:      "media_not_found_returns_permission_denied",
+					mediaID:   "nonexistent123",
+					userID:    "@test:example.com",
+					expectErr: connect.CodePermissionDenied,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					_, err := handler.GetSignedDownloadUrl(caseCtx, connect.NewRequest(&filesv1.GetSignedDownloadUrlRequest{
+						MediaId: tc.mediaID,
+					}))
+					require.Error(t, err)
+					require.Equal(t, tc.expectErr, connect.CodeOf(err))
+				})
+			}
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_BatchGetContent() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				mediaIDs  []string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "unauthenticated",
+					mediaIDs:  []string{"abc123"},
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "empty_media_ids",
+					mediaIDs:  []string{},
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					_, err := handler.BatchGetContent(caseCtx, connect.NewRequest(&filesv1.BatchGetContentRequest{
+						MediaIds: tc.mediaIDs,
+					}))
+					require.Error(t, err)
+					require.Equal(t, tc.expectErr, connect.CodeOf(err))
+				})
+			}
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_MultipartUploads() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "create_unauthenticated",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "complete_unauthenticated",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "abort_unauthenticated",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "list_parts_unauthenticated",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					switch tc.name {
+					case "create_unauthenticated":
+						_, err := handler.CreateMultipartUpload(caseCtx, connect.NewRequest(&filesv1.CreateMultipartUploadRequest{}))
+						require.Error(t, err)
+						require.Equal(t, tc.expectErr, connect.CodeOf(err))
+
+					case "complete_unauthenticated":
+						_, err := handler.CompleteMultipartUpload(caseCtx, connect.NewRequest(&filesv1.CompleteMultipartUploadRequest{}))
+						require.Error(t, err)
+						require.Equal(t, tc.expectErr, connect.CodeOf(err))
+
+					case "abort_unauthenticated":
+						_, err := handler.AbortMultipartUpload(caseCtx, connect.NewRequest(&filesv1.AbortMultipartUploadRequest{}))
+						require.Error(t, err)
+						require.Equal(t, tc.expectErr, connect.CodeOf(err))
+
+					case "list_parts_unauthenticated":
+						_, err := handler.ListMultipartParts(caseCtx, connect.NewRequest(&filesv1.ListMultipartPartsRequest{}))
+						require.Error(t, err)
+						require.Equal(t, tc.expectErr, connect.CodeOf(err))
+					}
+				})
+			}
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_Versioning() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				mediaID   string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "get_versions_unauthenticated",
+					mediaID:   "abc123",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "get_versions_permission_denied_for_invalid_id",
+					mediaID:   "bad id",
+					userID:    "@test:example.com",
+					expectErr: connect.CodePermissionDenied,
+				},
+				{
+					name:      "restore_version_unauthenticated",
+					mediaID:   "abc123",
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "restore_version_permission_denied_for_invalid_id",
+					mediaID:   "bad id",
+					userID:    "@test:example.com",
+					expectErr: connect.CodePermissionDenied,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					switch {
+					case strings.HasPrefix(tc.name, "get_versions"):
+						_, err := handler.GetVersions(caseCtx, connect.NewRequest(&filesv1.GetVersionsRequest{
+							MediaId: tc.mediaID,
+						}))
+						require.Error(t, err)
+						require.Equal(t, tc.expectErr, connect.CodeOf(err))
+
+					case strings.HasPrefix(tc.name, "restore_version"):
+						_, err := handler.RestoreVersion(caseCtx, connect.NewRequest(&filesv1.RestoreVersionRequest{
+							MediaId: tc.mediaID,
+						}))
+						require.Error(t, err)
+						require.Equal(t, tc.expectErr, connect.CodeOf(err))
+					}
+				})
+			}
+		})
+	})
 }

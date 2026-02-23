@@ -18,8 +18,14 @@ import (
 )
 
 type ServiceResources struct {
-	MediaRepository repository.MediaRepository
-	AuditRepository repository.MediaAuditRepository
+	MediaRepository         repository.MediaRepository
+	AuditRepository         repository.MediaAuditRepository
+	MultipartUploadRepo     repository.MultipartUploadRepository
+	MultipartUploadPartRepo repository.MultipartUploadPartRepository
+	FileVersionRepo         repository.FileVersionRepository
+	RetentionPolicyRepo     repository.RetentionPolicyRepository
+	FileRetentionRepo       repository.FileRetentionRepository
+	StorageStatsRepo        repository.StorageStatsRepository
 }
 
 type BaseTestSuite struct {
@@ -29,7 +35,10 @@ type BaseTestSuite struct {
 func initResources(_ context.Context) []definition.TestResource {
 	pg := testpostgres.NewWithOpts("service_test",
 		definition.WithUserName("test"),
-		definition.WithEnableLogging(true))
+		definition.WithEnableLogging(true),
+		definition.WithEnvironment(map[string]string{
+			"POSTGRES_MAX_CONNECTIONS": "500",
+		}))
 
 	return []definition.TestResource{pg}
 }
@@ -78,8 +87,14 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
 
 	deps := ServiceResources{
-		MediaRepository: repository.NewMediaRepository(ctx, dbPool, workMan),
-		AuditRepository: repository.NewMediaAuditRepository(ctx, dbPool, workMan),
+		MediaRepository:         repository.NewMediaRepository(ctx, dbPool, workMan),
+		AuditRepository:         repository.NewMediaAuditRepository(ctx, dbPool, workMan),
+		MultipartUploadRepo:     repository.NewMultipartUploadRepository(ctx, dbPool),
+		MultipartUploadPartRepo: repository.NewMultipartUploadPartRepository(ctx, dbPool),
+		FileVersionRepo:         repository.NewFileVersionRepository(ctx, dbPool),
+		RetentionPolicyRepo:     repository.NewRetentionPolicyRepository(ctx, dbPool),
+		FileRetentionRepo:       repository.NewFileRetentionRepository(ctx, dbPool),
+		StorageStatsRepo:        repository.NewStorageStatsRepository(ctx, dbPool),
 	}
 
 	svc.Init(ctx, frame.WithRegisterEvents(

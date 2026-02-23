@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
+	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
@@ -28,7 +29,7 @@ type AuthzMiddlewareTestSuite struct {
 	service    *frame.Service
 	authorizer security.Authorizer
 	middleware Middleware
-	mediaDB    *connection.Database
+	mediaDB    storage.Database
 	mediaRepo  repository.MediaRepository
 }
 
@@ -96,12 +97,21 @@ func (s *AuthzMiddlewareTestSuite) SetupSuite() {
 	require.NoError(s.T(), repository.Migrate(ctx, dbManager, "apps/default/migrations/0001"))
 	require.NoError(s.T(), svc.Run(ctx, ""))
 
-	mediaDB, err := connection.NewMediaDatabase(svc.WorkManager(), mediaRepo)
+	mediaDB, err := connection.NewMediaDatabase(
+		svc.WorkManager(),
+		mediaRepo,
+		repository.NewMultipartUploadRepository(ctx, dbPool),
+		repository.NewMultipartUploadPartRepository(ctx, dbPool),
+		repository.NewFileVersionRepository(ctx, dbPool),
+		repository.NewRetentionPolicyRepository(ctx, dbPool),
+		repository.NewFileRetentionRepository(ctx, dbPool),
+		repository.NewStorageStatsRepository(ctx, dbPool),
+	)
 	require.NoError(s.T(), err)
 
 	s.service = svc
 	s.mediaRepo = mediaRepo
-	s.mediaDB = mediaDB.(*connection.Database)
+	s.mediaDB = mediaDB
 	s.authorizer = svc.SecurityManager().GetAuthorizer(ctx)
 	s.middleware = NewMiddleware(s.authorizer, s.mediaDB)
 }

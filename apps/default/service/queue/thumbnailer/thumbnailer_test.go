@@ -100,7 +100,16 @@ func (suite *ThumbnailerTestSuite) TestGenerateThumbnail() {
 				cfg := svc.Config().(*config.FilesConfig)
 				log := util.Log(ctx)
 
-				mediaDB, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
+				mediaDB, err := connection.NewMediaDatabase(
+					svc.WorkManager(),
+					res.MediaRepository,
+					res.MultipartUploadRepo,
+					res.MultipartUploadPartRepo,
+					res.FileVersionRepo,
+					res.RetentionPolicyRepo,
+					res.FileRetentionRepo,
+					res.StorageStatsRepo,
+				)
 				require.NoError(t, err)
 
 				storageProvider, err := provider.GetStorageProvider(ctx, cfg)
@@ -186,7 +195,16 @@ func (suite *ThumbnailerTestSuite) TestGenerateThumbnails() {
 				cfg := svc.Config().(*config.FilesConfig)
 				log := util.Log(ctx)
 
-				mediaDB, err := connection.NewMediaDatabase(svc.WorkManager(), res.MediaRepository)
+				mediaDB, err := connection.NewMediaDatabase(
+					svc.WorkManager(),
+					res.MediaRepository,
+					res.MultipartUploadRepo,
+					res.MultipartUploadPartRepo,
+					res.FileVersionRepo,
+					res.RetentionPolicyRepo,
+					res.FileRetentionRepo,
+					res.StorageStatsRepo,
+				)
 				require.NoError(t, err)
 				storageProvider, err := provider.GetStorageProvider(ctx, cfg)
 				require.NoError(t, err)

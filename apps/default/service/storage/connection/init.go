@@ -6,8 +6,24 @@ import (
 	"github.com/pitabwire/frame/workerpool"
 )
 
-// NewMediaDatabase opens a database connection.
-func NewMediaDatabase(workManager workerpool.Manager, mediaRepo repository.MediaRepository) (storage.Database, error) {
-
-	return &Database{WorkManager: workManager, MediaRepository: mediaRepo}, nil
+func NewMediaDatabase(
+	workManager workerpool.Manager,
+	mediaRepo repository.MediaRepository,
+	multipartUploadRepo repository.MultipartUploadRepository,
+	multipartUploadPartRepo repository.MultipartUploadPartRepository,
+	fileVersionRepo repository.FileVersionRepository,
+	retentionPolicyRepo repository.RetentionPolicyRepository,
+	fileRetentionRepo repository.FileRetentionRepository,
+	storageStatsRepo repository.StorageStatsRepository,
+) (storage.Database, error) {
+	return &Database{
+		WorkManager:             workManager,
+		MediaRepository:         mediaRepo,
+		MultipartUploadRepo:     multipartUploadRepo,
+		MultipartUploadPartRepo: multipartUploadPartRepo,
+		FileVersionRepo:         fileVersionRepo,
+		RetentionPolicyRepo:     retentionPolicyRepo,
+		FileRetentionRepo:       fileRetentionRepo,
+		StorageStatsRepo:        storageStatsRepo,
+	}, nil
 }
