@@ -97,11 +97,22 @@ func (c *Cache) SetWithTTL(key string, value any, ttl time.Duration) {
 // Get retrieves a value from the cache
 // Returns the value and true if found and not expired, nil and false otherwise
 func (c *Cache) Get(key string) (any, bool) {
-	c.mu.RLock()
+	c.mu.Lock()
 	item, found := c.items[key]
-	c.mu.RUnlock()
+	c.mu.Unlock()
 
-	if !found || item.IsExpired() {
+	if !found {
+		return nil, false
+	}
+
+	if item.IsExpired() {
+		// Delete expired entry
+		c.mu.Lock()
+		delete(c.items, key)
+		if c.config.OnEviction != nil {
+			c.config.OnEviction(key, item.Value)
+		}
+		c.mu.Unlock()
 		return nil, false
 	}
 
