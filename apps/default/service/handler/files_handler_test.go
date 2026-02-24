@@ -973,6 +973,17 @@ func (suite *FileServerTestSuite) Test_FileServer_UploadContentStream() {
 			},
 			chunks: [][]byte{[]byte("hello")},
 		},
+		{
+			name:      "total_size_mismatch",
+			userID:    "@owner:example.com",
+			expectErr: connect.CodeInvalidArgument,
+			metadata: &filesv1.UploadMetadata{
+				Filename:    "upload.txt",
+				ContentType: "text/plain",
+				TotalSize:   3,
+			},
+			chunks: [][]byte{[]byte("hello")},
+		},
 	}
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {

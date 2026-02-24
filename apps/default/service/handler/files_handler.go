@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"sort"
 	"strconv"
@@ -96,52 +97,44 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 
 	req := stream.Msg()
 	metadata := req.GetMetadata()
-	if metadata == nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("metadata is required"))
+	if err = validateUploadMetadata(metadata, cfg); err != nil {
+		return nil, err
 	}
 
-	if metadata.ServerName != "" && metadata.ServerName != cfg.ServerName {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("server_name mismatch"))
-	}
-
-	if metadata.MediaId != "" && !isValidMediaID(metadata.MediaId) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
-	}
-
-	var fileData []byte
-	for stream.Receive() {
-		req := stream.Msg()
-		if chunk := req.GetChunk(); chunk != nil {
-			fileData = append(fileData, chunk...)
-		}
-	}
-
-	if err = stream.Err(); err != nil {
+	tempFile, err := os.CreateTemp("", "files-upload-*")
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	defer func() {
+		_ = os.Remove(tempFile.Name())
+	}()
 
-	fileSize := len(fileData)
-	if metadata.TotalSize > 0 {
-		fileSize = int(metadata.TotalSize)
+	bytesReceived, err := readUploadChunksToTempFile(stream, tempFile, int64(cfg.MaxFileSizeBytes))
+	if err != nil {
+		_ = tempFile.Close()
+		return nil, err
 	}
 
-	isPublic := metadata.Visibility == filesv1.MediaMetadata_VISIBILITY_PUBLIC
-	if metadata.Properties != nil {
-		props := metadata.Properties.AsMap()
-		if raw, ok := props["is_public"]; ok {
-			if flag, ok := raw.(bool); ok {
-				isPublic = flag
-			}
-		}
+	if metadata.TotalSize > 0 && bytesReceived != metadata.TotalSize {
+		_ = tempFile.Close()
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("metadata total_size does not match received bytes"))
 	}
+
+	if _, err = tempFile.Seek(0, io.SeekStart); err != nil {
+		_ = tempFile.Close()
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	defer util.CloseAndLogOnError(ctx, tempFile)
+
+	isPublic := resolveUploadVisibility(metadata)
 
 	businessReq := &business.UploadRequest{
 		OwnerID:       types.OwnerID(sub),
 		MediaID:       types.MediaID(metadata.MediaId),
 		UploadName:    types.Filename(metadata.Filename),
 		ContentType:   types.ContentType(metadata.ContentType),
-		FileSizeBytes: types.FileSizeBytes(fileSize),
-		FileData:      io.NopCloser(bytes.NewReader(fileData)),
+		FileSizeBytes: types.FileSizeBytes(bytesReceived),
+		FileData:      tempFile,
 		Config:        cfg,
 		IsPublic:      isPublic,
 	}
@@ -160,6 +153,60 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 		ServerName: result.ServerName,
 		ContentUri: result.ContentURI,
 	}), nil
+}
+
+func validateUploadMetadata(metadata *filesv1.UploadMetadata, cfg *config.FilesConfig) error {
+	if metadata == nil {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("metadata is required"))
+	}
+	if metadata.ServerName != "" && metadata.ServerName != cfg.ServerName {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("server_name mismatch"))
+	}
+	if metadata.MediaId != "" && !isValidMediaID(metadata.MediaId) {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	}
+	if cfg.MaxFileSizeBytes > 0 && metadata.TotalSize > int64(cfg.MaxFileSizeBytes) {
+		return connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", cfg.MaxFileSizeBytes))
+	}
+	return nil
+}
+
+func readUploadChunksToTempFile(stream *connect.ClientStream[filesv1.UploadContentRequest], tempFile *os.File, maxAllowed int64) (int64, error) {
+	bytesReceived := int64(0)
+	for stream.Receive() {
+		msg := stream.Msg()
+		chunk := msg.GetChunk()
+		if chunk == nil {
+			continue
+		}
+		bytesReceived += int64(len(chunk))
+		if maxAllowed > 0 && bytesReceived > maxAllowed {
+			return 0, connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", maxAllowed))
+		}
+		if _, err := tempFile.Write(chunk); err != nil {
+			return 0, connect.NewError(connect.CodeInternal, err)
+		}
+	}
+	if err := stream.Err(); err != nil {
+		return 0, connect.NewError(connect.CodeInternal, err)
+	}
+	return bytesReceived, nil
+}
+
+func resolveUploadVisibility(metadata *filesv1.UploadMetadata) bool {
+	isPublic := metadata.Visibility == filesv1.MediaMetadata_VISIBILITY_PUBLIC
+	if metadata.Properties == nil {
+		return isPublic
+	}
+	props := metadata.Properties.AsMap()
+	if raw, ok := props["is_public"]; ok {
+		if flag, ok := raw.(bool); ok {
+			return flag
+		}
+	}
+	return isPublic
 }
 
 // CreateContent creates a new MXC URI without uploading content

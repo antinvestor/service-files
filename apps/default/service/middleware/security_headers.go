@@ -1,7 +1,10 @@
 package middleware
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -206,7 +209,7 @@ func CORSMiddleware(config *CORSConfig) func(http.Handler) http.Handler {
 				}
 
 				if config.MaxAge > 0 {
-					w.Header().Set("Access-Control-Max-Age", string(rune(config.MaxAge)))
+					w.Header().Set("Access-Control-Max-Age", strconv.Itoa(config.MaxAge))
 				}
 
 				w.WriteHeader(http.StatusNoContent)
@@ -256,11 +259,17 @@ func generateRequestID() string {
 
 // randomString generates a random string of the given length
 func randomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		// This is a simplified version - use crypto/rand for production
-		b[i] = letters[i%len(letters)]
+	if n <= 0 {
+		return ""
 	}
-	return string(b)
+	raw := make([]byte, n)
+	if _, err := rand.Read(raw); err != nil {
+		// Preserve behaviour under entropy failures without panicking.
+		return "fallback_request_id"
+	}
+	encoded := base64.RawURLEncoding.EncodeToString(raw)
+	if len(encoded) > n {
+		return encoded[:n]
+	}
+	return encoded
 }

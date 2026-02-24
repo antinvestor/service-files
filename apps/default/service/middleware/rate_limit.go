@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pitabwire/util"
@@ -48,7 +51,7 @@ type IPRateLimiter struct {
 
 type ipLimiterEntry struct {
 	limiter    *rate.Limiter
-	lastAccess time.Time
+	lastAccess int64
 }
 
 // NewIPRateLimiter creates a new IP-based rate limiter
@@ -81,7 +84,7 @@ func (rl *IPRateLimiter) Allow(ip string) bool {
 			limiter := rate.NewLimiter(rate.Limit(float64(rl.config.RequestsPerSecond)), rl.config.BurstSize)
 			entry = &ipLimiterEntry{
 				limiter:    limiter,
-				lastAccess: time.Now(),
+				lastAccess: time.Now().UnixNano(),
 			}
 			rl.limiterMap[ip] = entry
 		}
@@ -89,7 +92,7 @@ func (rl *IPRateLimiter) Allow(ip string) bool {
 	}
 
 	// Update last access time
-	entry.lastAccess = time.Now()
+	atomic.StoreInt64(&entry.lastAccess, time.Now().UnixNano())
 
 	return entry.limiter.Allow()
 }
@@ -103,7 +106,8 @@ func (rl *IPRateLimiter) cleanup() {
 		rl.mu.Lock()
 		now := time.Now()
 		for ip, entry := range rl.limiterMap {
-			if now.Sub(entry.lastAccess) > rl.config.EntryTTL {
+			lastAccess := time.Unix(0, atomic.LoadInt64(&entry.lastAccess))
+			if now.Sub(lastAccess) > rl.config.EntryTTL {
 				delete(rl.limiterMap, ip)
 			}
 		}
@@ -115,16 +119,12 @@ func (rl *IPRateLimiter) cleanup() {
 func GetIP(r *http.Request) string {
 	// Check X-Forwarded-For header for proxies
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP from the comma-separated list
-		for i, c := range xff {
-			if c == ' ' {
-				continue
-			}
-			if c == ',' {
-				return xff[:i]
+		parts := strings.Split(xff, ",")
+		for _, part := range parts {
+			if candidate := strings.TrimSpace(part); candidate != "" {
+				return candidate
 			}
 		}
-		return xff
 	}
 
 	// Check X-Real-IP header
@@ -134,11 +134,12 @@ func GetIP(r *http.Request) string {
 
 	// Fall back to RemoteAddr
 	if r.RemoteAddr != "" {
-		// Remove port if present
-		for i := len(r.RemoteAddr) - 1; i >= 0; i-- {
-			if r.RemoteAddr[i] == ':' {
-				return r.RemoteAddr[:i]
-			}
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err == nil && host != "" {
+			return host
+		}
+		if ip := net.ParseIP(r.RemoteAddr); ip != nil {
+			return ip.String()
 		}
 		return r.RemoteAddr
 	}
@@ -182,7 +183,7 @@ type UserRateLimiter struct {
 
 type userLimiterEntry struct {
 	limiter    *rate.Limiter
-	lastAccess time.Time
+	lastAccess int64
 }
 
 // NewUserRateLimiter creates a new user-based rate limiter
@@ -212,14 +213,14 @@ func (rl *UserRateLimiter) Allow(userID string) bool {
 			limiter := rate.NewLimiter(rate.Limit(float64(rl.config.RequestsPerSecond)), rl.config.BurstSize)
 			entry = &userLimiterEntry{
 				limiter:    limiter,
-				lastAccess: time.Now(),
+				lastAccess: time.Now().UnixNano(),
 			}
 			rl.limiterMap[userID] = entry
 		}
 		rl.mu.Unlock()
 	}
 
-	entry.lastAccess = time.Now()
+	atomic.StoreInt64(&entry.lastAccess, time.Now().UnixNano())
 	return entry.limiter.Allow()
 }
 
@@ -232,7 +233,8 @@ func (rl *UserRateLimiter) cleanup() {
 		rl.mu.Lock()
 		now := time.Now()
 		for userID, entry := range rl.limiterMap {
-			if now.Sub(entry.lastAccess) > rl.config.EntryTTL {
+			lastAccess := time.Unix(0, atomic.LoadInt64(&entry.lastAccess))
+			if now.Sub(lastAccess) > rl.config.EntryTTL {
 				delete(rl.limiterMap, userID)
 			}
 		}

@@ -16,7 +16,7 @@ func TestNewMetrics(t *testing.T) {
 	m := NewMetrics()
 	require.NotNil(t, m)
 
-	// Verify metrics are properly initialized
+	// Verify metrics are properly initialised
 	assert.Equal(t, int64(0), m.GetActiveRequests())
 }
 
