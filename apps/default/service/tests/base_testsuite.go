@@ -37,7 +37,7 @@ func initResources(_ context.Context) []definition.TestResource {
 		definition.WithUserName("test"),
 		definition.WithEnableLogging(true),
 		definition.WithEnvironment(map[string]string{
-			"POSTGRES_MAX_CONNECTIONS": "50",
+			"POSTGRES_MAX_CONNECTIONS": "300",
 		}))
 
 	return []definition.TestResource{pg}

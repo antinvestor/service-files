@@ -481,6 +481,146 @@ func (s *FileServer) GetConfig(ctx context.Context, _ *connect.Request[filesv1.G
 	}), nil
 }
 
+type userUsageStore interface {
+	GetUserUsage(ctx context.Context, ownerID types.OwnerID) (int64, int, error)
+}
+
+type latestStorageStats interface {
+	TotalBytes() int64
+	FileCount() int
+	UserCount() int
+	PublicBytes() int64
+	PrivateBytes() int64
+}
+
+type storageStatsStore interface {
+	GetLatestStats(ctx context.Context) (latestStorageStats, error)
+}
+
+func (s *FileServer) GetUserUsage(ctx context.Context, req *connect.Request[filesv1.GetUserUsageRequest]) (*connect.Response[filesv1.GetUserUsageResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	targetUser := sub
+	if requested := strings.TrimSpace(req.Msg.GetUserId()); requested != "" {
+		if requested != sub {
+			return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("user_id must match authenticated user"))
+		}
+		targetUser = requested
+	}
+
+	usageRepo, ok := s.db.(userUsageStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("user usage is not available"))
+	}
+
+	totalBytes, totalFiles, err := usageRepo.GetUserUsage(ctx, types.OwnerID(targetUser))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	now := time.Now().UTC()
+	periodStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	periodEnd := periodStart.AddDate(0, 1, 0)
+
+	return connect.NewResponse(&filesv1.GetUserUsageResponse{
+		Usage: &filesv1.UsageStats{
+			TotalFiles: int64(totalFiles),
+			TotalBytes: totalBytes,
+		},
+		PeriodStart: timestamppb.New(periodStart),
+		PeriodEnd:   timestamppb.New(periodEnd),
+	}), nil
+}
+
+func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[filesv1.GetStorageStatsRequest]) (*connect.Response[filesv1.GetStorageStatsResponse], error) {
+	if _, err := authenticatedSubject(ctx); err != nil {
+		return nil, err
+	}
+
+	var totalBytes int64
+	var totalFiles int64
+	var totalUsers int64
+
+	statsRepo, ok := s.db.(storageStatsStore)
+	if ok {
+		stats, err := statsRepo.GetLatestStats(ctx)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		if stats != nil {
+			totalBytes = stats.TotalBytes()
+			totalFiles = int64(stats.FileCount())
+			totalUsers = int64(stats.UserCount())
+		}
+	}
+
+	return connect.NewResponse(&filesv1.GetStorageStatsResponse{
+		TotalBytes: totalBytes,
+		TotalFiles: totalFiles,
+		TotalUsers: totalUsers,
+	}), nil
+}
+
+func (s *FileServer) GetSignedUploadUrl(ctx context.Context, req *connect.Request[filesv1.GetSignedUploadUrlRequest]) (*connect.Response[filesv1.GetSignedUploadUrlResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !isValidMediaID(req.Msg.GetMediaId()) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	}
+	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("signed upload URL generation is not implemented"))
+}
+
+func (s *FileServer) GetSignedDownloadUrl(ctx context.Context, req *connect.Request[filesv1.GetSignedDownloadUrlRequest]) (*connect.Response[filesv1.GetSignedDownloadUrlResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mediaID := req.Msg.GetMediaId()
+	if !isValidMediaID(mediaID) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	}
+	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("signed download URL generation is not implemented"))
+}
+
+func (s *FileServer) CreateMultipartUpload(ctx context.Context, _ *connect.Request[filesv1.CreateMultipartUploadRequest]) (*connect.Response[filesv1.CreateMultipartUploadResponse], error) {
+	if _, err := authenticatedSubject(ctx); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+}
+
+func (s *FileServer) CompleteMultipartUpload(ctx context.Context, _ *connect.Request[filesv1.CompleteMultipartUploadRequest]) (*connect.Response[filesv1.CompleteMultipartUploadResponse], error) {
+	if _, err := authenticatedSubject(ctx); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+}
+
+func (s *FileServer) AbortMultipartUpload(ctx context.Context, _ *connect.Request[filesv1.AbortMultipartUploadRequest]) (*connect.Response[filesv1.AbortMultipartUploadResponse], error) {
+	if _, err := authenticatedSubject(ctx); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+}
+
+func (s *FileServer) ListMultipartParts(ctx context.Context, _ *connect.Request[filesv1.ListMultipartPartsRequest]) (*connect.Response[filesv1.ListMultipartPartsResponse], error) {
+	if _, err := authenticatedSubject(ctx); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+}
+
 // SearchMedia searches for media files matching specified criteria
 func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[filesv1.SearchMediaRequest]) (*connect.Response[filesv1.SearchMediaResponse], error) {
 	sub, err := authenticatedSubject(ctx)
