@@ -17,6 +17,10 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Install OCR build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libleptonica-dev libtesseract-dev tesseract-ocr-eng
       - name: Run tests (stable mode with single retry)
         shell: bash
         run: |
