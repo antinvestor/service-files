@@ -17,11 +17,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - name: Set up gotestfmt
-        uses: gotesttools/gotestfmt-action@v2
-        with:
-          # Optional: pass GITHUB_TOKEN to avoid rate limiting.
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run tests (stable mode with single retry)
         shell: bash
         run: |
@@ -29,8 +24,8 @@ jobs:
           status=1
           for attempt in 1 2; do
             echo "Starting go test attempt ${attempt}/2"
-            go test -count=1 -p 1 -timeout=45m -json -v ./... 2>&1 | gotestfmt -hide all
-            status=${PIPESTATUS[0]}
+            go test -count=1 -p 1 -timeout=45m ./...
+            status=$?
             if [ "$status" -eq 0 ]; then
               echo "Tests passed on attempt ${attempt}"
               break
