@@ -60,8 +60,8 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	profileConfig.DatabaseMigrate = true
 	profileConfig.RunServiceSecurely = false
 	profileConfig.ServerPort = ""
-	profileConfig.DatabaseMaxOpenConnections = 2
-	profileConfig.DatabaseMaxIdleConnections = 1
+	profileConfig.DatabaseMaxOpenConnections = 1
+	profileConfig.DatabaseMaxIdleConnections = 0
 	profileConfig.EnvStorageEncryptionPhrase = "0123456789abcdef0123456789abcdef"
 	profileConfig.BasePath = aconfig.Path(t.TempDir())
 
@@ -77,7 +77,7 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	})
 
 	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
-	profileConfig.DatabaseReplicaURL = []string{testDS.String()}
+	profileConfig.DatabaseReplicaURL = []string{}
 
 	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithName("profile tests"),
 		frame.WithConfig(&profileConfig),
@@ -111,6 +111,7 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 
 	t.Cleanup(func() {
 		svc.Stop(ctx)
+		svc.DatastoreManager().Close(ctx)
 	})
 
 	return ctx, svc, deps

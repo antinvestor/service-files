@@ -3,15 +3,20 @@ package handler
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,13 +42,15 @@ import (
 
 const (
 	defaultRequestTimeout = 10 * time.Second
-	maxPreviewBodyBytes   = int64(2 << 20) // 2 MiB
-	maxPreviewImageBytes  = int64(5 << 20) // 5 MiB
+	maxInMemoryFileBytes  = int64(1536 << 10) // 1.5 MiB hard in-memory cap
+	maxPreviewBodyBytes   = maxInMemoryFileBytes
+	maxPreviewImageBytes  = maxInMemoryFileBytes
 	maxSearchWindow       = 1000
 	// Memory limits for content endpoints to prevent OOM
-	maxContentBytes       = int64(100 << 20) // 100 MiB - max file size for GetContent
-	maxThumbnailBytes     = int64(10 << 20)  // 10 MiB - max file size for GetContentThumbnail
-	contentReadBufferSize = 64 << 10         // 64 KiB buffer for reading content
+	maxContentBytes       = maxInMemoryFileBytes
+	maxThumbnailBytes     = maxInMemoryFileBytes
+	contentReadBufferSize = 64 << 10 // 64 KiB buffer for reading content
+	maxMultipartPartBytes = maxInMemoryFileBytes
 )
 
 // FileServer implements the Connect RPC handler for files service
@@ -179,6 +186,10 @@ func readUploadChunksToTempFile(stream *connect.ClientStream[filesv1.UploadConte
 		chunk := msg.GetChunk()
 		if chunk == nil {
 			continue
+		}
+		if int64(len(chunk)) > maxInMemoryFileBytes {
+			return 0, connect.NewError(connect.CodeFailedPrecondition,
+				fmt.Errorf("chunk exceeds maximum in-memory size of %d bytes", maxInMemoryFileBytes))
 		}
 		bytesReceived += int64(len(chunk))
 		if maxAllowed > 0 && bytesReceived > maxAllowed {
@@ -523,6 +534,183 @@ type storageStatsStore interface {
 	GetLatestStats(ctx context.Context) (latestStorageStats, error)
 }
 
+type deleteStore interface {
+	DeleteMedia(ctx context.Context, mediaID types.MediaID) error
+}
+
+type multipartStore interface {
+	StoreUpload(ctx context.Context, upload interface {
+		GetID() string
+		GetOwnerID() string
+		GetMediaID() string
+		GetUploadName() string
+		GetContentType() string
+		GetTotalSize() int64
+		GetPartSize() int64
+		GetPartCount() int
+		GetUploadState() string
+		GetExpiresAt() *time.Time
+	}) error
+	GetUpload(ctx context.Context, uploadID string) (interface {
+		ID() string
+		OwnerID() string
+		MediaID() string
+		UploadName() string
+		ContentType() string
+		TotalSize() int64
+		PartSize() int64
+		PartCount() int
+		UploadedParts() int
+		UploadState() string
+		ExpiresAt() *time.Time
+	}, error)
+	UpdateUploadState(ctx context.Context, uploadID string, state string) error
+	DeleteUpload(ctx context.Context, uploadID string) error
+	StorePart(ctx context.Context, part interface {
+		GetID() string
+		GetUploadID() string
+		GetPartNumber() int
+		GetEtag() string
+		GetSize() int64
+		GetContentHash() string
+		GetStoragePath() string
+	}) error
+	GetParts(ctx context.Context, uploadID string) ([]interface {
+		ID() string
+		UploadID() string
+		PartNumber() int
+		Etag() string
+		Size() int64
+		ContentHash() string
+		StoragePath() string
+	}, error)
+	GetPart(ctx context.Context, uploadID string, partNumber int) (interface {
+		ID() string
+		UploadID() string
+		PartNumber() int
+		Etag() string
+		Size() int64
+		ContentHash() string
+		StoragePath() string
+	}, error)
+}
+
+type versionStore interface {
+	GetVersion(ctx context.Context, mediaID string, versionNumber int) (interface {
+		ID() string
+		MediaID() string
+		VersionNumber() int
+		ContentHash() string
+		FileSize() int64
+		UploadName() string
+		ContentType() string
+		StoragePath() string
+		CreatedAt() time.Time
+	}, error)
+	GetVersionsPaginated(ctx context.Context, mediaID string, limit, offset int) ([]interface {
+		ID() string
+		MediaID() string
+		VersionNumber() int
+		ContentHash() string
+		FileSize() int64
+		UploadName() string
+		ContentType() string
+		CreatedAt() time.Time
+	}, int, error)
+	RestoreMediaToVersion(ctx context.Context, mediaID string, versionNumber int, restoredBy string) (*types.MediaMetadata, error)
+}
+
+type retentionStore interface {
+	ApplyRetention(ctx context.Context, retention interface {
+		GetMediaID() string
+		GetPolicyID() string
+		GetExpiresAt() *time.Time
+		GetIsLocked() bool
+	}) error
+	GetRetention(ctx context.Context, mediaID string) (interface {
+		MediaID() string
+		PolicyID() string
+		AppliedAt() time.Time
+		ExpiresAt() *time.Time
+		IsLocked() bool
+	}, error)
+	RemoveRetention(ctx context.Context, mediaID string) error
+	GetPolicy(ctx context.Context, policyID string) (interface {
+		ID() string
+		Name() string
+		Description() string
+		RetentionDays() int
+		IsDefault() bool
+		IsSystem() bool
+		OwnerID() string
+	}, error)
+	ListPolicies(ctx context.Context, ownerID string, limit, offset int) ([]interface {
+		ID() string
+		Name() string
+		Description() string
+		RetentionDays() int
+		IsDefault() bool
+		IsSystem() bool
+		OwnerID() string
+	}, int, error)
+}
+
+type multipartUploadRequest struct {
+	id          string
+	ownerID     string
+	mediaID     string
+	uploadName  string
+	contentType string
+	totalSize   int64
+	partSize    int64
+	partCount   int
+	uploadState string
+	expiresAt   *time.Time
+}
+
+func (m multipartUploadRequest) GetID() string          { return m.id }
+func (m multipartUploadRequest) GetOwnerID() string     { return m.ownerID }
+func (m multipartUploadRequest) GetMediaID() string     { return m.mediaID }
+func (m multipartUploadRequest) GetUploadName() string  { return m.uploadName }
+func (m multipartUploadRequest) GetContentType() string { return m.contentType }
+func (m multipartUploadRequest) GetTotalSize() int64    { return m.totalSize }
+func (m multipartUploadRequest) GetPartSize() int64     { return m.partSize }
+func (m multipartUploadRequest) GetPartCount() int      { return m.partCount }
+func (m multipartUploadRequest) GetUploadState() string { return m.uploadState }
+func (m multipartUploadRequest) GetExpiresAt() *time.Time {
+	return m.expiresAt
+}
+
+type multipartPartRequest struct {
+	id          string
+	uploadID    string
+	partNumber  int
+	etag        string
+	size        int64
+	contentHash string
+	storagePath string
+}
+
+func (m multipartPartRequest) GetID() string          { return m.id }
+func (m multipartPartRequest) GetUploadID() string    { return m.uploadID }
+func (m multipartPartRequest) GetPartNumber() int     { return m.partNumber }
+func (m multipartPartRequest) GetEtag() string        { return m.etag }
+func (m multipartPartRequest) GetSize() int64         { return m.size }
+func (m multipartPartRequest) GetContentHash() string { return m.contentHash }
+func (m multipartPartRequest) GetStoragePath() string { return m.storagePath }
+
+type fileRetentionRequest struct {
+	mediaID   string
+	policyID  string
+	expiresAt *time.Time
+	isLocked  bool
+}
+
+func (r fileRetentionRequest) GetMediaID() string       { return r.mediaID }
+func (r fileRetentionRequest) GetPolicyID() string      { return r.policyID }
+func (r fileRetentionRequest) GetExpiresAt() *time.Time { return r.expiresAt }
+func (r fileRetentionRequest) GetIsLocked() bool        { return r.isLocked }
+
 func (s *FileServer) GetUserUsage(ctx context.Context, req *connect.Request[filesv1.GetUserUsageRequest]) (*connect.Response[filesv1.GetUserUsageResponse], error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
@@ -601,7 +789,15 @@ func (s *FileServer) GetSignedUploadUrl(ctx context.Context, req *connect.Reques
 	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, err)
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("signed upload URL generation is not implemented"))
+	expiresAt, err := resolveURLExpiry(req.Msg.GetExpiresSeconds())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	uploadURL, err := s.signedFileURL(ctx, "upload", req.Msg.GetMediaId(), sub, expiresAt)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.GetSignedUploadUrlResponse{UploadUrl: uploadURL}), nil
 }
 
 func (s *FileServer) GetSignedDownloadUrl(ctx context.Context, req *connect.Request[filesv1.GetSignedDownloadUrlRequest]) (*connect.Response[filesv1.GetSignedDownloadUrlResponse], error) {
@@ -616,35 +812,368 @@ func (s *FileServer) GetSignedDownloadUrl(ctx context.Context, req *connect.Requ
 	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, err)
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("signed download URL generation is not implemented"))
+	expiresAt, err := resolveURLExpiry(req.Msg.GetExpiresSeconds())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	downloadURL, err := s.signedFileURL(ctx, "download", mediaID, sub, expiresAt)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.GetSignedDownloadUrlResponse{DownloadUrl: downloadURL}), nil
 }
 
-func (s *FileServer) CreateMultipartUpload(ctx context.Context, _ *connect.Request[filesv1.CreateMultipartUploadRequest]) (*connect.Response[filesv1.CreateMultipartUploadResponse], error) {
+func (s *FileServer) CreateMultipartUpload(ctx context.Context, req *connect.Request[filesv1.CreateMultipartUploadRequest]) (*connect.Response[filesv1.CreateMultipartUploadResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	if req.Msg.GetTotalSize() <= 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("total_size must be greater than zero"))
+	}
+	cfg := s.Service.Config().(*config.FilesConfig)
+	if cfg.MaxFileSizeBytes > 0 && req.Msg.GetTotalSize() > int64(cfg.MaxFileSizeBytes) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("total_size exceeds configured max upload size"))
+	}
+	if strings.TrimSpace(req.Msg.GetFilename()) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("filename is required"))
+	}
+	ownerID := sub
+	if msgOwner := strings.TrimSpace(req.Msg.GetOwnerId()); msgOwner != "" && msgOwner != sub {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("owner_id must match authenticated user"))
+	}
+	store, ok := s.db.(multipartStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("multipart storage is unavailable"))
+	}
+	now := time.Now().UTC()
+	expiresAt := now.Add(24 * time.Hour)
+	if req.Msg.GetExpiresAt() != nil {
+		exp := req.Msg.GetExpiresAt().AsTime().UTC()
+		if !exp.After(now) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("expires_at must be in the future"))
+		}
+		expiresAt = exp
+	}
+	partCount := int(math.Ceil(float64(req.Msg.GetTotalSize()) / float64(maxMultipartPartBytes)))
+	if partCount <= 0 {
+		partCount = 1
+	}
+	uploadID := utils.GenerateRandomString(32)
+	mediaID := utils.GenerateRandomString(32)
+	upload := multipartUploadRequest{
+		id:          uploadID,
+		ownerID:     ownerID,
+		mediaID:     mediaID,
+		uploadName:  req.Msg.GetFilename(),
+		contentType: req.Msg.GetContentType(),
+		totalSize:   req.Msg.GetTotalSize(),
+		partSize:    maxMultipartPartBytes,
+		partCount:   partCount,
+		uploadState: "pending",
+		expiresAt:   &expiresAt,
+	}
+	if err = store.StoreUpload(ctx, upload); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.CreateMultipartUploadResponse{UploadId: uploadID}), nil
+}
+
+func (s *FileServer) UploadMultipartPart(ctx context.Context, req *connect.Request[filesv1.UploadMultipartPartRequest]) (*connect.Response[filesv1.UploadMultipartPartResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	if err != nil {
+		return nil, err
+	}
+	if upload.UploadState() != "pending" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("upload is not pending"))
+	}
+	partNumber := int(req.Msg.GetPartNumber())
+	if partNumber <= 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("part_number must be greater than zero"))
+	}
+	partContent := req.Msg.GetContent()
+	if len(partContent) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("content is required"))
+	}
+	if int64(len(partContent)) > maxMultipartPartBytes {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("part size exceeds %d bytes in-memory limit", maxMultipartPartBytes))
+	}
+	existingPart, getErr := store.GetPart(ctx, upload.ID(), partNumber)
+	if getErr == nil && existingPart != nil {
+		return connect.NewResponse(&filesv1.UploadMultipartPartResponse{
+			Etag:       existingPart.Etag(),
+			PartNumber: int32(existingPart.PartNumber()),
+			Size:       existingPart.Size(),
+		}), nil
+	}
+
+	tmpFile, err := os.CreateTemp("", "multipart-part-*")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
+	if _, err = tmpFile.Write(partContent); err != nil {
+		_ = tmpFile.Close()
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	_ = tmpFile.Close()
+
+	sum := sha256.Sum256(partContent)
+	etag := hex.EncodeToString(sum[:])
+	storagePath := filepath.ToSlash(filepath.Join("multipart", upload.ID(), fmt.Sprintf("part-%06d", partNumber)))
+	bucket := s.provider.GetBucket(false)
+	_, err = s.provider.UploadFile(ctx, bucket, types.Path(tmpFile.Name()), types.Path(storagePath))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	part := multipartPartRequest{
+		id:          utils.GenerateRandomString(32),
+		uploadID:    upload.ID(),
+		partNumber:  partNumber,
+		etag:        etag,
+		size:        int64(len(partContent)),
+		contentHash: etag,
+		storagePath: storagePath,
+	}
+	if err = store.StorePart(ctx, part); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.UploadMultipartPartResponse{
+		Etag:       etag,
+		PartNumber: int32(partNumber),
+		Size:       int64(len(partContent)),
+	}), nil
+}
+
+func (s *FileServer) CompleteMultipartUpload(ctx context.Context, req *connect.Request[filesv1.CompleteMultipartUploadRequest]) (*connect.Response[filesv1.CompleteMultipartUploadResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	if err != nil {
+		return nil, err
+	}
+	if upload.UploadState() != "pending" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("upload is not pending"))
+	}
+	if len(req.Msg.GetParts()) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parts are required"))
+	}
+
+	parts, err := store.GetParts(ctx, upload.ID())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	partByNumber := make(map[int]struct {
+		etag string
+		path string
+	}, len(parts))
+	for _, p := range parts {
+		partByNumber[p.PartNumber()] = struct {
+			etag string
+			path string
+		}{etag: p.Etag(), path: p.StoragePath()}
+	}
+	sort.Slice(req.Msg.Parts, func(i, j int) bool {
+		return req.Msg.Parts[i].GetPartNumber() < req.Msg.Parts[j].GetPartNumber()
+	})
+
+	assembled, err := os.CreateTemp("", "multipart-assembled-*")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	defer func() {
+		_ = os.Remove(assembled.Name())
+	}()
+	totalWritten := int64(0)
+	for _, reqPart := range req.Msg.GetParts() {
+		entry, ok := partByNumber[int(reqPart.GetPartNumber())]
+		if !ok {
+			_ = assembled.Close()
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("missing part %d", reqPart.GetPartNumber()))
+		}
+		if entry.etag != reqPart.GetEtag() {
+			_ = assembled.Close()
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("etag mismatch for part %d", reqPart.GetPartNumber()))
+		}
+		reader, cleanup, dlErr := s.provider.DownloadFile(ctx, s.provider.GetBucket(false), types.Path(entry.path))
+		if dlErr != nil {
+			_ = assembled.Close()
+			return nil, connect.NewError(connect.CodeInternal, dlErr)
+		}
+		n, copyErr := io.CopyBuffer(assembled, reader, make([]byte, contentReadBufferSize))
+		cleanup()
+		if copyErr != nil {
+			_ = assembled.Close()
+			return nil, connect.NewError(connect.CodeInternal, copyErr)
+		}
+		totalWritten += n
+	}
+	if _, err = assembled.Seek(0, io.SeekStart); err != nil {
+		_ = assembled.Close()
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	defer util.CloseAndLogOnError(ctx, assembled)
+
+	cfg := s.Service.Config().(*config.FilesConfig)
+	result, err := s.mediaService.UploadFile(ctx, &business.UploadRequest{
+		OwnerID:       types.OwnerID(upload.OwnerID()),
+		MediaID:       types.MediaID(upload.MediaID()),
+		UploadName:    types.Filename(upload.UploadName()),
+		ContentType:   types.ContentType(upload.ContentType()),
+		FileSizeBytes: types.FileSizeBytes(totalWritten),
+		FileData:      assembled,
+		Config:        cfg,
+		IsPublic:      false,
+	})
+	if err != nil {
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
+	}
+	if err = store.UpdateUploadState(ctx, upload.ID(), "completed"); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	metadata, err := s.db.GetMediaMetadata(ctx, result.MediaID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.CompleteMultipartUploadResponse{
+		Metadata: toMediaMetadata(metadata),
+	}), nil
+}
+
+func (s *FileServer) AbortMultipartUpload(ctx context.Context, req *connect.Request[filesv1.AbortMultipartUploadRequest]) (*connect.Response[filesv1.AbortMultipartUploadResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	if err != nil {
+		return nil, err
+	}
+	if err = store.UpdateUploadState(ctx, upload.ID(), "aborted"); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err = store.DeleteUpload(ctx, upload.ID()); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.AbortMultipartUploadResponse{Aborted: true}), nil
+}
+
+func (s *FileServer) ListMultipartParts(ctx context.Context, req *connect.Request[filesv1.ListMultipartPartsRequest]) (*connect.Response[filesv1.ListMultipartPartsResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	store, _, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	if err != nil {
+		return nil, err
+	}
+	parts, err := store.GetParts(ctx, req.Msg.GetUploadId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	respParts := make([]*filesv1.ListMultipartPartsResponse_Part, 0, len(parts))
+	for _, part := range parts {
+		respParts = append(respParts, &filesv1.ListMultipartPartsResponse_Part{
+			PartNumber: int32(part.PartNumber()),
+			Etag:       part.Etag(),
+			Size:       part.Size(),
+		})
+	}
+	return connect.NewResponse(&filesv1.ListMultipartPartsResponse{
+		Parts: respParts,
+	}), nil
+}
+
+func (s *FileServer) DeleteContent(ctx context.Context, req *connect.Request[filesv1.DeleteContentRequest]) (*connect.Response[filesv1.DeleteContentResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mediaID := req.Msg.GetMediaId()
+	if !isValidMediaID(mediaID) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	}
+	if err = s.authz.CanDeleteFile(ctx, sub, mediaID); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	deleter, ok := s.db.(deleteStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete operation unavailable"))
+	}
+	if err = deleter.DeleteMedia(ctx, types.MediaID(mediaID)); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.DeleteContentResponse{Success: true}), nil
+}
+
+func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[filesv1.BatchGetContentRequest]) (*connect.Response[filesv1.BatchGetContentResponse], error) {
 	if _, err := authenticatedSubject(ctx); err != nil {
 		return nil, err
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+	if len(req.Msg.GetMediaIds()) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not be empty"))
+	}
+	results := make([]*filesv1.BatchGetContentResponse_ContentResult, 0, len(req.Msg.GetMediaIds()))
+	for _, mediaID := range req.Msg.GetMediaIds() {
+		contentResp, err := s.GetContent(ctx, connect.NewRequest(&filesv1.GetContentRequest{MediaId: mediaID}))
+		if err != nil {
+			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
+				MediaId: mediaID,
+				Result: &filesv1.BatchGetContentResponse_ContentResult_Error{
+					Error: err.Error(),
+				},
+			})
+			continue
+		}
+		results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
+			MediaId: mediaID,
+			Result: &filesv1.BatchGetContentResponse_ContentResult_Content{
+				Content: contentResp.Msg,
+			},
+		})
+	}
+	return connect.NewResponse(&filesv1.BatchGetContentResponse{Results: results}), nil
 }
 
-func (s *FileServer) CompleteMultipartUpload(ctx context.Context, _ *connect.Request[filesv1.CompleteMultipartUploadRequest]) (*connect.Response[filesv1.CompleteMultipartUploadResponse], error) {
+func (s *FileServer) BatchDeleteContent(ctx context.Context, req *connect.Request[filesv1.BatchDeleteContentRequest]) (*connect.Response[filesv1.BatchDeleteContentResponse], error) {
 	if _, err := authenticatedSubject(ctx); err != nil {
 		return nil, err
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
-}
-
-func (s *FileServer) AbortMultipartUpload(ctx context.Context, _ *connect.Request[filesv1.AbortMultipartUploadRequest]) (*connect.Response[filesv1.AbortMultipartUploadResponse], error) {
-	if _, err := authenticatedSubject(ctx); err != nil {
-		return nil, err
+	if len(req.Msg.GetMediaIds()) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not be empty"))
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
-}
-
-func (s *FileServer) ListMultipartParts(ctx context.Context, _ *connect.Request[filesv1.ListMultipartPartsRequest]) (*connect.Response[filesv1.ListMultipartPartsResponse], error) {
-	if _, err := authenticatedSubject(ctx); err != nil {
-		return nil, err
+	results := make([]*filesv1.BatchDeleteContentResponse_DeleteResult, 0, len(req.Msg.GetMediaIds()))
+	for _, mediaID := range req.Msg.GetMediaIds() {
+		_, err := s.DeleteContent(ctx, connect.NewRequest(&filesv1.DeleteContentRequest{
+			MediaId:    mediaID,
+			HardDelete: req.Msg.GetHardDelete(),
+		}))
+		if err != nil {
+			results = append(results, &filesv1.BatchDeleteContentResponse_DeleteResult{
+				MediaId: mediaID,
+				Success: false,
+				Error:   err.Error(),
+			})
+			continue
+		}
+		results = append(results, &filesv1.BatchDeleteContentResponse_DeleteResult{
+			MediaId: mediaID,
+			Success: true,
+		})
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+	return connect.NewResponse(&filesv1.BatchDeleteContentResponse{Results: results}), nil
 }
 
 func (s *FileServer) GetVersions(ctx context.Context, req *connect.Request[filesv1.GetVersionsRequest]) (*connect.Response[filesv1.GetVersionsResponse], error) {
@@ -655,7 +1184,42 @@ func (s *FileServer) GetVersions(ctx context.Context, req *connect.Request[files
 	if err = s.authz.CanViewFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, err)
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("file version listing is not implemented"))
+	versionsDB, ok := s.db.(versionStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("version storage is unavailable"))
+	}
+	limit := int(req.Msg.GetLimit())
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := 0
+	if req.Msg.GetBeforeVersion() > 0 {
+		offset = int(req.Msg.GetBeforeVersion())
+	}
+	versions, _, err := versionsDB.GetVersionsPaginated(ctx, req.Msg.GetMediaId(), limit, offset)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	respVersions := make([]*filesv1.FileVersion, 0, len(versions))
+	latest := int64(0)
+	for _, v := range versions {
+		if int64(v.VersionNumber()) > latest {
+			latest = int64(v.VersionNumber())
+		}
+		respVersions = append(respVersions, &filesv1.FileVersion{
+			Version:   int64(v.VersionNumber()),
+			MediaId:   v.MediaID(),
+			CreatedAt: timestamppb.New(v.CreatedAt()),
+			SizeBytes: v.FileSize(),
+		})
+	}
+	return connect.NewResponse(&filesv1.GetVersionsResponse{
+		Versions:      respVersions,
+		LatestVersion: latest,
+	}), nil
 }
 
 func (s *FileServer) RestoreVersion(ctx context.Context, req *connect.Request[filesv1.RestoreVersionRequest]) (*connect.Response[filesv1.RestoreVersionResponse], error) {
@@ -663,10 +1227,128 @@ func (s *FileServer) RestoreVersion(ctx context.Context, req *connect.Request[fi
 	if err != nil {
 		return nil, err
 	}
+	if err = s.authz.CanEditFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	if req.Msg.GetVersion() <= 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("version must be greater than zero"))
+	}
+	versionsDB, ok := s.db.(versionStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("version storage is unavailable"))
+	}
+	metadata, err := versionsDB.RestoreMediaToVersion(ctx, req.Msg.GetMediaId(), int(req.Msg.GetVersion()), sub)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.RestoreVersionResponse{Metadata: toMediaMetadata(metadata)}), nil
+}
+
+func (s *FileServer) SetRetentionPolicy(ctx context.Context, req *connect.Request[filesv1.SetRetentionPolicyRequest]) (*connect.Response[filesv1.SetRetentionPolicyResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.authz.CanEditFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	if strings.TrimSpace(req.Msg.GetPolicyId()) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("policy_id is required"))
+	}
+	retStore, ok := s.db.(retentionStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retention store is unavailable"))
+	}
+	policy, err := retStore.GetPolicy(ctx, req.Msg.GetPolicyId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if !policy.IsSystem() && policy.OwnerID() != sub {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("policy is not owned by caller"))
+	}
+	var expiresAt *time.Time
+	if policy.RetentionDays() >= 0 {
+		exp := time.Now().UTC().AddDate(0, 0, policy.RetentionDays())
+		expiresAt = &exp
+	}
+	_ = retStore.RemoveRetention(ctx, req.Msg.GetMediaId())
+	if err = retStore.ApplyRetention(ctx, fileRetentionRequest{
+		mediaID:   req.Msg.GetMediaId(),
+		policyID:  policy.ID(),
+		expiresAt: expiresAt,
+		isLocked:  false,
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&filesv1.SetRetentionPolicyResponse{Success: true}), nil
+}
+
+func (s *FileServer) GetRetentionPolicy(ctx context.Context, req *connect.Request[filesv1.GetRetentionPolicyRequest]) (*connect.Response[filesv1.GetRetentionPolicyResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if err = s.authz.CanViewFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, err)
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("file version restore is not implemented"))
+	retStore, ok := s.db.(retentionStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retention store is unavailable"))
+	}
+	retention, err := retStore.GetRetention(ctx, req.Msg.GetMediaId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("retention policy not found"))
+	}
+	policy, err := retStore.GetPolicy(ctx, retention.PolicyID())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	mode := filesv1.RetentionPolicy_MODE_DELETE
+	if policy.RetentionDays() < 0 {
+		mode = filesv1.RetentionPolicy_MODE_ARCHIVE
+	}
+	var expires *timestamppb.Timestamp
+	if retention.ExpiresAt() != nil {
+		expires = timestamppb.New(*retention.ExpiresAt())
+	}
+	return connect.NewResponse(&filesv1.GetRetentionPolicyResponse{
+		Policy: &filesv1.RetentionPolicy{
+			PolicyId:      policy.ID(),
+			Name:          policy.Name(),
+			RetentionDays: int64(policy.RetentionDays()),
+			Mode:          mode,
+		},
+		ExpiresAt: expires,
+	}), nil
+}
+
+func (s *FileServer) ListRetentionPolicies(ctx context.Context, _ *connect.Request[filesv1.ListRetentionPoliciesRequest]) (*connect.Response[filesv1.ListRetentionPoliciesResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	retStore, ok := s.db.(retentionStore)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retention store is unavailable"))
+	}
+	policies, _, err := retStore.ListPolicies(ctx, sub, 200, 0)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	items := make([]*filesv1.RetentionPolicy, 0, len(policies))
+	for _, policy := range policies {
+		mode := filesv1.RetentionPolicy_MODE_DELETE
+		if policy.RetentionDays() < 0 {
+			mode = filesv1.RetentionPolicy_MODE_ARCHIVE
+		}
+		items = append(items, &filesv1.RetentionPolicy{
+			PolicyId:      policy.ID(),
+			Name:          policy.Name(),
+			RetentionDays: int64(policy.RetentionDays()),
+			Mode:          mode,
+		})
+	}
+	return connect.NewResponse(&filesv1.ListRetentionPoliciesResponse{Policies: items}), nil
 }
 
 // SearchMedia searches for media files matching specified criteria
@@ -754,6 +1436,83 @@ func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[files
 		Results:    results,
 		NextCursor: nextCursor,
 	}), nil
+}
+
+func resolveURLExpiry(expiresSeconds int64) (time.Time, error) {
+	if expiresSeconds <= 0 {
+		expiresSeconds = 300
+	}
+	if expiresSeconds > 86400 {
+		return time.Time{}, fmt.Errorf("expires_seconds must be <= 86400")
+	}
+	return time.Now().UTC().Add(time.Duration(expiresSeconds) * time.Second), nil
+}
+
+func (s *FileServer) signedFileURL(_ context.Context, purpose, mediaID, sub string, expiresAt time.Time) (string, error) {
+	cfg := s.Service.Config().(*config.FilesConfig)
+	base := strings.TrimSpace(cfg.FileAccessServerUrl)
+	if base == "" {
+		base = "https://" + cfg.ServerName
+	}
+	baseURL, err := url.Parse(base)
+	if err != nil {
+		return "", err
+	}
+	if baseURL.Scheme == "" {
+		baseURL.Scheme = "https"
+	}
+	baseURL.Path = path.Join(baseURL.Path, "/signed", purpose)
+
+	secret := strings.TrimSpace(cfg.CsrfSecret)
+	if secret == "" {
+		secret = strings.TrimSpace(cfg.EnvStorageEncryptionPhrase)
+	}
+	if secret == "" {
+		return "", fmt.Errorf("signed URL secret is not configured")
+	}
+
+	expUnix := expiresAt.Unix()
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = fmt.Fprintf(mac, "%s|%s|%s|%d", purpose, mediaID, sub, expUnix)
+	sig := hex.EncodeToString(mac.Sum(nil))
+
+	q := baseURL.Query()
+	q.Set("media_id", mediaID)
+	q.Set("sub", sub)
+	q.Set("exp", strconv.FormatInt(expUnix, 10))
+	q.Set("sig", sig)
+	baseURL.RawQuery = q.Encode()
+	return baseURL.String(), nil
+}
+
+func (s *FileServer) getOwnedUpload(ctx context.Context, uploadID, subject string) (multipartStore, interface {
+	ID() string
+	OwnerID() string
+	MediaID() string
+	UploadName() string
+	ContentType() string
+	TotalSize() int64
+	PartSize() int64
+	PartCount() int
+	UploadedParts() int
+	UploadState() string
+	ExpiresAt() *time.Time
+}, error) {
+	store, ok := s.db.(multipartStore)
+	if !ok {
+		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("multipart storage is unavailable"))
+	}
+	upload, err := store.GetUpload(ctx, uploadID)
+	if err != nil {
+		return nil, nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("upload not found"))
+	}
+	if upload.OwnerID() != subject {
+		return nil, nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("upload does not belong to caller"))
+	}
+	if expiresAt := upload.ExpiresAt(); expiresAt != nil && !expiresAt.After(time.Now().UTC()) {
+		return nil, nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("upload has expired"))
+	}
+	return store, upload, nil
 }
 
 func authenticatedSubject(ctx context.Context) (string, error) {

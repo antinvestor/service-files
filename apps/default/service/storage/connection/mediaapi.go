@@ -448,6 +448,62 @@ func (d *Database) GetVersionsPaginated(ctx context.Context, mediaID string, lim
 	return result, count, nil
 }
 
+func (d *Database) RestoreMediaToVersion(ctx context.Context, mediaID string, versionNumber int, restoredBy string) (*types.MediaMetadata, error) {
+	var restored *types.MediaMetadata
+	err := d.MediaRepository.Pool().DB(ctx, false).Transaction(func(tx *gorm.DB) error {
+		version := &models.FileVersion{}
+		if err := tx.Where("media_id = ? AND version_number = ?", mediaID, versionNumber).First(version).Error; err != nil {
+			return err
+		}
+
+		media := &models.MediaMetadata{}
+		if err := tx.First(media, "id = ?", mediaID).Error; err != nil {
+			return err
+		}
+
+		var maxVersion int64
+		if err := tx.Model(&models.FileVersion{}).
+			Where("media_id = ?", mediaID).
+			Select("COALESCE(MAX(version_number), 0)").
+			Scan(&maxVersion).Error; err != nil {
+			return err
+		}
+
+		backup := &models.FileVersion{
+			BaseModel:          data.BaseModel{ID: util.IDString()},
+			MediaID:            mediaID,
+			VersionNumber:      int(maxVersion) + 1,
+			ContentHash:        media.Hash,
+			FileSize:           media.Size,
+			UploadName:         media.Name,
+			ContentType:        media.Mimetype,
+			StoragePath:        media.Hash,
+			CreatedBy:          restoredBy,
+			RestoreFromVersion: version.VersionNumber,
+		}
+		if err := tx.Create(backup).Error; err != nil {
+			return err
+		}
+
+		media.Hash = version.ContentHash
+		media.Size = version.FileSize
+		media.Name = version.UploadName
+		media.Mimetype = version.ContentType
+		media.OriginTs = time.Now().UnixMilli()
+
+		if err := tx.Save(media).Error; err != nil {
+			return err
+		}
+
+		restored = media.ToApi()
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return restored, nil
+}
+
 type dbRetentionPolicyResult struct {
 	p *models.RetentionPolicy
 }

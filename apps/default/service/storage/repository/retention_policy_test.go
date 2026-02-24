@@ -25,12 +25,11 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestCreateRetentionPolicy() {
 		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.RetentionPolicyRepo
-
 		testPolicy := &models.RetentionPolicy{
 			Name:          "Standard Retention",
 			Description:   "Keep files for 30 days",
 			RetentionDays: 30,
-			IsDefault:     true,
+			IsDefault:     false,
 			IsSystem:      false,
 			OwnerID:       "test-owner",
 		}

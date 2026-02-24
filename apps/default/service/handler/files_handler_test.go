@@ -215,6 +215,48 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentSuccess() {
 	})
 }
 
+func (suite *FileServerTestSuite) Test_FileServer_GetContentRejectsOversizedPayloads() {
+	testCases := []struct {
+		name      string
+		sizeBytes int
+	}{
+		{
+			name:      "above_memory_limit",
+			sizeBytes: int(maxContentBytes) + 1,
+		},
+		{
+			name:      "well_above_memory_limit",
+			sizeBytes: int(maxContentBytes) + (128 << 10),
+		},
+	}
+
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				payload := bytes.Repeat([]byte("x"), tc.sizeBytes)
+				mediaID := fmt.Sprintf("oversized-%s", strings.ReplaceAll(tc.name, "_", "-"))
+				_, err := mediaService.UploadFile(ctx, &business.UploadRequest{
+					OwnerID:       "@owner:example.com",
+					MediaID:       types.MediaID(mediaID),
+					UploadName:    "oversized.bin",
+					ContentType:   "application/octet-stream",
+					FileSizeBytes: types.FileSizeBytes(len(payload)),
+					FileData:      bytes.NewReader(payload),
+					Config:        cfg,
+				})
+				require.NoError(t, err)
+
+				_, err = handler.GetContent(claimsCtx(ctx, "@owner:example.com"), connect.NewRequest(&filesv1.GetContentRequest{
+					MediaId: mediaID,
+				}))
+				require.Error(t, err)
+				assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+			})
+		}
+	})
+}
+
 func (suite *FileServerTestSuite) Test_FileServer_SearchMediaValidation() {
 	testCases := []struct {
 		name      string
@@ -421,6 +463,44 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewAdditionalCases()
 				return "http://8.8.8.8/page"
 			},
 			expectErr: connect.CodeUnavailable,
+		},
+		{
+			name: "oversized_og_image_is_not_loaded",
+			setupClient: func(t *testing.T, svcCtx context.Context, svc *frame.Service) string {
+				largeLength := maxPreviewImageBytes + 1
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch r.Method {
+					case http.MethodGet:
+						if r.URL.Path == "/large.jpg" {
+							w.Header().Set("Content-Type", "image/jpeg")
+							_, _ = w.Write(createJPEGPayload(t, 64, 64))
+							return
+						}
+						w.Header().Set("Content-Type", "text/html")
+						_, _ = w.Write([]byte(`<html><head><meta property="og:image" content="http://8.8.8.8/large.jpg"></head></html>`))
+					case http.MethodHead:
+						if r.URL.Path == "/large.jpg" {
+							w.Header().Set("Content-Type", "image/jpeg")
+							w.Header().Set("Content-Length", fmt.Sprintf("%d", largeLength))
+						}
+						w.WriteHeader(http.StatusOK)
+					default:
+						w.WriteHeader(http.StatusMethodNotAllowed)
+					}
+				}))
+				t.Cleanup(server.Close)
+				targetURL, _ := url.Parse(server.URL)
+				svc.HTTPClientManager().SetClient(svcCtx, &http.Client{
+					Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+						clone := req.Clone(req.Context())
+						clone.URL.Scheme = targetURL.Scheme
+						clone.URL.Host = targetURL.Host
+						return http.DefaultTransport.RoundTrip(clone)
+					}),
+				})
+				return "http://8.8.8.8/page"
+			},
+			expectOgImageMediaID: "",
 		},
 	}
 
