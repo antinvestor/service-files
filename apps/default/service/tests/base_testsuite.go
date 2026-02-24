@@ -60,6 +60,8 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	profileConfig.DatabaseMigrate = true
 	profileConfig.RunServiceSecurely = false
 	profileConfig.ServerPort = ""
+	profileConfig.DatabaseMaxOpenConnections = 2
+	profileConfig.DatabaseMaxIdleConnections = 1
 	profileConfig.EnvStorageEncryptionPhrase = "0123456789abcdef0123456789abcdef"
 	profileConfig.BasePath = aconfig.Path(t.TempDir())
 

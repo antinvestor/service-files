@@ -307,6 +307,32 @@ func (s *FileServer) GetContentOverrideName(ctx context.Context, req *connect.Re
 	}), nil
 }
 
+func (s *FileServer) HeadContent(ctx context.Context, req *connect.Request[filesv1.HeadContentRequest]) (*connect.Response[filesv1.HeadContentResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mediaID := req.Msg.GetMediaId()
+	if !isValidMediaID(mediaID) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	}
+	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+
+	metadata, err := s.db.GetMediaMetadata(ctx, types.MediaID(mediaID))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if metadata == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("media not found"))
+	}
+
+	return connect.NewResponse(&filesv1.HeadContentResponse{
+		Metadata: toMediaMetadata(metadata),
+	}), nil
+}
+
 // GetContentThumbnail retrieves a thumbnail of the content
 func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Request[filesv1.GetContentThumbnailRequest]) (*connect.Response[filesv1.GetContentThumbnailResponse], error) {
 	cfg := s.Service.Config().(*config.FilesConfig)
@@ -619,6 +645,28 @@ func (s *FileServer) ListMultipartParts(ctx context.Context, _ *connect.Request[
 		return nil, err
 	}
 	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("multipart upload is not implemented"))
+}
+
+func (s *FileServer) GetVersions(ctx context.Context, req *connect.Request[filesv1.GetVersionsRequest]) (*connect.Response[filesv1.GetVersionsResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.authz.CanViewFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("file version listing is not implemented"))
+}
+
+func (s *FileServer) RestoreVersion(ctx context.Context, req *connect.Request[filesv1.RestoreVersionRequest]) (*connect.Response[filesv1.RestoreVersionResponse], error) {
+	sub, err := authenticatedSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.authz.CanViewFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("file version restore is not implemented"))
 }
 
 // SearchMedia searches for media files matching specified criteria
