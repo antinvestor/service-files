@@ -1705,6 +1705,12 @@ func (suite *FileServerTestSuite) Test_FileServer_BatchGetContent() {
 					userID:    "@test:example.com",
 					expectErr: connect.CodeInvalidArgument,
 				},
+				{
+					name:      "too_many_media_ids",
+					mediaIDs:  make([]string, maxBatchGetItems+1),
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
 			}
 
 			for _, tc := range tests {
@@ -1715,6 +1721,55 @@ func (suite *FileServerTestSuite) Test_FileServer_BatchGetContent() {
 					}
 
 					_, err := handler.BatchGetContent(caseCtx, connect.NewRequest(&filesv1.BatchGetContentRequest{
+						MediaIds: tc.mediaIDs,
+					}))
+					require.Error(t, err)
+					require.Equal(t, tc.expectErr, connect.CodeOf(err))
+				})
+			}
+		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_BatchDeleteContent() {
+	suite.Run("default", func() {
+		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+			ctx, _, _, handler := suite.setupFileServer(t, dep)
+
+			tests := []struct {
+				name      string
+				mediaIDs  []string
+				userID    string
+				expectErr connect.Code
+			}{
+				{
+					name:      "unauthenticated",
+					mediaIDs:  []string{"abc123"},
+					userID:    "",
+					expectErr: connect.CodeUnauthenticated,
+				},
+				{
+					name:      "empty_media_ids",
+					mediaIDs:  []string{},
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
+				{
+					name:      "too_many_media_ids",
+					mediaIDs:  make([]string, maxBatchDeleteItems+1),
+					userID:    "@test:example.com",
+					expectErr: connect.CodeInvalidArgument,
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					caseCtx := ctx
+					if tc.userID != "" {
+						caseCtx = claimsCtx(ctx, tc.userID)
+					}
+
+					_, err := handler.BatchDeleteContent(caseCtx, connect.NewRequest(&filesv1.BatchDeleteContentRequest{
 						MediaIds: tc.mediaIDs,
 					}))
 					require.Error(t, err)

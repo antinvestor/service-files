@@ -51,6 +51,9 @@ const (
 	maxThumbnailBytes     = maxInMemoryFileBytes
 	contentReadBufferSize = 64 << 10 // 64 KiB buffer for reading content
 	maxMultipartPartBytes = maxInMemoryFileBytes
+	maxBatchGetItems      = 16
+	maxBatchDeleteItems   = 500
+	maxBatchResponseBytes = int64(8 << 20)
 )
 
 // FileServer implements the Connect RPC handler for files service
@@ -1125,8 +1128,22 @@ func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[f
 	if len(req.Msg.GetMediaIds()) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not be empty"))
 	}
+	if len(req.Msg.GetMediaIds()) > maxBatchGetItems {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not exceed %d", maxBatchGetItems))
+	}
 	results := make([]*filesv1.BatchGetContentResponse_ContentResult, 0, len(req.Msg.GetMediaIds()))
+	totalBytes := int64(0)
+	budgetExceeded := false
 	for _, mediaID := range req.Msg.GetMediaIds() {
+		if budgetExceeded {
+			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
+				MediaId: mediaID,
+				Result: &filesv1.BatchGetContentResponse_ContentResult_Error{
+					Error: "batch response memory limit exceeded",
+				},
+			})
+			continue
+		}
 		contentResp, err := s.GetContent(ctx, connect.NewRequest(&filesv1.GetContentRequest{MediaId: mediaID}))
 		if err != nil {
 			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
@@ -1137,6 +1154,18 @@ func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[f
 			})
 			continue
 		}
+		contentBytes := int64(len(contentResp.Msg.GetContent()))
+		if totalBytes+contentBytes > maxBatchResponseBytes {
+			budgetExceeded = true
+			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
+				MediaId: mediaID,
+				Result: &filesv1.BatchGetContentResponse_ContentResult_Error{
+					Error: "batch response memory limit exceeded",
+				},
+			})
+			continue
+		}
+		totalBytes += contentBytes
 		results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
 			MediaId: mediaID,
 			Result: &filesv1.BatchGetContentResponse_ContentResult_Content{
@@ -1153,6 +1182,9 @@ func (s *FileServer) BatchDeleteContent(ctx context.Context, req *connect.Reques
 	}
 	if len(req.Msg.GetMediaIds()) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not be empty"))
+	}
+	if len(req.Msg.GetMediaIds()) > maxBatchDeleteItems {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not exceed %d", maxBatchDeleteItems))
 	}
 	results := make([]*filesv1.BatchDeleteContentResponse_DeleteResult, 0, len(req.Msg.GetMediaIds()))
 	for _, mediaID := range req.Msg.GetMediaIds() {
