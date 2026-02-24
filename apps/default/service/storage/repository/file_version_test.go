@@ -26,14 +26,14 @@ func (suite *FileVersionRepositoryTestSuite) TestCreateFileVersion() {
 		repo := res.FileVersionRepo
 
 		testVersion := &models.FileVersion{
-			MediaID:      "media-version",
+			MediaID:       "media-version",
 			VersionNumber: 1,
-			ContentHash:  "hash-abc123",
-			FileSize:     1024,
-			UploadName:   "file-v1.txt",
-			ContentType:  "text/plain",
-			StoragePath:  "/path/to/file",
-			CreatedBy:    "test-user",
+			ContentHash:   "hash-abc123",
+			FileSize:      1024,
+			UploadName:    "file-v1.txt",
+			ContentType:   "text/plain",
+			StoragePath:   "/path/to/file",
+			CreatedBy:     "test-user",
 		}
 
 		err := repo.Create(ctx, testVersion)
@@ -51,36 +51,36 @@ func (suite *FileVersionRepositoryTestSuite) TestGetByMediaID() {
 		mediaID := "get-by-media-versions"
 
 		version1 := &models.FileVersion{
-			MediaID:      mediaID,
+			MediaID:       mediaID,
 			VersionNumber: 1,
-			ContentHash:  "hash-v1",
-			FileSize:     1024,
-			UploadName:   "file-v1.txt",
-			ContentType:  "text/plain",
-			StoragePath:  "/path/to/file1",
-			CreatedBy:    "test-user",
+			ContentHash:   "hash-v1",
+			FileSize:      1024,
+			UploadName:    "file-v1.txt",
+			ContentType:   "text/plain",
+			StoragePath:   "/path/to/file1",
+			CreatedBy:     "test-user",
 		}
 
 		version2 := &models.FileVersion{
-			MediaID:      mediaID,
+			MediaID:       mediaID,
 			VersionNumber: 2,
-			ContentHash:  "hash-v2",
-			FileSize:     2048,
-			UploadName:   "file-v2.txt",
-			ContentType:  "text/plain",
-			StoragePath:  "/path/to/file2",
-			CreatedBy:    "test-user",
+			ContentHash:   "hash-v2",
+			FileSize:      2048,
+			UploadName:    "file-v2.txt",
+			ContentType:   "text/plain",
+			StoragePath:   "/path/to/file2",
+			CreatedBy:     "test-user",
 		}
 
 		version3 := &models.FileVersion{
-			MediaID:      mediaID,
+			MediaID:       mediaID,
 			VersionNumber: 3,
-			ContentHash:  "hash-v3",
-			FileSize:     3072,
-			UploadName:   "file-v3.txt",
-			ContentType:  "text/plain",
-			StoragePath:  "/path/to/file3",
-			CreatedBy:    "test-user",
+			ContentHash:   "hash-v3",
+			FileSize:      3072,
+			UploadName:    "file-v3.txt",
+			ContentType:   "text/plain",
+			StoragePath:   "/path/to/file3",
+			CreatedBy:     "test-user",
 		}
 
 		err := repo.Create(ctx, version1)
@@ -110,25 +110,25 @@ func (suite *FileVersionRepositoryTestSuite) TestGetVersion() {
 		mediaID := "get-specific-version"
 
 		version1 := &models.FileVersion{
-			MediaID:      mediaID,
+			MediaID:       mediaID,
 			VersionNumber: 1,
-			ContentHash:  "hash-v1",
-			FileSize:     1024,
-			UploadName:   "file-v1.txt",
-			ContentType:  "text/plain",
-			StoragePath:  "/path/to/file1",
-			CreatedBy:    "test-user",
+			ContentHash:   "hash-v1",
+			FileSize:      1024,
+			UploadName:    "file-v1.txt",
+			ContentType:   "text/plain",
+			StoragePath:   "/path/to/file1",
+			CreatedBy:     "test-user",
 		}
 
 		version2 := &models.FileVersion{
-			MediaID:      mediaID,
+			MediaID:       mediaID,
 			VersionNumber: 2,
-			ContentHash:  "hash-v2",
-			FileSize:     2048,
-			UploadName:   "file-v2.txt",
-			ContentType:  "text/plain",
-			StoragePath:  "/path/to/file2",
-			CreatedBy:    "test-user",
+			ContentHash:   "hash-v2",
+			FileSize:      2048,
+			UploadName:    "file-v2.txt",
+			ContentType:   "text/plain",
+			StoragePath:   "/path/to/file2",
+			CreatedBy:     "test-user",
 		}
 
 		err := repo.Create(ctx, version1)
@@ -165,14 +165,14 @@ func (suite *FileVersionRepositoryTestSuite) TestGetVersionsPaginated() {
 
 		for i := 1; i <= 5; i++ {
 			version := &models.FileVersion{
-				MediaID:      mediaID,
+				MediaID:       mediaID,
 				VersionNumber: i,
-				ContentHash: "hash-p" + string(rune('0'+i)),
-				FileSize:     int64(1024 * i),
-				UploadName:   "file-v" + string(rune('0'+i)) + ".txt",
-				ContentType:  "text/plain",
-				StoragePath:  "/path/to/file" + string(rune('0'+i)),
-				CreatedBy:    "test-user",
+				ContentHash:   "hash-p" + string(rune('0'+i)),
+				FileSize:      int64(1024 * i),
+				UploadName:    "file-v" + string(rune('0'+i)) + ".txt",
+				ContentType:   "text/plain",
+				StoragePath:   "/path/to/file" + string(rune('0'+i)),
+				CreatedBy:     "test-user",
 			}
 			err := repo.Create(ctx, version)
 			require.NoError(t, err)

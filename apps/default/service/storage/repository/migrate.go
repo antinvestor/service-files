@@ -11,5 +11,13 @@ func Migrate(ctx context.Context, dbManager datastore.Manager, migrationPath str
 	dbPool := dbManager.GetPool(ctx, datastore.DefaultMigrationPoolName)
 
 	return dbManager.Migrate(ctx, dbPool, migrationPath,
-		&models.MediaMetadata{}, &models.MediaAudit{})
+		&models.MediaMetadata{},
+		&models.MediaAudit{},
+		&models.MultipartUpload{},
+		&models.MultipartUploadPart{},
+		&models.FileVersion{},
+		&models.RetentionPolicy{},
+		&models.FileRetention{},
+		&models.StorageStats{},
+	)
 }

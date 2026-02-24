@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_retention_policies_owner_id ON retention_policies
 CREATE INDEX IF NOT EXISTS idx_retention_policies_is_default ON retention_policies (is_default);
 
 -- File retention assignments
-CREATE TABLE IF NOT EXISTS file_retention (
+CREATE TABLE IF NOT EXISTS file_retentions (
     id VARCHAR(50) PRIMARY KEY,
     created_at TIMESTAMPTZ,
     modified_at TIMESTAMPTZ,
@@ -40,6 +40,6 @@ CREATE TABLE IF NOT EXISTS file_retention (
     metadata JSONB
 );
 
-CREATE INDEX IF NOT EXISTS idx_file_retention_media_id ON file_retention (media_id);
-CREATE INDEX IF NOT EXISTS idx_file_retention_policy_id ON file_retention (policy_id);
-CREATE INDEX IF NOT EXISTS idx_file_retention_expires_at ON file_retention (expires_at);
+CREATE INDEX IF NOT EXISTS idx_file_retentions_media_id ON file_retentions (media_id);
+CREATE INDEX IF NOT EXISTS idx_file_retentions_policy_id ON file_retentions (policy_id);
+CREATE INDEX IF NOT EXISTS idx_file_retentions_expires_at ON file_retentions (expires_at);

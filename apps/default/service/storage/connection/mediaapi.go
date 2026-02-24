@@ -251,7 +251,7 @@ func (d *Database) UpdateUploadState(ctx context.Context, uploadID string, state
 }
 
 func (d *Database) DeleteUpload(ctx context.Context, uploadID string) error {
-	return d.MultipartUploadRepo.HardDeleteByID(ctx, uploadID)
+	return d.MultipartUploadRepo.Delete(ctx, uploadID)
 }
 
 func (d *Database) StorePart(ctx context.Context, part interface {
@@ -515,7 +515,7 @@ func (d *Database) UpdatePolicy(ctx context.Context, policy interface {
 }
 
 func (d *Database) DeletePolicy(ctx context.Context, policyID string) error {
-	return d.RetentionPolicyRepo.HardDeleteByID(ctx, policyID)
+	return d.RetentionPolicyRepo.Delete(ctx, policyID)
 }
 
 func (d *Database) ListPolicies(ctx context.Context, ownerID string, limit, offset int) ([]interface {

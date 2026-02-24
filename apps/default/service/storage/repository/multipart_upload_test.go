@@ -71,7 +71,7 @@ func (suite *MultipartUploadRepositoryTestSuite) TestUpdateState() {
 	})
 }
 
-func (suite *MultipartUploadRepositoryTestSuite) TestHardDeleteByID() {
+func (suite *MultipartUploadRepositoryTestSuite) TestDelete() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, _, res := suite.CreateService(t, dep)
 		repo := res.MultipartUploadRepo
@@ -93,8 +93,12 @@ func (suite *MultipartUploadRepositoryTestSuite) TestHardDeleteByID() {
 		require.NoError(t, err)
 
 		uploadID := testUpload.ID
-		err = repo.HardDeleteByID(ctx, uploadID)
+		err = repo.Delete(ctx, uploadID)
 		assert.NoError(t, err)
+
+		result, err := repo.GetByUploadID(ctx, uploadID)
+		assert.Error(t, err)
+		assert.Nil(t, result)
 	})
 }
 

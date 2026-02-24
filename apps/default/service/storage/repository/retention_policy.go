@@ -15,7 +15,6 @@ type RetentionPolicyRepository interface {
 	GetByID(ctx context.Context, policyID string) (*models.RetentionPolicy, error)
 	GetDefault(ctx context.Context) (*models.RetentionPolicy, error)
 	ListByOwner(ctx context.Context, ownerID string, limit, offset int) ([]*models.RetentionPolicy, int, error)
-	HardDeleteByID(ctx context.Context, policyID string) error
 }
 
 // NewRetentionPolicyRepository creates a new retention policy repository instance
@@ -37,7 +36,7 @@ func (r *retentionPolicyRepository) GetByID(ctx context.Context, policyID string
 	policy := &models.RetentionPolicy{}
 	err := r.Pool().DB(ctx, true).First(policy, "id = ?", policyID).Error
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	return policy, nil
 }
@@ -74,9 +73,4 @@ func (r *retentionPolicyRepository) ListByOwner(ctx context.Context, ownerID str
 	}
 
 	return policies, int(count), nil
-}
-
-// HardDeleteByID permanently deletes a retention policy by ID
-func (r *retentionPolicyRepository) HardDeleteByID(ctx context.Context, policyID string) error {
-	return r.Pool().DB(ctx, true).Delete(&models.RetentionPolicy{}, "id = ?", policyID).Error
 }

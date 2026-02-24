@@ -22,14 +22,13 @@ func TestRetentionPolicyRepositoryTestSuite(t *testing.T) {
 
 func (suite *RetentionPolicyRepositoryTestSuite) TestCreateRetentionPolicy() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, _, res := suite.CreateService(t, dep)
 
 		repo := res.RetentionPolicyRepo
 
 		testPolicy := &models.RetentionPolicy{
 			Name:          "Standard Retention",
-			Description:    "Keep files for 30 days",
+			Description:   "Keep files for 30 days",
 			RetentionDays: 30,
 			IsDefault:     true,
 			IsSystem:      false,
@@ -50,7 +49,7 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestGetByID() {
 
 		testPolicy := &models.RetentionPolicy{
 			Name:          "Test Policy",
-			Description:    "For testing",
+			Description:   "For testing",
 			RetentionDays: 7,
 			IsDefault:     false,
 			IsSystem:      false,
@@ -88,7 +87,7 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestGetDefault() {
 
 		testPolicy := &models.RetentionPolicy{
 			Name:          "Default Policy",
-			Description:    "Default retention",
+			Description:   "Default retention",
 			RetentionDays: 365,
 			IsDefault:     true,
 			IsSystem:      true,
@@ -119,7 +118,7 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestListByOwner() {
 		for i := 1; i <= 3; i++ {
 			policy := &models.RetentionPolicy{
 				Name:          "Policy " + string(rune('0'+i)),
-				Description:    "Test description " + string(rune('0'+i)),
+				Description:   "Test description " + string(rune('0'+i)),
 				RetentionDays: i * 10,
 				IsDefault:     i == 1,
 				IsSystem:      false,
@@ -138,7 +137,7 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestListByOwner() {
 	})
 }
 
-func (suite *RetentionPolicyRepositoryTestSuite) TestHardDeleteByID() {
+func (suite *RetentionPolicyRepositoryTestSuite) TestDelete() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, _, res := suite.CreateService(t, dep)
 
@@ -146,7 +145,7 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestHardDeleteByID() {
 
 		testPolicy := &models.RetentionPolicy{
 			Name:          "Delete Test Policy",
-			Description:    "Policy to delete",
+			Description:   "Policy to delete",
 			RetentionDays: 90,
 			IsDefault:     false,
 			IsSystem:      false,
@@ -156,7 +155,7 @@ func (suite *RetentionPolicyRepositoryTestSuite) TestHardDeleteByID() {
 		err := repo.Create(ctx, testPolicy)
 		require.NoError(t, err)
 
-		err = repo.HardDeleteByID(ctx, testPolicy.ID)
+		err = repo.Delete(ctx, testPolicy.ID)
 		assert.NoError(t, err)
 
 		result, err := repo.GetByID(ctx, testPolicy.ID)
@@ -173,6 +172,10 @@ func TestFileRetentionRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, new(FileRetentionRepositoryTestSuite))
 }
 
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
+
 func (suite *FileRetentionRepositoryTestSuite) TestCreateFileRetention() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, _, res := suite.CreateService(t, dep)
@@ -183,11 +186,11 @@ func (suite *FileRetentionRepositoryTestSuite) TestCreateFileRetention() {
 		expiresAt := now.Add(30 * 24 * time.Hour)
 
 		testRetention := &models.FileRetention{
-			MediaID:     "retain-media",
-			PolicyID:    "policy-123",
-			AppliedAt:   now,
-			ExpiresAt:   &expiresAt,
-			IsLocked:     false,
+			MediaID:   "retain-media",
+			PolicyID:  "policy-123",
+			AppliedAt: now,
+			ExpiresAt: &expiresAt,
+			IsLocked:  false,
 		}
 
 		err := repo.Create(ctx, testRetention)
@@ -205,11 +208,11 @@ func (suite *FileRetentionRepositoryTestSuite) TestGetByMediaID() {
 		mediaID := "get-retention-media"
 
 		testRetention := &models.FileRetention{
-			MediaID:     mediaID,
-			PolicyID:    "policy-456",
-			AppliedAt:   time.Now(),
-			ExpiresAt:   time.Now().Add(7 * 24 * time.Hour),
-			IsLocked:     false,
+			MediaID:   mediaID,
+			PolicyID:  "policy-456",
+			AppliedAt: time.Now(),
+			ExpiresAt: timePtr(time.Now().Add(7 * 24 * time.Hour)),
+			IsLocked:  false,
 		}
 
 		err := repo.Create(ctx, testRetention)
@@ -232,11 +235,11 @@ func (suite *FileRetentionRepositoryTestSuite) TestUpdateLocked() {
 		mediaID := "lock-media"
 
 		testRetention := &models.FileRetention{
-			MediaID:     mediaID,
-			PolicyID:    "policy-789",
-			AppliedAt:   time.Now(),
-			ExpiresAt:   time.Now().Add(7 * 24 * time.Hour),
-			IsLocked:     false,
+			MediaID:   mediaID,
+			PolicyID:  "policy-789",
+			AppliedAt: time.Now(),
+			ExpiresAt: timePtr(time.Now().Add(7 * 24 * time.Hour)),
+			IsLocked:  false,
 		}
 
 		err := repo.Create(ctx, testRetention)
@@ -245,10 +248,11 @@ func (suite *FileRetentionRepositoryTestSuite) TestUpdateLocked() {
 		err = repo.UpdateLocked(ctx, mediaID, true)
 		assert.NoError(t, err)
 
-		result, err := repo.GetByMediaID(ctx, mediaID)
+		retentionID := testRetention.GetID()
+		result, err := repo.GetByID(ctx, retentionID)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, true, result.IsLocked)
+		assert.True(t, result.IsLocked)
 	})
 }
 
@@ -261,22 +265,22 @@ func (suite *FileRetentionRepositoryTestSuite) TestDeleteByMediaID() {
 		mediaID := "delete-retention-media"
 
 		testRetention := &models.FileRetention{
-			MediaID:     mediaID,
-			PolicyID:    "policy-delete",
-			AppliedAt:   time.Now(),
-			ExpiresAt:   time.Now().Add(7 * 24 * time.Hour),
-			IsLocked:     false,
+			MediaID:   mediaID,
+			PolicyID:  "policy-delete",
+			AppliedAt: time.Now(),
+			ExpiresAt: timePtr(time.Now().Add(7 * 24 * time.Hour)),
+			IsLocked:  false,
 		}
 
 		err := repo.Create(ctx, testRetention)
 		require.NoError(t, err)
 
+		retentionID := testRetention.GetID()
 		err = repo.DeleteByMediaID(ctx, mediaID)
 		assert.NoError(t, err)
 
-		result, err := repo.GetByMediaID(ctx, mediaID)
-		assert.NoError(t, err)
-		assert.Nil(t, result)
+		_, err = repo.GetByID(ctx, retentionID)
+		assert.Error(t, err)
 	})
 }
 
@@ -291,19 +295,19 @@ func (suite *FileRetentionRepositoryTestSuite) TestGetExpired() {
 		futureTime := now.Add(1 * 24 * time.Hour)
 
 		expiredRetention := &models.FileRetention{
-			MediaID:     "expired-media",
-			PolicyID:    "policy-expired",
-			AppliedAt:   time.Now(),
-			ExpiresAt:   &expiredTime,
-			IsLocked:     false,
+			MediaID:   "expired-media",
+			PolicyID:  "policy-expired",
+			AppliedAt: time.Now(),
+			ExpiresAt: &expiredTime,
+			IsLocked:  false,
 		}
 
 		futureRetention := &models.FileRetention{
-			MediaID:     "future-media",
-			PolicyID:    "policy-future",
-			AppliedAt:   time.Now(),
-			ExpiresAt:   &futureTime,
-			IsLocked:     false,
+			MediaID:   "future-media",
+			PolicyID:  "policy-future",
+			AppliedAt: time.Now(),
+			ExpiresAt: &futureTime,
+			IsLocked:  false,
 		}
 
 		err := repo.Create(ctx, expiredRetention)

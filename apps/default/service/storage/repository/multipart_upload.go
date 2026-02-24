@@ -16,7 +16,6 @@ type MultipartUploadRepository interface {
 	GetByUploadID(ctx context.Context, uploadID string) (*models.MultipartUpload, error)
 	GetByMediaID(ctx context.Context, mediaID string) (*models.MultipartUpload, error)
 	UpdateState(ctx context.Context, uploadID string, state string) error
-	HardDeleteByID(ctx context.Context, uploadID string) error
 	GetExpiredUploads(ctx context.Context, before time.Time) ([]*models.MultipartUpload, error)
 }
 
@@ -56,14 +55,9 @@ func (r *multipartUploadRepository) GetByMediaID(ctx context.Context, mediaID st
 
 // UpdateState updates the state of a multipart upload
 func (r *multipartUploadRepository) UpdateState(ctx context.Context, uploadID string, state string) error {
-	return r.Pool().DB(ctx, true).Model(&models.MultipartUpload{}).
+	return r.Pool().DB(ctx, false).Model(&models.MultipartUpload{}).
 		Where("id = ?", uploadID).
 		Update("upload_state", state).Error
-}
-
-// HardDeleteByID permanently deletes a multipart upload by ID
-func (r *multipartUploadRepository) HardDeleteByID(ctx context.Context, uploadID string) error {
-	return r.Pool().DB(ctx, true).Delete(&models.MultipartUpload{}, "id = ?", uploadID).Error
 }
 
 // GetExpiredUploads retrieves all uploads that have expired before the given time

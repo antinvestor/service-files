@@ -48,7 +48,7 @@ func (r *fileVersionRepository) GetVersion(ctx context.Context, mediaID string, 
 	version := &models.FileVersion{}
 	err := r.Pool().DB(ctx, true).Where("media_id = ? AND version_number = ?", mediaID, versionNumber).First(version).Error
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	return version, nil
 }
