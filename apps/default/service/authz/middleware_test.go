@@ -41,7 +41,7 @@ func (s *AuthzMiddlewareTestSuite) SetupSuite() {
 	s.InitResourceFunc = func(_ context.Context) []definition.TestResource {
 		pg := testpostgres.NewWithOpts("service_authz",
 			definition.WithUserName("ant"),
-			definition.WithPassword("s3cr3t"),
+			definition.WithCredential("s3cr3t"),
 			definition.WithEnableLogging(true))
 		keto := testketo.NewWithOpts(definition.WithDependancies(pg))
 		return []definition.TestResource{pg, keto}
