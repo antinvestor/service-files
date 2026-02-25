@@ -6,7 +6,7 @@ on:
   check_suite:
     types: [completed]
   workflow_run:
-    workflows: ["Run Tests", "golangci-lint"]
+    workflows: ["Run Tests", "Lint"]
     types: [completed]
 
 permissions:
@@ -42,7 +42,7 @@ jobs:
             
             for (const pr of prs) {
               const hasLabel = pr.labels.some(l => l.name === 'auto-merge');
-              if (!hasLabel) continue;
+              if (\!hasLabel) continue;
               
               // Check if all checks passed
               const { data: checks } = await github.rest.checks.listForRef({
@@ -69,3 +69,4 @@ jobs:
                 }
               }
             }
+
