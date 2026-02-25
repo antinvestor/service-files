@@ -1,6 +1,6 @@
 module github.com/antinvestor/service-files
 
-go 1.25.2
+go 1.26
 
 require (
 	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20260219054105-fe125014d75c.1
@@ -27,8 +27,8 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame v1.73.0
-	github.com/pitabwire/util v0.5.0
+	github.com/pitabwire/frame v1.74.0
+	github.com/pitabwire/util v0.6.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/twpayne/go-geom v1.6.1
