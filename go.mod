@@ -34,7 +34,7 @@ require (
 	github.com/twpayne/go-geom v1.6.1
 	gocloud.dev v0.44.0
 	golang.org/x/image v0.36.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/time v0.14.0
