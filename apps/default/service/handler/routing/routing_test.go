@@ -88,21 +88,21 @@ func (suite *RoutingTestSuite) TestGetPathVars() {
 	}{
 		{
 			name:         "download_without_name",
-			path:         "/_matrix/client/v1/media/download/serverA/mediaA",
+			path:         "/v1/media/download/serverA/mediaA",
 			wantServer:   "serverA",
 			wantMediaID:  "mediaA",
 			wantDownload: "",
 		},
 		{
 			name:         "download_with_name",
-			path:         "/_matrix/client/v1/media/download/serverA/mediaA/file.txt",
+			path:         "/v1/media/download/serverA/mediaA/file.txt",
 			wantServer:   "serverA",
 			wantMediaID:  "mediaA",
 			wantDownload: "file.txt",
 		},
 		{
 			name:         "thumbnail_path",
-			path:         "/_matrix/client/v1/media/thumbnail/serverB/mediaB",
+			path:         "/v1/media/thumbnail/serverB/mediaB",
 			wantServer:   "serverB",
 			wantMediaID:  "mediaB",
 			wantDownload: "",
@@ -249,11 +249,11 @@ func (suite *RoutingTestSuite) TestRouter_PathPrefixAndCatchAll() {
 		{
 			name:     "subrouter_route_is_reachable",
 			method:   http.MethodGet,
-			path:     "/_matrix/client/v1/media/config",
+			path:     "/v1/media/config",
 			wantCode: http.StatusOK,
 			wantBody: "ok",
 			setupRoute: func(router *Router) {
-				sub := router.PathPrefix("/_matrix").PathPrefix("/client").PathPrefix("/v1")
+				sub := router.PathPrefix("/v1")
 				sub.Handle("/media/config", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					w.WriteHeader(http.StatusOK)
 					_, _ = w.Write([]byte("ok"))
@@ -290,7 +290,7 @@ func (suite *RoutingTestSuite) TestRouter_PathPrefixAndCatchAll() {
 	}
 }
 
-func (suite *RoutingTestSuite) TestSetupMatrixRoutes() {
+func (suite *RoutingTestSuite) TestSetupMediaRoutes() {
 	testCases := []struct {
 		name       string
 		method     string
@@ -302,14 +302,14 @@ func (suite *RoutingTestSuite) TestSetupMatrixRoutes() {
 		{
 			name:       "config_route_available",
 			method:     http.MethodGet,
-			path:       "/_matrix/client/v1/media/config",
+			path:       "/v1/media/config",
 			claimsSub:  "@owner:example.com",
 			wantStatus: http.StatusOK,
 		},
 		{
 			name:       "upload_requires_auth",
 			method:     http.MethodPost,
-			path:       "/_matrix/client/v1/media/upload?filename=x.txt",
+			path:       "/v1/media/upload?filename=x.txt",
 			body:       "content",
 			wantStatus: http.StatusUnauthorized,
 		},
@@ -331,7 +331,7 @@ func (suite *RoutingTestSuite) TestSetupMatrixRoutes() {
 
 				mediaService := business.NewMediaService(db, storageProvider)
 				authzMiddleware := authz.NewMiddleware(svc.SecurityManager().GetAuthorizer(ctx), db)
-				router := SetupMatrixRoutes(svc, db, storageProvider, mediaService, authzMiddleware)
+				router := SetupMediaRoutes(svc, db, storageProvider, mediaService, authzMiddleware)
 
 				req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
 				if tc.body != "" {
@@ -354,52 +354,6 @@ func (suite *RoutingTestSuite) TestSetupMatrixRoutes() {
 	})
 }
 
-func (suite *RoutingTestSuite) TestServeOpenAPISpec() {
-	testCases := []struct {
-		name       string
-		method     string
-		wantStatus int
-	}{
-		{name: "options", method: http.MethodOptions, wantStatus: http.StatusOK},
-		{name: "missing_file", method: http.MethodGet, wantStatus: http.StatusNotFound},
-	}
-
-	for _, tc := range testCases {
-		suite.T().Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(tc.method, PublicAPISpecPath, nil)
-			rec := httptest.NewRecorder()
-			ServeOpenAPISpec(rec, req)
-			assert.Equal(t, tc.wantStatus, rec.Code)
-		})
-	}
-}
-
-func (suite *RoutingTestSuite) TestSetupApiSpecRoute() {
-	testCases := []struct {
-		name       string
-		method     string
-		path       string
-		wantStatus int
-	}{
-		{name: "options_on_swagger_path", method: http.MethodOptions, path: PublicAPISpecPath, wantStatus: http.StatusOK},
-		{name: "unknown_path_not_found", method: http.MethodGet, path: "/unknown", wantStatus: http.StatusNotFound},
-	}
-
-	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
-		_, svc, _ := suite.CreateService(t, dep)
-		router := SetupApiSpecRoute(svc)
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				req := httptest.NewRequest(tc.method, tc.path, nil)
-				rec := httptest.NewRecorder()
-				router.ServeHTTP(rec, req)
-				assert.Equal(t, tc.wantStatus, rec.Code)
-			})
-		}
-	})
-}
-
 func (suite *RoutingTestSuite) TestMakeDownloadAPI() {
 	testCases := []struct {
 		name           string
@@ -413,7 +367,7 @@ func (suite *RoutingTestSuite) TestMakeDownloadAPI() {
 		{
 			name:           "download_streams_content",
 			mediaID:        "mediaDownloadAuth",
-			path:           "/_matrix/client/v1/media/download/server/mediaDownloadAuth/file.txt",
+			path:           "/v1/media/download/server/mediaDownloadAuth/file.txt",
 			claimsSubject:  "@owner:example.com",
 			expectCode:     http.StatusOK,
 			expectedHeader: "text/plain",
@@ -421,7 +375,7 @@ func (suite *RoutingTestSuite) TestMakeDownloadAPI() {
 		{
 			mediaID:    "mediaDownloadNoAuth",
 			name:       "download_requires_auth",
-			path:       "/_matrix/client/v1/media/download/server/mediaDownloadNoAuth/file.txt",
+			path:       "/v1/media/download/server/mediaDownloadNoAuth/file.txt",
 			expectCode: http.StatusUnauthorized,
 		},
 	}

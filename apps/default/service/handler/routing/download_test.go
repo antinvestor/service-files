@@ -172,7 +172,7 @@ func (suite *DownloadRoutingTestSuite) TestDownload() {
 					require.NoError(t, uploadErr)
 				}
 
-				req := httptest.NewRequest(http.MethodGet, "/_matrix/client/v1/media/download/"+cfg.ServerName+"/"+tc.mediaID, nil)
+				req := httptest.NewRequest(http.MethodGet, "/v1/media/download/"+cfg.ServerName+"/"+tc.mediaID, nil)
 				if tc.subject != "" {
 					claims := &security.AuthenticationClaims{
 						RegisteredClaims: jwt.RegisteredClaims{Subject: tc.subject},

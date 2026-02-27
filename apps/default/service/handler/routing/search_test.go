@@ -84,7 +84,7 @@ func (suite *SearchRoutingTestSuite) TestSearch() {
 
 				req := httptest.NewRequest(
 					http.MethodGet,
-					"/_matrix/client/v1/media/search?query="+tc.query+"&page="+tc.page+"&limit="+tc.limit,
+					"/v1/media/search?query="+tc.query+"&page="+tc.page+"&limit="+tc.limit,
 					nil,
 				)
 				if tc.subject != "" {

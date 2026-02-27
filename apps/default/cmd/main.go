@@ -6,6 +6,9 @@ import (
 	"net/http"
 
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
+	"connectrpc.com/connect"
+	apis "github.com/antinvestor/apis/go/common"
+	filesv1 "github.com/antinvestor/apis/go/files/v1"
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
@@ -16,10 +19,10 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/gorilla/handlers"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/datastore"
+	connectInterceptors "github.com/pitabwire/frame/security/interceptors/connect"
 	framehttp "github.com/pitabwire/frame/security/interceptors/httptor"
 	"github.com/pitabwire/util"
 )
@@ -88,37 +91,22 @@ func main() {
 
 	fileServer := handler.NewFileServer(svc, mediaService, authzMiddleware, metadataStore, storageProvider)
 
-	publicRouter := routing.SetupApiSpecRoute(svc)
-
-	router := routing.SetupMatrixRoutes(svc, metadataStore, storageProvider, mediaService, authzMiddleware)
-
-	_, connectHandler := filesv1connect.NewFilesServiceHandler(fileServer)
-
-	connectAuthHandler := handlers.RecoveryHandler(
-		handlers.PrintRecoveryStack(true))(
-		framehttp.AuthenticationMiddleware(connectHandler, sm.GetAuthenticator(ctx)))
-
-	connectProcedures := []string{
-		filesv1connect.FilesServiceUploadContentProcedure,
-		filesv1connect.FilesServiceCreateContentProcedure,
-		filesv1connect.FilesServiceGetContentProcedure,
-		filesv1connect.FilesServiceGetContentOverrideNameProcedure,
-		filesv1connect.FilesServiceGetContentThumbnailProcedure,
-		filesv1connect.FilesServiceGetUrlPreviewProcedure,
-		filesv1connect.FilesServiceGetConfigProcedure,
-		filesv1connect.FilesServiceSearchMediaProcedure,
-	}
-	for _, procedure := range connectProcedures {
-		publicRouter.Handle(procedure, connectAuthHandler).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
+	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+	if err != nil {
+		log.WithError(err).Fatal("main -- could not create default interceptors")
 	}
 
-	authServiceHandlers := handlers.RecoveryHandler(
-		handlers.PrintRecoveryStack(true))(
-		framehttp.AuthenticationMiddleware(router, sm.GetAuthenticator(ctx)))
+	connectPath, connectHandler := filesv1connect.NewFilesServiceHandler(
+		fileServer, connect.WithInterceptors(defaultInterceptorList...))
 
-	publicRouter.Handle("/*", authServiceHandlers)
+	mediaRouter := routing.SetupMediaRoutes(svc, metadataStore, storageProvider, mediaService, authzMiddleware)
 
-	defaultServer := frame.WithHTTPHandler(publicRouter)
+	mux := http.NewServeMux()
+	mux.Handle(connectPath, connectHandler)
+	mux.Handle("/openapi.yaml", apis.NewOpenAPIHandler(filesv1.ApiSpecFile, nil))
+	mux.Handle("/v1/media/", framehttp.AuthenticationMiddleware(mediaRouter, sm.GetAuthenticator(ctx)))
+
+	defaultServer := frame.WithHTTPHandler(mux)
 	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(
 		events.NewAuditSaveHandler(auditRepo),
 		events.NewMetadataSaveHandler(mediaRepo),

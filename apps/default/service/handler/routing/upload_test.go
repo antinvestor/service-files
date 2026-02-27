@@ -383,7 +383,7 @@ func (suite *UploadRoutingTestSuite) TestUpload() {
 				mediaService := business.NewMediaService(db, storageProvider)
 				authzMiddleware := authz.NewMiddleware(svc.SecurityManager().GetAuthorizer(ctx), db)
 
-				reqURL := "/_matrix/client/v1/media/upload?filename=" + url.QueryEscape(tc.filename)
+				reqURL := "/v1/media/upload?filename=" + url.QueryEscape(tc.filename)
 				req := httptest.NewRequest(http.MethodPost, reqURL, strings.NewReader(tc.body))
 				req.Header.Set("Content-Type", "text/plain")
 				req.ContentLength = int64(len(tc.body))

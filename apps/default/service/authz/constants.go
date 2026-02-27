@@ -34,6 +34,21 @@ func RoleToRelation(role string) string {
 	}
 }
 
+func RelationToRole(relation string) string {
+	switch relation {
+	case RelationOwner:
+		return "owner"
+	case RelationViewer:
+		return "viewer"
+	case RelationEditor:
+		return "editor"
+	case RelationUploader:
+		return "uploader"
+	default:
+		return ""
+	}
+}
+
 func RelationToPermission(relation string) string {
 	switch relation {
 	case RelationOwner:

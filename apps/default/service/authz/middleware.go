@@ -17,6 +17,11 @@ var (
 	ErrNotFound        = errors.New("file not found")
 )
 
+type AccessGrantInfo struct {
+	PrincipalID string
+	Role        string
+}
+
 type Middleware interface {
 	CanViewFile(ctx context.Context, profileID, fileID string) error
 	CanEditFile(ctx context.Context, profileID, fileID string) error
@@ -29,6 +34,7 @@ type Middleware interface {
 	GetFileOwner(ctx context.Context, fileID string) (string, error)
 	ListSharedWith(ctx context.Context, ownerProfileID, fileID string) ([]string, error)
 	ListUserShares(ctx context.Context, profileID string) ([]string, error)
+	ListFileAccessGrants(ctx context.Context, ownerProfileID, fileID string) ([]AccessGrantInfo, error)
 }
 
 type middleware struct {
@@ -234,4 +240,38 @@ func (m *middleware) ListUserShares(ctx context.Context, profileID string) ([]st
 	}
 
 	return files, nil
+}
+
+func (m *middleware) ListFileAccessGrants(ctx context.Context, ownerProfileID, fileID string) ([]AccessGrantInfo, error) {
+	isOwner, err := m.isOwner(ctx, ownerProfileID, fileID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isOwner {
+		return nil, ErrNotOwner
+	}
+
+	relations := []string{RelationViewer, RelationEditor, RelationUploader}
+	var grants []AccessGrantInfo
+
+	for _, rel := range relations {
+		tuples, err := m.authorizer.ListSubjectRelations(ctx,
+			security.SubjectRef{Namespace: NamespaceProfile},
+			NamespaceFile+":"+fileID+":"+rel,
+		)
+		if err != nil {
+			continue
+		}
+
+		role := RelationToRole(rel)
+		for _, t := range tuples {
+			grants = append(grants, AccessGrantInfo{
+				PrincipalID: t.Subject.ID,
+				Role:        role,
+			})
+		}
+	}
+
+	return grants, nil
 }

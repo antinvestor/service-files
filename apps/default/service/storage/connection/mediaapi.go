@@ -58,6 +58,15 @@ func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) 
 	return mediaMetadata.ToApi(), err
 }
 
+// UpdateMediaMetadata updates specific fields on a media record and returns the updated metadata.
+func (d *Database) UpdateMediaMetadata(ctx context.Context, mediaID types.MediaID, updates map[string]any) (*types.MediaMetadata, error) {
+	_, err := d.MediaRepository.BulkUpdate(ctx, []string{string(mediaID)}, updates)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetMediaMetadata(ctx, mediaID)
+}
+
 // GetMediaMetadataByHash returns metadata about media stored on this server.
 // The media could have been uploaded to this server or fetched from another server and cached here.
 // Returns nil metadata if there is no metadata associated with this media.
@@ -345,6 +354,7 @@ func (v *dbFileVersionResult) UploadName() string   { return v.v.UploadName }
 func (v *dbFileVersionResult) ContentType() string  { return v.v.ContentType }
 func (v *dbFileVersionResult) CreatedAt() time.Time { return v.v.CreatedAt }
 func (v *dbFileVersionResult) StoragePath() string  { return v.v.StoragePath }
+func (v *dbFileVersionResult) CreatedBy() string    { return v.v.CreatedBy }
 
 func (d *Database) CreateVersion(ctx context.Context, version interface {
 	GetMediaID() string
@@ -427,6 +437,7 @@ func (d *Database) GetVersionsPaginated(ctx context.Context, mediaID string, lim
 	UploadName() string
 	ContentType() string
 	CreatedAt() time.Time
+	CreatedBy() string
 }, int, error) {
 	versions, count, err := d.FileVersionRepo.GetVersionsPaginated(ctx, mediaID, limit, offset)
 	if err != nil {
@@ -441,6 +452,7 @@ func (d *Database) GetVersionsPaginated(ctx context.Context, mediaID string, lim
 		UploadName() string
 		ContentType() string
 		CreatedAt() time.Time
+		CreatedBy() string
 	}, len(versions))
 	for i, v := range versions {
 		result[i] = &dbFileVersionResult{v: v}

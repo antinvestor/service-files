@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -34,10 +32,7 @@ import (
 )
 
 const (
-	PublicClientPathPrefix = "/_matrix/client/"
-	PublicMediaPathPrefix  = "/_matrix/media/"
-	PublicStaticPath       = "/_matrix/static/"
-	PublicAPISpecPath      = "/swagger.json"
+	PublicMediaPathPrefix = "/v1/media/"
 )
 
 type ctxValueString string
@@ -194,20 +189,10 @@ func (r *Router) extractPathVars(route Route, path string) map[string]string {
 	return vars
 }
 
-// SetupApiSpecRoute sets up the OpenAPI spec route
-func SetupApiSpecRoute(service *frame.Service) *Router {
-	apiSpecRouter := NewRouter()
-
-	// Add OpenAPI spec route at root
-	apiSpecRouter.Handle(PublicAPISpecPath, http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
-
-	return apiSpecRouter
-}
-
-// SetupMatrixRoutes sets up all the Matrix media API routes
+// SetupMediaRoutes sets up all the media API routes
 // Note: This function has high cyclomatic complexity but is necessary for route setup
 // nolint: gocyclo
-func SetupMatrixRoutes(
+func SetupMediaRoutes(
 	service *frame.Service,
 	db storage2.Database,
 	provider storage2.Provider,
@@ -215,20 +200,16 @@ func SetupMatrixRoutes(
 	authzMiddleware authz.Middleware,
 ) *Router {
 	cfg := service.Config().(*config.FilesConfig)
-	matrixPathsRouter := NewRouter()
-
-	// Add OpenAPI spec route at root
-	matrixPathsRouter.Handle(PublicAPISpecPath, http.HandlerFunc(ServeOpenAPISpec)).Methods(http.MethodGet, http.MethodOptions)
+	mediaRouter := NewRouter()
 
 	// Add search endpoint at /media/search
 	searchHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
 			return Search(req, service, db, mediaService)
 		})
-	matrixPathsRouter.Handle("/v1/media/search", searchHandler).Methods(http.MethodGet, http.MethodOptions)
+	mediaRouter.Handle("/v1/media/search", searchHandler).Methods(http.MethodGet, http.MethodOptions)
 
-	ClientRouters := matrixPathsRouter.PathPrefix(PublicClientPathPrefix)
-	v1mux := ClientRouters.PathPrefix("/v1/media/")
+	v1mux := mediaRouter.PathPrefix(PublicMediaPathPrefix)
 
 	uploadHandler := CreateHandler(
 		func(req *http.Request) util.JSONResponse {
@@ -257,56 +238,7 @@ func SetupMatrixRoutes(
 
 	v1mux.Handle("/thumbnail/{serverName}/{mediaId}", makeDownloadAPI("thumbnail_authed_client", cfg, db, provider, mediaService, authzMiddleware)).Methods(http.MethodGet, http.MethodOptions)
 
-	return matrixPathsRouter
-}
-
-// ServeOpenAPISpec serves the OpenAPI specification file
-func ServeOpenAPISpec(w http.ResponseWriter, req *http.Request) {
-	// Set CORS headers
-	util.SetCORSHeaders(w)
-
-	// Handle OPTIONS request
-	if req.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	// Get the current working directory
-	wd, err := os.Getwd()
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		errorResponse, _ := json.Marshal(map[string]interface{}{
-			"errcode": "M_INTERNAL_SERVER_ERROR",
-			"error":   "Internal server error",
-		})
-		_, _ = w.Write(errorResponse)
-		return
-	}
-
-	// Construct path to openapi.yaml
-	openAPIPath := filepath.Join(wd, "api", "openapi.yaml")
-	if _, statErr := os.Stat(openAPIPath); statErr != nil {
-		openAPIPath = filepath.Join(wd, "apps", "default", "api", "openapi.yaml")
-	}
-
-	// Read the OpenAPI spec file
-	content, err := os.ReadFile(openAPIPath)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		errorResponse, _ := json.Marshal(map[string]interface{}{
-			"errcode": "M_NOT_FOUND",
-			"error":   "OpenAPI specification not found",
-		})
-		_, _ = w.Write(errorResponse)
-		return
-	}
-
-	// Set content type and write the YAML content
-	w.Header().Set("Content-Type", "application/x-yaml")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(content)
+	return mediaRouter
 }
 
 func makeDownloadAPI(
@@ -411,13 +343,13 @@ func GetPathVars(req *http.Request) map[string]string {
 	// Extract from URL path components
 	pathParts := strings.Split(strings.Trim(req.URL.Path, "/"), "/")
 
-	// Look for Matrix media patterns
-	if len(pathParts) >= 4 && pathParts[0] == "_matrix" && pathParts[1] == "client" && pathParts[2] == "v1" && pathParts[3] == "media" {
-		if len(pathParts) >= 7 && (pathParts[4] == "download" || pathParts[4] == "thumbnail") {
-			vars["serverName"] = pathParts[5]
-			vars["mediaId"] = pathParts[6]
-			if len(pathParts) >= 8 {
-				vars["downloadName"] = pathParts[7]
+	// Look for media API patterns: /v1/media/{download|thumbnail}/{serverName}/{mediaId}[/{downloadName}]
+	if len(pathParts) >= 2 && pathParts[0] == "v1" && pathParts[1] == "media" {
+		if len(pathParts) >= 5 && (pathParts[2] == "download" || pathParts[2] == "thumbnail") {
+			vars["serverName"] = pathParts[3]
+			vars["mediaId"] = pathParts[4]
+			if len(pathParts) >= 6 {
+				vars["downloadName"] = pathParts[5]
 			}
 		}
 	}
