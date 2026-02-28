@@ -229,9 +229,13 @@ func resolveUploadVisibility(metadata *filesv1.UploadMetadata) bool {
 
 // CreateContent creates a new MXC URI without uploading content
 func (s *FileServer) CreateContent(ctx context.Context, _ *connect.Request[filesv1.CreateContentRequest]) (*connect.Response[filesv1.CreateContentResponse], error) {
-	_, err := authenticatedSubject(ctx)
+	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
 	}
 
 	mediaID := utils.GenerateRandomString(32)
@@ -494,7 +498,7 @@ func (s *FileServer) GetUrlPreview(ctx context.Context, req *connect.Request[fil
 				if mediaID := strings.TrimPrefix(imgParsed.Path, "/"); mediaID != "" {
 					response.OgImageMediaId = mediaID
 				}
-			} else {
+			} else if uploadErr := s.authz.CanUploadFile(ctx, sub); uploadErr == nil {
 				mediaID, fetchErr := s.fetchAndStorePreviewImage(ctx, client, ogImageURL, types.OwnerID(sub), cfg)
 				if fetchErr == nil && mediaID != "" {
 					response.OgImageMediaId = mediaID
@@ -764,6 +768,20 @@ func (s *FileServer) GetUserUsage(ctx context.Context, req *connect.Request[file
 func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[filesv1.GetStorageStatsRequest]) (*connect.Response[filesv1.GetStorageStatsResponse], error) {
 	if _, err := authenticatedSubject(ctx); err != nil {
 		return nil, err
+	}
+
+	claims := security.ClaimsFromContext(ctx)
+	isAdmin := false
+	if claims != nil {
+		for _, role := range claims.GetRoles() {
+			if strings.HasPrefix(role, "system_internal") || role == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+	}
+	if !isAdmin {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin access required"))
 	}
 
 	var totalBytes int64
@@ -1714,11 +1732,11 @@ func (s *FileServer) ListAccess(ctx context.Context, req *connect.Request[filesv
 	if !isValidMediaID(mediaID) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
 	}
-	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
-	}
 	grants, err := s.authz.ListFileAccessGrants(ctx, sub, mediaID)
 	if err != nil {
+		if errors.Is(err, authz.ErrNotOwner) {
+			return nil, connect.NewError(connect.CodePermissionDenied, err)
+		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 

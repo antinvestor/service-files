@@ -2,7 +2,7 @@ package authz
 
 const (
 	NamespaceFile    = "file"
-	NamespaceProfile = "profile"
+	NamespaceProfile = "profile_user"
 )
 
 const (
@@ -12,11 +12,18 @@ const (
 	PermissionDelete = "delete"
 )
 
+// Service permission scopes for internal service-to-service calls.
 const (
-	RelationOwner    = "owner"
-	RelationViewer   = "viewer"
-	RelationEditor   = "editor"
-	RelationUploader = "uploader"
+	ServiceScopeRead  = "read"  // view/download files
+	ServiceScopeWrite = "write" // upload files
+	ServiceScopeAdmin = "admin" // access admin endpoints (e.g. GetStorageStats)
+)
+
+const (
+	RelationOwner    = "granted_owner"
+	RelationViewer   = "granted_viewer"
+	RelationEditor   = "granted_editor"
+	RelationUploader = "granted_uploader"
 )
 
 func RoleToRelation(role string) string {

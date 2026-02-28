@@ -38,15 +38,22 @@ type Middleware interface {
 }
 
 type middleware struct {
-	authorizer security.Authorizer
-	mediaDB    storage.Database
+	authorizer    security.Authorizer
+	mediaDB       storage.Database
+	servicePolicy ServicePolicy
 }
 
 func NewMiddleware(authorizer security.Authorizer, mediaDB storage.Database) Middleware {
 	return &middleware{
-		authorizer: authorizer,
-		mediaDB:    mediaDB,
+		authorizer:    authorizer,
+		mediaDB:       mediaDB,
+		servicePolicy: DefaultServicePolicy(),
 	}
+}
+
+// NewMiddlewareWithPolicy allows injecting a custom service policy (for tests).
+func NewMiddlewareWithPolicy(authorizer security.Authorizer, mediaDB storage.Database, policy ServicePolicy) Middleware {
+	return &middleware{authorizer: authorizer, mediaDB: mediaDB, servicePolicy: policy}
 }
 
 func (m *middleware) CanViewFile(ctx context.Context, profileID, fileID string) error {
@@ -65,6 +72,18 @@ func (m *middleware) CanUploadFile(ctx context.Context, profileID string) error 
 	if profileID == "" {
 		return authorizer.ErrInvalidSubject
 	}
+
+	if svcName := internalServiceName(ctx); svcName != "" {
+		if !m.servicePolicy.HasScope(svcName, ServiceScopeWrite) {
+			return authorizer.NewPermissionDeniedError(
+				security.ObjectRef{Namespace: NamespaceFile},
+				PermissionUpload,
+				security.SubjectRef{Namespace: NamespaceProfile, ID: profileID},
+				"service lacks write scope",
+			)
+		}
+	}
+
 	return nil
 }
 
@@ -78,6 +97,16 @@ func (m *middleware) checkFilePermission(ctx context.Context, profileID, fileID,
 		"file_id":    fileID,
 		"permission": permission,
 	})
+
+	// Check if caller is an authorized internal service
+	if svcName := internalServiceName(ctx); svcName != "" {
+		requiredScope := permissionToScope(permission)
+		if m.servicePolicy.HasScope(svcName, requiredScope) {
+			log.WithField("service_name", svcName).Debug("internal service granted access")
+			return nil
+		}
+		// Unknown service or insufficient scope — fall through to normal auth
+	}
 
 	ownerID, err := m.GetFileOwner(ctx, fileID)
 	if err != nil {

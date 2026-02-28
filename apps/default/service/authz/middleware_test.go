@@ -12,6 +12,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/tests/testketo"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/datastore"
 	"github.com/pitabwire/frame/frametests"
@@ -399,6 +400,107 @@ func (s *AuthzMiddlewareTestSuite) TestOwnershipAndRoleValidationErrors() {
 			err := tc.run(t)
 			require.Error(t, err)
 			require.ErrorIs(t, err, tc.expectErr)
+		})
+	}
+}
+
+func internalServiceClaimsCtx(ctx context.Context, serviceName string) context.Context {
+	authClaims := &security.AuthenticationClaims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: serviceName},
+		ServiceName:      serviceName,
+		Roles:            []string{"system_internal"},
+	}
+	return authClaims.ClaimsToContext(ctx)
+}
+
+func (s *AuthzMiddlewareTestSuite) TestInternalServiceAccess() {
+	ctx := s.T().Context()
+
+	media := &types.MediaMetadata{
+		MediaID:       "media-svc-1",
+		OwnerID:       "owner-svc-1",
+		UploadName:    "file.txt",
+		Base64Hash:    "hashsvc1",
+		FileSizeBytes: 10,
+		ServerName:    "server",
+	}
+	require.NoError(s.T(), s.mediaDB.StoreMediaMetadata(ctx, media))
+
+	cases := []struct {
+		name        string
+		serviceName string
+		checkFn     func(context.Context) error
+		expectError bool
+	}{
+		{
+			name:        "ocr_service_can_view",
+			serviceName: "service_ocr",
+			checkFn: func(svcCtx context.Context) error {
+				return s.middleware.CanViewFile(svcCtx, "service_ocr", string(media.MediaID))
+			},
+			expectError: false,
+		},
+		{
+			name:        "ocr_service_can_upload",
+			serviceName: "service_ocr",
+			checkFn: func(svcCtx context.Context) error {
+				return s.middleware.CanUploadFile(svcCtx, "service_ocr")
+			},
+			expectError: false,
+		},
+		{
+			name:        "property_service_can_view",
+			serviceName: "service_property",
+			checkFn: func(svcCtx context.Context) error {
+				return s.middleware.CanViewFile(svcCtx, "service_property", string(media.MediaID))
+			},
+			expectError: false,
+		},
+		{
+			name:        "property_service_cannot_write",
+			serviceName: "service_property",
+			checkFn: func(svcCtx context.Context) error {
+				return s.middleware.CanUploadFile(svcCtx, "service_property")
+			},
+			expectError: true,
+		},
+		{
+			name:        "unknown_service_denied_view",
+			serviceName: "service_unknown",
+			checkFn: func(svcCtx context.Context) error {
+				return s.middleware.CanViewFile(svcCtx, "service_unknown", string(media.MediaID))
+			},
+			expectError: true,
+		},
+		{
+			name:        "regular_user_unaffected",
+			serviceName: "",
+			checkFn: func(_ context.Context) error {
+				userCtx := ctx
+				authClaims := &security.AuthenticationClaims{
+					RegisteredClaims: jwt.RegisteredClaims{Subject: "regular-user"},
+					Roles:            []string{"user"},
+				}
+				userCtx = authClaims.ClaimsToContext(userCtx)
+				// Regular user is not owner and has no Keto relation — should be denied
+				return s.middleware.CanViewFile(userCtx, "regular-user", string(media.MediaID))
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tc := range cases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			svcCtx := ctx
+			if tc.serviceName != "" {
+				svcCtx = internalServiceClaimsCtx(ctx, tc.serviceName)
+			}
+			err := tc.checkFn(svcCtx)
+			if tc.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

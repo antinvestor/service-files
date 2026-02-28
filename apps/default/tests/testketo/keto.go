@@ -41,31 +41,31 @@ namespaces:
 
 class file implements Namespace {
   related: {
-    owner: profile[]
-    viewer: profile[]
-    editor: profile[]
-    uploader: profile[]
+    granted_owner: profile_user[]
+    granted_viewer: profile_user[]
+    granted_editor: profile_user[]
+    granted_uploader: profile_user[]
   }
 
   permits = {
     view: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject) ||
-      this.related.viewer.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject) ||
+      this.related.granted_viewer.includes(ctx.subject),
 
     edit: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject) ||
-      this.related.editor.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject) ||
+      this.related.granted_editor.includes(ctx.subject),
 
     delete: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     upload: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject) ||
-      this.related.uploader.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject) ||
+      this.related.granted_uploader.includes(ctx.subject),
   }
 }
 
-class profile implements Namespace {}
+class profile_user implements Namespace {}
 `
 )
 

@@ -2,11 +2,13 @@ package routing
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
@@ -22,6 +24,33 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+// denyByDefaultAuthorizer wraps an authorizer and denies all Check requests
+// that would otherwise be permitted by permissive mode (when Keto is unconfigured).
+// Owner checks still pass because they happen before the authorizer is called.
+type denyByDefaultAuthorizer struct {
+	security.Authorizer
+}
+
+func (d *denyByDefaultAuthorizer) Check(_ context.Context, _ security.CheckRequest) (security.CheckResult, error) {
+	return security.CheckResult{
+		Allowed:   false,
+		Reason:    "deny-by-default test authorizer",
+		CheckedAt: time.Now().Unix(),
+	}, nil
+}
+
+func (d *denyByDefaultAuthorizer) BatchCheck(_ context.Context, requests []security.CheckRequest) ([]security.CheckResult, error) {
+	results := make([]security.CheckResult, len(requests))
+	for i := range results {
+		results[i] = security.CheckResult{
+			Allowed:   false,
+			Reason:    "deny-by-default test authorizer",
+			CheckedAt: time.Now().Unix(),
+		}
+	}
+	return results, nil
+}
 
 type DownloadRoutingTestSuite struct {
 	tests.BaseTestSuite
@@ -120,12 +149,12 @@ func (suite *DownloadRoutingTestSuite) TestDownload() {
 			wantCode:    http.StatusUnauthorized,
 		},
 		{
-			name:        "non_owner_currently_allowed",
+			name:        "non_owner_denied",
 			subject:     "@other:example.com",
 			owner:       "@owner:example.com",
 			mediaID:     "downloadMediaB",
 			setupUpload: true,
-			wantCode:    http.StatusOK,
+			wantCode:    http.StatusForbidden,
 		},
 		{
 			name:        "owner_downloads_file",
@@ -154,7 +183,10 @@ func (suite *DownloadRoutingTestSuite) TestDownload() {
 		storageProvider, err := provider.GetStorageProvider(ctx, cfg)
 		require.NoError(t, err)
 		mediaService := business.NewMediaService(db, storageProvider)
-		authzMiddleware := authz.NewMiddleware(svc.SecurityManager().GetAuthorizer(ctx), db)
+		// Use deny-by-default authorizer to prevent permissive mode from masking authz gaps
+		baseAuthorizer := svc.SecurityManager().GetAuthorizer(ctx)
+		denyAuthorizer := &denyByDefaultAuthorizer{Authorizer: baseAuthorizer}
+		authzMiddleware := authz.NewMiddleware(denyAuthorizer, db)
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {

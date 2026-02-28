@@ -1523,6 +1523,15 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUserUsage() {
 	})
 }
 
+func internalServiceClaimsCtx(ctx context.Context, serviceName string) context.Context {
+	authClaims := &security.AuthenticationClaims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: serviceName},
+		ServiceName:      serviceName,
+		Roles:            []string{"system_internal"},
+	}
+	return authClaims.ClaimsToContext(ctx)
+}
+
 func (suite *FileServerTestSuite) Test_FileServer_GetStorageStats() {
 	suite.Run("default", func() {
 		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
@@ -1534,10 +1543,16 @@ func (suite *FileServerTestSuite) Test_FileServer_GetStorageStats() {
 				require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
-			t.Run("returns_zero_when_no_stats", func(t *testing.T) {
+			t.Run("regular_user_denied", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@test-user:example.com")
+				_, err := handler.GetStorageStats(authCtx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				require.Error(t, err)
+				require.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
+			})
 
-				resp, err := handler.GetStorageStats(authCtx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+			t.Run("internal_service_returns_stats", func(t *testing.T) {
+				svcCtx := internalServiceClaimsCtx(ctx, "service_ocr")
+				resp, err := handler.GetStorageStats(svcCtx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
 				require.NoError(t, err)
 				require.Equal(t, int64(0), resp.Msg.TotalBytes)
 				require.Equal(t, int64(0), resp.Msg.TotalFiles)
@@ -2059,6 +2074,15 @@ func (suite *FileServerTestSuite) Test_FileServer_ListAccess() {
 				}))
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+			})
+
+			t.Run("non_owner_denied", func(t *testing.T) {
+				authCtx := claimsCtx(ctx, "@not-owner:example.com")
+				_, err := handler.ListAccess(authCtx, connect.NewRequest(&filesv1.ListAccessRequest{
+					MediaId: "listfile01",
+				}))
+				require.Error(t, err)
+				assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 			})
 
 			t.Run("success", func(t *testing.T) {

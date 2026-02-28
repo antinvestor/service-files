@@ -7,15 +7,19 @@
 // NOTE: Class names are prefixed with "file_" to avoid collisions with other
 // services sharing the same Keto instance. Keto uses the exact class name as
 // the namespace identifier in API calls, so these must match the Go constants
-// (e.g., NamespaceFile = "file", NamespaceProfile = "profile").
+// (e.g., NamespaceFile = "file", NamespaceProfile = "profile_user").
+//
+// IMPORTANT: Direct grant relations are prefixed with "granted_" to avoid
+// name conflicts with permit functions. Keto skips permit evaluation when
+// a relation shares the same name as a permit function.
 
 import { Namespace, Context } from "@ory/keto-namespace-types"
 
-// file_profile namespace represents users/actors in the file system
+// profile_user namespace represents users/actors in the file system
 // This is the subject that performs actions on files
-class file_profile implements Namespace {
+class profile_user implements Namespace {
   related: {
-    self: file_profile[]
+    self: profile_user[]
   }
 }
 
@@ -24,50 +28,50 @@ class file_profile implements Namespace {
 class file implements Namespace {
   related: {
     // Owner has full control over the file
-    owner: file_profile[]
+    granted_owner: profile_user[]
     // Viewers can only read the file
-    viewer: file_profile[]
+    granted_viewer: profile_user[]
     // Editors can modify file metadata (not the file content itself)
-    editor: file_profile[]
+    granted_editor: profile_user[]
     // Uploaders can upload new versions of the file
-    uploader: file_profile[]
+    granted_uploader: profile_user[]
   }
 
   permits = {
     // View/download the file content
     view: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject) ||
-      this.related.viewer.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject) ||
+      this.related.granted_viewer.includes(ctx.subject),
 
     // Edit file metadata (name, description, etc.)
     edit: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject) ||
-      this.related.editor.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject) ||
+      this.related.granted_editor.includes(ctx.subject),
 
     // Delete the file entirely
     delete: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     // Upload a new version of the file
     upload: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject) ||
-      this.related.uploader.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject) ||
+      this.related.granted_uploader.includes(ctx.subject),
 
     // Get storage usage statistics for this file
     stats: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     // Manage sharing - add/remove viewers, editors, uploaders
     share: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     // Update retention policy on the file
-    set_retention: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+    retention_set: (ctx: Context): boolean =>
+      this.related.granted_owner.includes(ctx.subject),
 
     // Lock/unlock file for retention
     lock: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
   }
 }
 
@@ -78,7 +82,7 @@ class file_version implements Namespace {
     // The file this version belongs to
     parent: file[]
     // The profile that created this version
-    creator: file_profile[]
+    creator: profile_user[]
   }
 
   permits = {
@@ -101,7 +105,7 @@ class file_version implements Namespace {
 class file_retention_policy implements Namespace {
   related: {
     // The owner who created this policy
-    owner: file_profile[]
+    granted_owner: profile_user[]
     // Files that have this policy applied
     files: file[]
   }
@@ -109,19 +113,19 @@ class file_retention_policy implements Namespace {
   permits = {
     // View the policy details
     view: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     // Update policy (name, description, retention days)
     update: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     // Delete the policy
     delete: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
 
     // Apply this policy to files
     apply: (ctx: Context): boolean =>
-      this.related.owner.includes(ctx.subject),
+      this.related.granted_owner.includes(ctx.subject),
   }
 }
 
@@ -149,7 +153,7 @@ class file_thumbnail implements Namespace {
 class file_upload implements Namespace {
   related: {
     // The profile initiating the upload
-    uploader: file_profile[]
+    granted_uploader: profile_user[]
     // The file being uploaded (may not exist yet)
     target_file: file[]
   }
@@ -157,25 +161,25 @@ class file_upload implements Namespace {
   permits = {
     // Continue/resume the upload
     write: (ctx: Context): boolean =>
-      this.related.uploader.includes(ctx.subject),
+      this.related.granted_uploader.includes(ctx.subject),
 
     // Complete the upload
     complete: (ctx: Context): boolean =>
-      this.related.uploader.includes(ctx.subject),
+      this.related.granted_uploader.includes(ctx.subject),
 
     // Cancel/abort the upload
     cancel: (ctx: Context): boolean =>
-      this.related.uploader.includes(ctx.subject),
+      this.related.granted_uploader.includes(ctx.subject),
 
     // View upload status
     status: (ctx: Context): boolean =>
-      this.related.uploader.includes(ctx.subject),
+      this.related.granted_uploader.includes(ctx.subject),
   }
 }
 
 // Export namespaces for Keto to use
 export {
-  file_profile,
+  profile_user,
   file,
   file_version,
   file_retention_policy,
