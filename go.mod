@@ -15,19 +15,19 @@ require (
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260219062102-a7f099ddfe12.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260219062102-a7f099ddfe12.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.53.17
-	github.com/antinvestor/apis/go/files v1.53.19
-	github.com/antinvestor/apis/go/partition v1.54.0
-	github.com/antinvestor/apis/go/profile v1.53.18
+	github.com/antinvestor/apis/go/common v1.55.0
+	github.com/antinvestor/apis/go/files v1.55.1
+	github.com/antinvestor/apis/go/partition v1.55.1
+	github.com/antinvestor/apis/go/profile v1.55.1
 	github.com/aws/aws-sdk-go-v2 v1.41.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.3
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame v1.76.5
-	github.com/pitabwire/util v0.6.0
+	github.com/pitabwire/frame v1.76.6
+	github.com/pitabwire/util v0.6.1
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/twpayne/go-geom v1.6.1
@@ -69,11 +69,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.19 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.5 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.6 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.5 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.20 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.19 // indirect
@@ -113,7 +113,7 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.7.0 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.13 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
 	github.com/googleapis/gax-go/v2 v2.17.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -203,7 +203,7 @@ require (
 	google.golang.org/genproto v0.0.0-20260223185530-2f722ef697dc // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260223185530-2f722ef697dc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
-	google.golang.org/grpc v1.79.1 // indirect
+	google.golang.org/grpc v1.79.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.6.0 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
