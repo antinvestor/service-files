@@ -28,6 +28,62 @@ type BaseTestSuite struct {
 	mc *minimock.Controller
 }
 
+// partitionServiceClientCompatMock bridges the gap between the latest
+// generated Connect client and the older mock surface published in apis.
+// Tests in this repo only exercise GetAccess, so the added methods can stay
+// as no-op stubs until the upstream mocks are regenerated.
+type partitionServiceClientCompatMock struct {
+	*partitionv1_mocks.PartitionServiceClientMock
+}
+
+func (m *partitionServiceClientCompatMock) RemoveTenant(context.Context, *connect.Request[partitionpb.RemoveTenantRequest]) (*connect.Response[partitionpb.RemoveTenantResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) RemovePartition(context.Context, *connect.Request[partitionpb.RemovePartitionRequest]) (*connect.Response[partitionpb.RemovePartitionResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) UpdatePartitionRole(context.Context, *connect.Request[partitionpb.UpdatePartitionRoleRequest]) (*connect.Response[partitionpb.UpdatePartitionRoleResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) ListPage(context.Context, *connect.Request[partitionpb.ListPageRequest]) (*connect.ServerStreamForClient[partitionpb.ListPageResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) UpdatePage(context.Context, *connect.Request[partitionpb.UpdatePageRequest]) (*connect.Response[partitionpb.UpdatePageResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) ListAccess(context.Context, *connect.Request[partitionpb.ListAccessRequest]) (*connect.ServerStreamForClient[partitionpb.ListAccessResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) UpdateServiceAccount(context.Context, *connect.Request[partitionpb.UpdateServiceAccountRequest]) (*connect.Response[partitionpb.UpdateServiceAccountResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) CreateClient(context.Context, *connect.Request[partitionpb.CreateClientRequest]) (*connect.Response[partitionpb.CreateClientResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) GetClient(context.Context, *connect.Request[partitionpb.GetClientRequest]) (*connect.Response[partitionpb.GetClientResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) ListClient(context.Context, *connect.Request[partitionpb.ListClientRequest]) (*connect.ServerStreamForClient[partitionpb.ListClientResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) UpdateClient(context.Context, *connect.Request[partitionpb.UpdateClientRequest]) (*connect.Response[partitionpb.UpdateClientResponse], error) {
+	return nil, nil
+}
+
+func (m *partitionServiceClientCompatMock) RemoveClient(context.Context, *connect.Request[partitionpb.RemoveClientRequest]) (*connect.Response[partitionpb.RemoveClientResponse], error) {
+	return nil, nil
+}
+
 func initResources(_ context.Context) []definition.TestResource {
 	pg := testpostgres.NewWithOpts("service_files", definition.WithUserName("ant"), definition.WithCredential("s3cr3t"))
 	resources := []definition.TestResource{pg}
@@ -64,7 +120,9 @@ func (bs *BaseTestSuite) GetProfileCli(_ context.Context) profilev1connect.Profi
 
 func (bs *BaseTestSuite) GetPartitionCli(_ context.Context) partitionv1connect.PartitionServiceClient {
 
-	mockPartitionService := partitionv1_mocks.NewPartitionServiceClientMock(bs.mc)
+	mockPartitionService := &partitionServiceClientCompatMock{
+		PartitionServiceClientMock: partitionv1_mocks.NewPartitionServiceClientMock(bs.mc),
+	}
 
 	mockPartitionService.GetAccessMock.Return(&connect.Response[partitionpb.GetAccessResponse]{
 		Msg: &partitionpb.GetAccessResponse{Data: &partitionpb.AccessObject{
