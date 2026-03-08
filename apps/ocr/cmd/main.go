@@ -20,7 +20,6 @@ import (
 	"github.com/pitabwire/frame/datastore"
 	"github.com/pitabwire/frame/security"
 	connectInterceptors "github.com/pitabwire/frame/security/interceptors/connect"
-	"github.com/pitabwire/frame/security/openid"
 	"github.com/pitabwire/util"
 )
 
@@ -40,7 +39,6 @@ func main() {
 	ctx, svc := frame.NewServiceWithContext(
 		tmpCtx,
 		frame.WithConfig(&cfg),
-		frame.WithRegisterServerOauth2Client(),
 		frame.WithDatastore(),
 	)
 	defer svc.Stop(ctx)
@@ -66,7 +64,7 @@ func main() {
 
 	audienceList := cfg.GetOauth2ServiceAudience()
 
-	filesCli, err := setupFilesClient(ctx, sm, cfg, audienceList)
+	filesCli, err := setupFilesClient(ctx, cfg, audienceList)
 	if err != nil {
 		log.WithError(err).Fatal("could not setup files client")
 	}
@@ -107,17 +105,14 @@ func main() {
 
 func setupFilesClient(
 	ctx context.Context,
-	clHolder security.InternalOauth2ClientHolder,
 	cfg config.OcrConfig,
 	audiences []string,
 ) (filesv1connect.FilesServiceClient, error) {
-	return files.NewClient(ctx,
-		apis.WithEndpoint(cfg.FilesServiceURI),
-		apis.WithTokenEndpoint(cfg.GetOauth2TokenEndpoint()),
-		apis.WithTokenUsername(clHolder.JwtClientID()),
-		apis.WithTokenPassword(clHolder.JwtClientSecret()),
-		apis.WithScopes(openid.ConstSystemScopeInternal),
-		apis.WithAudiences(audiences...))
+	return files.NewClient(ctx, &cfg, apis.ServiceTarget{
+		Endpoint:              cfg.FilesServiceURI,
+		WorkloadAPITargetPath: cfg.FilesServiceWorkloadAPITargetPath,
+		Audiences:             audiences,
+	})
 }
 
 func setupConnectServer(ctx context.Context, sm security.Manager, ocrBusiness business.OCRBusiness) http.Handler {

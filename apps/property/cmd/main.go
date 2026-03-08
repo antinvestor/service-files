@@ -27,7 +27,6 @@ func main() {
 
 	ctx, svc := frame.NewServiceWithContext(tmpCtx,
 		frame.WithConfig(&cfg),
-		frame.WithRegisterServerOauth2Client(),
 		frame.WithDatastore(),
 	)
 

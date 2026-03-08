@@ -49,7 +49,7 @@ func main() {
 		util.Log(ctx).WithError(err).Fatal("invalid encryption configuration")
 	}
 
-	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithRegisterServerOauth2Client(), frame.WithDatastore())
+	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithDatastore())
 
 	log := svc.Log(ctx)
 
