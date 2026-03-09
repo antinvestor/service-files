@@ -15,13 +15,13 @@ require (
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260219062102-a7f099ddfe12.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260219062102-a7f099ddfe12.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.55.6
-	github.com/antinvestor/apis/go/files v1.55.7
-	github.com/antinvestor/apis/go/partition v1.55.7
-	github.com/antinvestor/apis/go/profile v1.55.7
-	github.com/aws/aws-sdk-go-v2 v1.41.3
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
+	github.com/antinvestor/apis/go/common v1.55.8
+	github.com/antinvestor/apis/go/files v1.55.8
+	github.com/antinvestor/apis/go/partition v1.55.8
+	github.com/antinvestor/apis/go/profile v1.55.8
+	github.com/aws/aws-sdk-go-v2 v1.41.2
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.10
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.2
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
@@ -36,7 +36,7 @@ require (
 	golang.org/x/net v0.51.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/time v0.15.0
+	golang.org/x/time v0.14.0
 	google.golang.org/api v0.269.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/h2non/bimg.v1 v1.1.9
