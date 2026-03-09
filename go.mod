@@ -15,10 +15,10 @@ require (
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260219062102-a7f099ddfe12.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260219062102-a7f099ddfe12.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.55.5
-	github.com/antinvestor/apis/go/files v1.55.5
-	github.com/antinvestor/apis/go/partition v1.55.5
-	github.com/antinvestor/apis/go/profile v1.55.5
+	github.com/antinvestor/apis/go/common v1.55.6
+	github.com/antinvestor/apis/go/files v1.55.7
+	github.com/antinvestor/apis/go/partition v1.55.7
+	github.com/antinvestor/apis/go/profile v1.55.7
 	github.com/aws/aws-sdk-go-v2 v1.41.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.10
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.2
