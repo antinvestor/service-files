@@ -15,10 +15,10 @@ require (
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260219062102-a7f099ddfe12.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260219062102-a7f099ddfe12.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.55.11
+	github.com/antinvestor/apis/go/common v1.55.12
 	github.com/antinvestor/apis/go/files v1.55.11
-	github.com/antinvestor/apis/go/partition v1.55.11
-	github.com/antinvestor/apis/go/profile v1.55.11
+	github.com/antinvestor/apis/go/partition v1.55.12
+	github.com/antinvestor/apis/go/profile v1.55.12
 	github.com/aws/aws-sdk-go-v2 v1.41.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
@@ -26,7 +26,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame v1.78.2
+	github.com/pitabwire/frame v1.78.3
 	github.com/pitabwire/util v0.6.1
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.41.0
