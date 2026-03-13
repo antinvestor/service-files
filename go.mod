@@ -21,7 +21,7 @@ require (
 	github.com/antinvestor/apis/go/profile v1.55.13
 	github.com/aws/aws-sdk-go-v2 v1.41.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
@@ -55,7 +55,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.5.3 // indirect
 	cloud.google.com/go/monitoring v1.24.3 // indirect
-	cloud.google.com/go/storage v1.61.2 // indirect
+	cloud.google.com/go/storage v1.61.3 // indirect
 	connectrpc.com/otelconnect v0.9.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
@@ -69,7 +69,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.19 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.6 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.7 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.5 // indirect
