@@ -51,7 +51,7 @@ func TestInternalServiceName(t *testing.T) {
 			claims: &security.AuthenticationClaims{
 				RegisteredClaims: jwt.RegisteredClaims{Subject: "service_ocr"},
 				ServiceName:      "service_ocr",
-				Roles:            []string{"system_internal"},
+				Roles:            []string{"internal"},
 			},
 			want: "service_ocr",
 		},
@@ -68,7 +68,7 @@ func TestInternalServiceName(t *testing.T) {
 			claims: &security.AuthenticationClaims{
 				RegisteredClaims: jwt.RegisteredClaims{Subject: "service_ocr"},
 				ServiceName:      "service_ocr",
-				Roles:            []string{"system_internal", "admin"},
+				Roles:            []string{"internal", "admin"},
 			},
 			want: "",
 		},

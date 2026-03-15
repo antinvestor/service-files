@@ -45,7 +45,7 @@ func internalServiceName(ctx context.Context) string {
 		return ""
 	}
 	roles := claims.GetRoles()
-	if len(roles) == 1 && strings.HasPrefix(roles[0], "system_internal") {
+	if len(roles) == 1 && strings.HasPrefix(roles[0], "internal") {
 		return claims.GetServiceName()
 	}
 	return ""

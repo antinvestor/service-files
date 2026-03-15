@@ -1527,7 +1527,7 @@ func internalServiceClaimsCtx(ctx context.Context, serviceName string) context.C
 	authClaims := &security.AuthenticationClaims{
 		RegisteredClaims: jwt.RegisteredClaims{Subject: serviceName},
 		ServiceName:      serviceName,
-		Roles:            []string{"system_internal"},
+		Roles:            []string{"internal"},
 	}
 	return authClaims.ClaimsToContext(ctx)
 }

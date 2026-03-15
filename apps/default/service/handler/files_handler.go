@@ -774,7 +774,7 @@ func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[fil
 	isAdmin := false
 	if claims != nil {
 		for _, role := range claims.GetRoles() {
-			if strings.HasPrefix(role, "system_internal") || role == "admin" {
+			if strings.HasPrefix(role, "internal") || role == "admin" {
 				isAdmin = true
 				break
 			}
