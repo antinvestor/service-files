@@ -6,6 +6,7 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
+	"github.com/pitabwire/frame/data"
 	"github.com/pitabwire/frame/events"
 	"github.com/pitabwire/util"
 )
@@ -37,8 +38,16 @@ func (fms *MediaMetadataSaveEvent) Execute(ctx context.Context, payload any) err
 		WithField("type", fms.Name())
 	logger.Debug("handling file metadata save event")
 
-	return fms.MediaRepository.Create(ctx, metadata)
-
+	err := fms.MediaRepository.Create(ctx, metadata)
+	if err != nil {
+		if data.ErrorIsDuplicateKey(err) {
+			logger.Debug("record already exists, skipping duplicate")
+			return nil
+		}
+		logger.WithError(err).Error("could not save to db")
+		return err
+	}
+	return nil
 }
 
 func NewMetadataSaveHandler(mediaRepository repository.MediaRepository) events.EventI {

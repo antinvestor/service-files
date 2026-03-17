@@ -6,6 +6,7 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
+	"github.com/pitabwire/frame/data"
 	"github.com/pitabwire/frame/events"
 	"github.com/pitabwire/util"
 )
@@ -37,8 +38,16 @@ func (mas *MediaAuditSaveEvent) Execute(ctx context.Context, payload any) error 
 		WithField("type", mas.Name())
 	logger.Debug("handling file audit save event")
 
-	return mas.AuditRepository.Create(ctx, audit)
-
+	err := mas.AuditRepository.Create(ctx, audit)
+	if err != nil {
+		if data.ErrorIsDuplicateKey(err) {
+			logger.Debug("record already exists, skipping duplicate")
+			return nil
+		}
+		logger.WithError(err).Error("could not save to db")
+		return err
+	}
+	return nil
 }
 
 func NewAuditSaveHandler(auditRepository repository.MediaAuditRepository) events.EventI {
