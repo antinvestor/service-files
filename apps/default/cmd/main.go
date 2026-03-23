@@ -38,7 +38,7 @@ func main() {
 	}
 
 	if cfg.Name() == "" {
-		cfg.ServerName = "service_files"
+		cfg.ServerName = "service_file"
 	}
 
 	if err = cfg.Normalise(); err != nil {

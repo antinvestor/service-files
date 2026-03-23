@@ -1,8 +1,8 @@
 
 ENV_LOCAL_TEST=\
-  TEST_DATABASE_URL=postgres://ant:secret@localhost:5434/service_files?sslmode=disable \
+  TEST_DATABASE_URL=postgres://ant:secret@localhost:5434/service_file?sslmode=disable \
   POSTGRES_PASSWORD=secret \
-  POSTGRES_DB=service_files \
+  POSTGRES_DB=service_file \
   POSTGRES_HOST=localhost \
   POSTGRES_USER=ant
 

@@ -7,10 +7,10 @@ services:
     environment:
       POSTGRES_PASSWORD: s3cr3t
       POSTGRES_USER: ant
-      POSTGRES_DB: service_files
+      POSTGRES_DB: service_file
       RUST_BACKTRACE: "1"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ant -d service_files" ]
+      test: [ "CMD-SHELL", "pg_isready -U ant -d service_file" ]
       interval: 2s
       timeout: 3s
       retries: 3
@@ -25,5 +25,5 @@ services:
     environment:
       - LOG_LEVEL=debug
       - DO_MIGRATION=true
-      - DATABASE_URL=postgres://ant:s3cr3t@files_datastore:5432/service_files?sslmode=disable
+      - DATABASE_URL=postgres://ant:s3cr3t@files_datastore:5432/service_file?sslmode=disable
     restart: on-failure

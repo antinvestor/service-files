@@ -85,7 +85,7 @@ func (m *partitionServiceClientCompatMock) RemoveClient(context.Context, *connec
 }
 
 func initResources(_ context.Context) []definition.TestResource {
-	pg := testpostgres.NewWithOpts("service_files", definition.WithUserName("ant"), definition.WithCredential("s3cr3t"))
+	pg := testpostgres.NewWithOpts("service_file", definition.WithUserName("ant"), definition.WithCredential("s3cr3t"))
 	resources := []definition.TestResource{pg}
 	return resources
 }
