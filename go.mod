@@ -17,10 +17,10 @@ require (
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260219062102-a7f099ddfe12.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260219062102-a7f099ddfe12.1
 	connectrpc.com/connect v1.19.1
-	github.com/antinvestor/apis/go/common v1.55.17
-	github.com/antinvestor/apis/go/files v1.55.17
-	github.com/antinvestor/apis/go/partition v1.55.17
-	github.com/antinvestor/apis/go/profile v1.55.17
+	github.com/antinvestor/apis/go/common v1.55.18
+	github.com/antinvestor/apis/go/files v1.56.0
+	github.com/antinvestor/apis/go/partition v1.56.0
+	github.com/antinvestor/apis/go/profile v1.56.0
 	github.com/aws/aws-sdk-go-v2 v1.41.4
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.12
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
@@ -29,7 +29,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
 	github.com/pitabwire/frame v1.81.1
-	github.com/pitabwire/util v0.6.1
+	github.com/pitabwire/util v0.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.41.0
 	github.com/twpayne/go-geom v1.6.1
@@ -120,7 +120,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.8.0 // indirect
+	github.com/jackc/pgx/v5 v5.9.1 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -144,7 +144,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/ory/keto/proto v0.13.0-alpha.0 // indirect
-	github.com/panjf2000/ants/v2 v2.11.6 // indirect
+	github.com/panjf2000/ants/v2 v2.12.0 // indirect
 	github.com/pitabwire/natspubsub v0.8.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
