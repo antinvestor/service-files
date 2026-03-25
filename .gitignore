@@ -24,3 +24,6 @@ docker.env
 
 apps/default/service/handler/routing/testdata/tmp/
 **/tmp
+
+# Shared Makefile cache
+.tmp/
