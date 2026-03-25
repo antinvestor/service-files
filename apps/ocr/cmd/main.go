@@ -7,8 +7,8 @@ import (
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	"buf.build/gen/go/antinvestor/ocr/connectrpc/go/ocr/v1/ocrv1connect"
 	"connectrpc.com/connect"
-	apis "github.com/antinvestor/apis/go/common"
-	"github.com/antinvestor/apis/go/files"
+	"github.com/antinvestor/common"
+	"github.com/antinvestor/common/connection"
 	"github.com/antinvestor/service-files/apps/ocr/config"
 	"github.com/antinvestor/service-files/apps/ocr/service/business"
 	"github.com/antinvestor/service-files/apps/ocr/service/handlers"
@@ -108,11 +108,11 @@ func setupFilesClient(
 	cfg config.OcrConfig,
 	audiences []string,
 ) (filesv1connect.FilesServiceClient, error) {
-	return files.NewClient(ctx, &cfg, apis.ServiceTarget{
+	return connection.NewServiceClient(ctx, &cfg, common.ServiceTarget{
 		Endpoint:              cfg.FilesServiceURI,
 		WorkloadAPITargetPath: cfg.FilesServiceWorkloadAPITargetPath,
 		Audiences:             audiences,
-	})
+	}, filesv1connect.NewFilesServiceClient)
 }
 
 func setupConnectServer(ctx context.Context, sm security.Manager, ocrBusiness business.OCRBusiness) http.Handler {

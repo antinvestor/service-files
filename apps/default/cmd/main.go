@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
+	_ "embed"
+
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	filespb "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
 	"connectrpc.com/connect"
-	apis "github.com/antinvestor/apis/go/common"
-	"github.com/antinvestor/apis/go/common/permissions"
-	filesv1 "github.com/antinvestor/apis/go/files/v1"
+	"github.com/antinvestor/common"
+	"github.com/antinvestor/common/permissions"
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
@@ -29,6 +30,9 @@ import (
 	framehttp "github.com/pitabwire/frame/security/interceptors/httptor"
 	"github.com/pitabwire/util"
 )
+
+//go:embed files.openapi.yaml
+var apiSpecFile []byte
 
 func main() {
 
@@ -113,7 +117,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle(connectPath, connectHandler)
-	mux.Handle("/openapi.yaml", apis.NewOpenAPIHandler(filesv1.ApiSpecFile, nil))
+	mux.Handle("/openapi.yaml", common.NewOpenAPIHandler(apiSpecFile, nil))
 	mux.Handle("/v1/media/", framehttp.AuthenticationMiddleware(mediaRouter, sm.GetAuthenticator(ctx)))
 
 	defaultServer := frame.WithHTTPHandler(mux)
