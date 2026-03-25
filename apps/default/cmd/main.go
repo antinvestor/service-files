@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
+	filespb "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
 	"connectrpc.com/connect"
 	apis "github.com/antinvestor/apis/go/common"
+	"github.com/antinvestor/apis/go/common/permissions"
 	filesv1 "github.com/antinvestor/apis/go/files/v1"
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
@@ -22,6 +24,7 @@ import (
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/datastore"
+	"github.com/pitabwire/frame/security/authorizer"
 	connectInterceptors "github.com/pitabwire/frame/security/interceptors/connect"
 	framehttp "github.com/pitabwire/frame/security/interceptors/httptor"
 	"github.com/pitabwire/util"
@@ -86,12 +89,19 @@ func main() {
 	mediaService := business.NewMediaService(metadataStore, storageProvider)
 
 	sm := svc.SecurityManager()
-	authorizer := sm.GetAuthorizer(ctx)
-	authzMiddleware := authz.NewMiddleware(authorizer, metadataStore)
+	authzMiddleware := authz.NewMiddleware(sm.GetAuthorizer(ctx), metadataStore)
 
 	fileServer := handler.NewFileServer(svc, mediaService, authzMiddleware, metadataStore, storageProvider)
 
-	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+	auth := sm.GetAuthorizer(ctx)
+
+	// Layer 2: FunctionAccessInterceptor enforces per-RPC permissions from proto annotations.
+	sd := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
+	procMap := permissions.BuildProcedureMap(sd)
+	functionChecker := authorizer.NewFunctionChecker(auth, "service_files")
+	functionAccessInterceptor := connectInterceptors.NewFunctionAccessInterceptor(functionChecker, procMap)
+
+	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), functionAccessInterceptor)
 	if err != nil {
 		log.WithError(err).Fatal("main -- could not create default interceptors")
 	}
