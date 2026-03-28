@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package redirect.v1;
+
+option go_package = "github.com/antinvestor/apis/go/redirect/v1;redirectv1";
+option java_package = "redirectv1";
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// RedirectService manages short links, affiliate tracking, and click telemetry.
+service RedirectService {
+  // CreateLink creates a new redirect link.
+  rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse);
+  // GetLink retrieves link details by ID.
+  rpc GetLink(GetLinkRequest) returns (GetLinkResponse);
+  // UpdateLink modifies an existing link.
+  rpc UpdateLink(UpdateLinkRequest) returns (UpdateLinkResponse);
+  // DeleteLink removes a link.
+  rpc DeleteLink(DeleteLinkRequest) returns (DeleteLinkResponse);
+  // ListLinks searches and lists links with filters.
+  rpc ListLinks(ListLinksRequest) returns (stream ListLinksResponse);
+  // GetLinkStats returns aggregate click statistics for a link.
+  rpc GetLinkStats(GetLinkStatsRequest) returns (GetLinkStatsResponse);
+  // ListClicks returns detailed click events for a link.
+  rpc ListClicks(ListClicksRequest) returns (stream ListClicksResponse);
+}
+
+// LinkState represents the lifecycle state of a link.
+enum LinkState {
+  LINK_STATE_UNSPECIFIED = 0;
+  LINK_STATE_ACTIVE = 1;
+  LINK_STATE_PAUSED = 2;
+  LINK_STATE_EXPIRED = 3;
+  LINK_STATE_DELETED = 4;
+}
+
+// DeviceType classifies the device that made the click.
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;
+  DEVICE_TYPE_DESKTOP = 1;
+  DEVICE_TYPE_MOBILE = 2;
+  DEVICE_TYPE_TABLET = 3;
+  DEVICE_TYPE_BOT = 4;
+}
+
+// Link represents a redirect link with affiliate tracking metadata.
+message Link {
+  string id = 1;
+  // Short slug used in the redirect URL (e.g., /r/{slug}).
+  string slug = 2 [(buf.validate.field).string.min_len = 1];
+  // The destination URL to redirect to.
+  string destination_url = 3 [(buf.validate.field).string.uri = true];
+  // Human-readable title for the link.
+  string title = 4;
+  // ID of the affiliate who owns this link.
+  string affiliate_id = 5;
+
+  // UTM-style campaign tracking fields.
+  string campaign = 6;
+  string source = 7;
+  string medium = 8;
+  string content = 9;
+  string term = 10;
+
+  // Arbitrary tags for flexible categorisation.
+  google.protobuf.Struct tags = 11;
+  // Maximum number of clicks allowed (0 = unlimited).
+  int64 max_clicks = 12;
+  // When the link expires (zero value = never).
+  google.protobuf.Timestamp expires_at = 13;
+
+  LinkState state = 14;
+  // Denormalised total click count for fast reads.
+  int64 click_count = 15;
+  // Unique visitor count (deduplicated by IP within 24h window).
+  int64 unique_click_count = 16;
+
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp modified_at = 18;
+}
+
+// Click records a single redirect event with telemetry.
+message Click {
+  string id = 1;
+  string link_id = 2;
+  string affiliate_id = 3;
+
+  string ip_address = 4;
+  string user_agent = 5;
+  string referer = 6;
+  string accept_language = 7;
+
+  // Derived fields (parsed from user_agent / IP).
+  string country = 8;
+  string city = 9;
+  DeviceType device_type = 10;
+  string browser = 11;
+  string os = 12;
+
+  // The slug that was accessed.
+  string slug = 13;
+
+  google.protobuf.Timestamp created_at = 14;
+}
+
+// LinkStats provides aggregate statistics for a link.
+message LinkStats {
+  string link_id = 1;
+  int64 total_clicks = 2;
+  int64 unique_clicks = 3;
+
+  // Top referrers by click count.
+  map<string, int64> referrers = 4;
+  // Clicks by country code.
+  map<string, int64> countries = 5;
+  // Clicks by device type.
+  map<string, int64> devices = 6;
+  // Clicks by browser name.
+  map<string, int64> browsers = 7;
+  // Clicks by OS name.
+  map<string, int64> operating_systems = 8;
+  // Clicks per day (ISO date string -> count).
+  map<string, int64> clicks_per_day = 9;
+}
+
+// --- Request / Response messages ---
+
+message CreateLinkRequest {
+  Link data = 1;
+}
+message CreateLinkResponse {
+  Link data = 1;
+}
+
+message GetLinkRequest {
+  string id = 1;
+}
+message GetLinkResponse {
+  Link data = 1;
+}
+
+message UpdateLinkRequest {
+  string id = 1;
+  string destination_url = 2;
+  string title = 3;
+  string campaign = 4;
+  string source = 5;
+  string medium = 6;
+  string content = 7;
+  string term = 8;
+  google.protobuf.Struct tags = 9;
+  int64 max_clicks = 10;
+  google.protobuf.Timestamp expires_at = 11;
+  LinkState state = 12;
+}
+message UpdateLinkResponse {
+  Link data = 1;
+}
+
+message DeleteLinkRequest {
+  string id = 1;
+}
+message DeleteLinkResponse {
+  bool success = 1;
+}
+
+message ListLinksRequest {
+  string query = 1;
+  string affiliate_id = 2;
+  string campaign = 3;
+  LinkState state = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+message ListLinksResponse {
+  repeated Link data = 1;
+  string next_page_token = 2;
+}
+
+message GetLinkStatsRequest {
+  string link_id = 1;
+  // Optional date range for the stats window.
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+}
+message GetLinkStatsResponse {
+  LinkStats data = 1;
+}
+
+message ListClicksRequest {
+  string link_id = 1;
+  string affiliate_id = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+message ListClicksResponse {
+  repeated Click data = 1;
+  string next_page_token = 2;
+}
