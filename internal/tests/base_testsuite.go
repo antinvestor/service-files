@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"testing"
 
 	"buf.build/gen/go/antinvestor/partition/connectrpc/go/partition/v1/partitionv1connect"

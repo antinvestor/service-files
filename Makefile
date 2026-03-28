@@ -1,6 +1,6 @@
 # Service-specific configuration
 SERVICE_NAME := files
-APP_DIRS     := apps/default apps/ocr apps/property
+APP_DIRS     := apps/default apps/ocr apps/property apps/redirect
 
 # Bootstrap: download shared Makefile.common if missing
 ifeq (,$(wildcard .tmp/Makefile.common))
