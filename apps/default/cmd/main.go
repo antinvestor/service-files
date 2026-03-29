@@ -102,7 +102,7 @@ func main() {
 	// Layer 2: FunctionAccessInterceptor enforces per-RPC permissions from proto annotations.
 	sd := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
 	procMap := permissions.BuildProcedureMap(sd)
-	functionChecker := authorizer.NewFunctionChecker(auth, "service_files")
+	functionChecker := authorizer.NewFunctionChecker(auth, permissions.ForService(sd).Namespace)
 	functionAccessInterceptor := connectInterceptors.NewFunctionAccessInterceptor(functionChecker, procMap)
 
 	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), functionAccessInterceptor)
