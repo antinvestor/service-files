@@ -1,6 +1,6 @@
 name: antinvestor_api_files
 description: Dart client library for Ant Investor Files Service
-version: 0.1.0
+version: 1.54.0
 repository: https://github.com/antinvestor/service-files
 homepage: https://github.com/antinvestor/service-files
 issue_tracker: https://github.com/antinvestor/service-files/issues
