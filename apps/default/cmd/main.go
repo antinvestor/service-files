@@ -99,13 +99,17 @@ func main() {
 
 	auth := sm.GetAuthorizer(ctx)
 
+	// Layer 1: TenancyAccessChecker verifies caller can access the partition.
+	tenancyAccessChecker := authorizer.NewTenancyAccessChecker(auth, authz.NamespaceTenancyAccess)
+	tenancyAccessInterceptor := connectInterceptors.NewTenancyAccessInterceptor(tenancyAccessChecker)
+
 	// Layer 2: FunctionAccessInterceptor enforces per-RPC permissions from proto annotations.
 	sd := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
 	procMap := permissions.BuildProcedureMap(sd)
 	functionChecker := authorizer.NewFunctionChecker(auth, permissions.ForService(sd).Namespace)
 	functionAccessInterceptor := connectInterceptors.NewFunctionAccessInterceptor(functionChecker, procMap)
 
-	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), functionAccessInterceptor)
+	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), tenancyAccessInterceptor, functionAccessInterceptor)
 	if err != nil {
 		log.WithError(err).Fatal("main -- could not create default interceptors")
 	}
@@ -118,7 +122,9 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle(connectPath, connectHandler)
 	mux.Handle("/openapi.yaml", common.NewOpenAPIHandler(apiSpecFile, nil))
-	mux.Handle("/v1/media/", framehttp.AuthenticationMiddleware(mediaRouter, sm.GetAuthenticator(ctx)))
+	mux.Handle("/v1/media/", framehttp.AuthenticationMiddleware(
+		framehttp.TenancyAccessMiddleware(mediaRouter, tenancyAccessChecker),
+		sm.GetAuthenticator(ctx)))
 
 	defaultServer := frame.WithHTTPHandler(mux)
 	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(

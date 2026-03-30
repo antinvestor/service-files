@@ -1,8 +1,9 @@
 package authz
 
 const (
-	NamespaceFile    = "file"
-	NamespaceProfile = "profile_user"
+	NamespaceFile          = "file"
+	NamespaceProfile       = "profile_user"
+	NamespaceTenancyAccess = "tenancy_access"
 )
 
 const (
