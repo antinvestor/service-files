@@ -24,7 +24,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame v1.92.1
+	github.com/pitabwire/frame v1.92.2
 	github.com/pitabwire/util v0.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.41.0
