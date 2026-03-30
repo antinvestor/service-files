@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"buf.build/gen/go/antinvestor/partition/connectrpc/go/partition/v1/partitionv1connect"
-	partitionpb "buf.build/gen/go/antinvestor/partition/protocolbuffers/go/partition/v1"
 	"buf.build/gen/go/antinvestor/profile/connectrpc/go/profile/v1/profilev1connect"
 	profilepb "buf.build/gen/go/antinvestor/profile/protocolbuffers/go/profile/v1"
+	"buf.build/gen/go/antinvestor/tenancy/connectrpc/go/tenancy/v1/tenancyv1connect"
+	tenancypb "buf.build/gen/go/antinvestor/tenancy/protocolbuffers/go/tenancy/v1"
 	"connectrpc.com/connect"
 	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
@@ -102,17 +102,17 @@ func (s *stubProfileServiceClient) ListRelationship(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-// --- stub PartitionServiceClient ---
+// --- stub TenancyServiceClient ---
 
-type stubPartitionServiceClient struct{}
+type stubTenancyServiceClient struct{}
 
-var _ partitionv1connect.PartitionServiceClient = (*stubPartitionServiceClient)(nil)
+var _ tenancyv1connect.TenancyServiceClient = (*stubTenancyServiceClient)(nil)
 
-func (s *stubPartitionServiceClient) GetAccess(_ context.Context, _ *connect.Request[partitionpb.GetAccessRequest]) (*connect.Response[partitionpb.GetAccessResponse], error) {
-	return connect.NewResponse(&partitionpb.GetAccessResponse{
-		Data: &partitionpb.AccessObject{
+func (s *stubTenancyServiceClient) GetAccess(_ context.Context, _ *connect.Request[tenancypb.GetAccessRequest]) (*connect.Response[tenancypb.GetAccessResponse], error) {
+	return connect.NewResponse(&tenancypb.GetAccessResponse{
+		Data: &tenancypb.AccessObject{
 			Id: "test_access-id",
-			Partition: &partitionpb.PartitionObject{
+			Partition: &tenancypb.PartitionObject{
 				Id:       "test_partition-id",
 				TenantId: "test_tenant-id",
 			},
@@ -120,147 +120,147 @@ func (s *stubPartitionServiceClient) GetAccess(_ context.Context, _ *connect.Req
 	}), nil
 }
 
-func (s *stubPartitionServiceClient) GetTenant(context.Context, *connect.Request[partitionpb.GetTenantRequest]) (*connect.Response[partitionpb.GetTenantResponse], error) {
+func (s *stubTenancyServiceClient) GetTenant(context.Context, *connect.Request[tenancypb.GetTenantRequest]) (*connect.Response[tenancypb.GetTenantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListTenant(context.Context, *connect.Request[partitionpb.ListTenantRequest]) (*connect.ServerStreamForClient[partitionpb.ListTenantResponse], error) {
+func (s *stubTenancyServiceClient) ListTenant(context.Context, *connect.Request[tenancypb.ListTenantRequest]) (*connect.ServerStreamForClient[tenancypb.ListTenantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreateTenant(context.Context, *connect.Request[partitionpb.CreateTenantRequest]) (*connect.Response[partitionpb.CreateTenantResponse], error) {
+func (s *stubTenancyServiceClient) CreateTenant(context.Context, *connect.Request[tenancypb.CreateTenantRequest]) (*connect.Response[tenancypb.CreateTenantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) UpdateTenant(context.Context, *connect.Request[partitionpb.UpdateTenantRequest]) (*connect.Response[partitionpb.UpdateTenantResponse], error) {
+func (s *stubTenancyServiceClient) UpdateTenant(context.Context, *connect.Request[tenancypb.UpdateTenantRequest]) (*connect.Response[tenancypb.UpdateTenantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemoveTenant(context.Context, *connect.Request[partitionpb.RemoveTenantRequest]) (*connect.Response[partitionpb.RemoveTenantResponse], error) {
+func (s *stubTenancyServiceClient) RemoveTenant(context.Context, *connect.Request[tenancypb.RemoveTenantRequest]) (*connect.Response[tenancypb.RemoveTenantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListPartition(context.Context, *connect.Request[partitionpb.ListPartitionRequest]) (*connect.ServerStreamForClient[partitionpb.ListPartitionResponse], error) {
+func (s *stubTenancyServiceClient) ListPartition(context.Context, *connect.Request[tenancypb.ListPartitionRequest]) (*connect.ServerStreamForClient[tenancypb.ListPartitionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreatePartition(context.Context, *connect.Request[partitionpb.CreatePartitionRequest]) (*connect.Response[partitionpb.CreatePartitionResponse], error) {
+func (s *stubTenancyServiceClient) CreatePartition(context.Context, *connect.Request[tenancypb.CreatePartitionRequest]) (*connect.Response[tenancypb.CreatePartitionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) GetPartition(context.Context, *connect.Request[partitionpb.GetPartitionRequest]) (*connect.Response[partitionpb.GetPartitionResponse], error) {
+func (s *stubTenancyServiceClient) GetPartition(context.Context, *connect.Request[tenancypb.GetPartitionRequest]) (*connect.Response[tenancypb.GetPartitionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) GetPartitionParents(context.Context, *connect.Request[partitionpb.GetPartitionParentsRequest]) (*connect.Response[partitionpb.GetPartitionParentsResponse], error) {
+func (s *stubTenancyServiceClient) GetPartitionParents(context.Context, *connect.Request[tenancypb.GetPartitionParentsRequest]) (*connect.Response[tenancypb.GetPartitionParentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemovePartition(context.Context, *connect.Request[partitionpb.RemovePartitionRequest]) (*connect.Response[partitionpb.RemovePartitionResponse], error) {
+func (s *stubTenancyServiceClient) RemovePartition(context.Context, *connect.Request[tenancypb.RemovePartitionRequest]) (*connect.Response[tenancypb.RemovePartitionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) UpdatePartition(context.Context, *connect.Request[partitionpb.UpdatePartitionRequest]) (*connect.Response[partitionpb.UpdatePartitionResponse], error) {
+func (s *stubTenancyServiceClient) UpdatePartition(context.Context, *connect.Request[tenancypb.UpdatePartitionRequest]) (*connect.Response[tenancypb.UpdatePartitionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreatePartitionRole(context.Context, *connect.Request[partitionpb.CreatePartitionRoleRequest]) (*connect.Response[partitionpb.CreatePartitionRoleResponse], error) {
+func (s *stubTenancyServiceClient) CreatePartitionRole(context.Context, *connect.Request[tenancypb.CreatePartitionRoleRequest]) (*connect.Response[tenancypb.CreatePartitionRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListPartitionRole(context.Context, *connect.Request[partitionpb.ListPartitionRoleRequest]) (*connect.ServerStreamForClient[partitionpb.ListPartitionRoleResponse], error) {
+func (s *stubTenancyServiceClient) ListPartitionRole(context.Context, *connect.Request[tenancypb.ListPartitionRoleRequest]) (*connect.ServerStreamForClient[tenancypb.ListPartitionRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) UpdatePartitionRole(context.Context, *connect.Request[partitionpb.UpdatePartitionRoleRequest]) (*connect.Response[partitionpb.UpdatePartitionRoleResponse], error) {
+func (s *stubTenancyServiceClient) UpdatePartitionRole(context.Context, *connect.Request[tenancypb.UpdatePartitionRoleRequest]) (*connect.Response[tenancypb.UpdatePartitionRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemovePartitionRole(context.Context, *connect.Request[partitionpb.RemovePartitionRoleRequest]) (*connect.Response[partitionpb.RemovePartitionRoleResponse], error) {
+func (s *stubTenancyServiceClient) RemovePartitionRole(context.Context, *connect.Request[tenancypb.RemovePartitionRoleRequest]) (*connect.Response[tenancypb.RemovePartitionRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreatePage(context.Context, *connect.Request[partitionpb.CreatePageRequest]) (*connect.Response[partitionpb.CreatePageResponse], error) {
+func (s *stubTenancyServiceClient) CreatePage(context.Context, *connect.Request[tenancypb.CreatePageRequest]) (*connect.Response[tenancypb.CreatePageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListPage(context.Context, *connect.Request[partitionpb.ListPageRequest]) (*connect.ServerStreamForClient[partitionpb.ListPageResponse], error) {
+func (s *stubTenancyServiceClient) ListPage(context.Context, *connect.Request[tenancypb.ListPageRequest]) (*connect.ServerStreamForClient[tenancypb.ListPageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) GetPage(context.Context, *connect.Request[partitionpb.GetPageRequest]) (*connect.Response[partitionpb.GetPageResponse], error) {
+func (s *stubTenancyServiceClient) GetPage(context.Context, *connect.Request[tenancypb.GetPageRequest]) (*connect.Response[tenancypb.GetPageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) UpdatePage(context.Context, *connect.Request[partitionpb.UpdatePageRequest]) (*connect.Response[partitionpb.UpdatePageResponse], error) {
+func (s *stubTenancyServiceClient) UpdatePage(context.Context, *connect.Request[tenancypb.UpdatePageRequest]) (*connect.Response[tenancypb.UpdatePageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemovePage(context.Context, *connect.Request[partitionpb.RemovePageRequest]) (*connect.Response[partitionpb.RemovePageResponse], error) {
+func (s *stubTenancyServiceClient) RemovePage(context.Context, *connect.Request[tenancypb.RemovePageRequest]) (*connect.Response[tenancypb.RemovePageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreateAccess(context.Context, *connect.Request[partitionpb.CreateAccessRequest]) (*connect.Response[partitionpb.CreateAccessResponse], error) {
+func (s *stubTenancyServiceClient) CreateAccess(context.Context, *connect.Request[tenancypb.CreateAccessRequest]) (*connect.Response[tenancypb.CreateAccessResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListAccess(context.Context, *connect.Request[partitionpb.ListAccessRequest]) (*connect.ServerStreamForClient[partitionpb.ListAccessResponse], error) {
+func (s *stubTenancyServiceClient) ListAccess(context.Context, *connect.Request[tenancypb.ListAccessRequest]) (*connect.ServerStreamForClient[tenancypb.ListAccessResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemoveAccess(context.Context, *connect.Request[partitionpb.RemoveAccessRequest]) (*connect.Response[partitionpb.RemoveAccessResponse], error) {
+func (s *stubTenancyServiceClient) RemoveAccess(context.Context, *connect.Request[tenancypb.RemoveAccessRequest]) (*connect.Response[tenancypb.RemoveAccessResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreateAccessRole(context.Context, *connect.Request[partitionpb.CreateAccessRoleRequest]) (*connect.Response[partitionpb.CreateAccessRoleResponse], error) {
+func (s *stubTenancyServiceClient) CreateAccessRole(context.Context, *connect.Request[tenancypb.CreateAccessRoleRequest]) (*connect.Response[tenancypb.CreateAccessRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListAccessRole(context.Context, *connect.Request[partitionpb.ListAccessRoleRequest]) (*connect.ServerStreamForClient[partitionpb.ListAccessRoleResponse], error) {
+func (s *stubTenancyServiceClient) ListAccessRole(context.Context, *connect.Request[tenancypb.ListAccessRoleRequest]) (*connect.ServerStreamForClient[tenancypb.ListAccessRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemoveAccessRole(context.Context, *connect.Request[partitionpb.RemoveAccessRoleRequest]) (*connect.Response[partitionpb.RemoveAccessRoleResponse], error) {
+func (s *stubTenancyServiceClient) RemoveAccessRole(context.Context, *connect.Request[tenancypb.RemoveAccessRoleRequest]) (*connect.Response[tenancypb.RemoveAccessRoleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreateServiceAccount(context.Context, *connect.Request[partitionpb.CreateServiceAccountRequest]) (*connect.Response[partitionpb.CreateServiceAccountResponse], error) {
+func (s *stubTenancyServiceClient) CreateServiceAccount(context.Context, *connect.Request[tenancypb.CreateServiceAccountRequest]) (*connect.Response[tenancypb.CreateServiceAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) GetServiceAccount(context.Context, *connect.Request[partitionpb.GetServiceAccountRequest]) (*connect.Response[partitionpb.GetServiceAccountResponse], error) {
+func (s *stubTenancyServiceClient) GetServiceAccount(context.Context, *connect.Request[tenancypb.GetServiceAccountRequest]) (*connect.Response[tenancypb.GetServiceAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) UpdateServiceAccount(context.Context, *connect.Request[partitionpb.UpdateServiceAccountRequest]) (*connect.Response[partitionpb.UpdateServiceAccountResponse], error) {
+func (s *stubTenancyServiceClient) UpdateServiceAccount(context.Context, *connect.Request[tenancypb.UpdateServiceAccountRequest]) (*connect.Response[tenancypb.UpdateServiceAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListServiceAccount(context.Context, *connect.Request[partitionpb.ListServiceAccountRequest]) (*connect.ServerStreamForClient[partitionpb.ListServiceAccountResponse], error) {
+func (s *stubTenancyServiceClient) ListServiceAccount(context.Context, *connect.Request[tenancypb.ListServiceAccountRequest]) (*connect.ServerStreamForClient[tenancypb.ListServiceAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemoveServiceAccount(context.Context, *connect.Request[partitionpb.RemoveServiceAccountRequest]) (*connect.Response[partitionpb.RemoveServiceAccountResponse], error) {
+func (s *stubTenancyServiceClient) RemoveServiceAccount(context.Context, *connect.Request[tenancypb.RemoveServiceAccountRequest]) (*connect.Response[tenancypb.RemoveServiceAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) CreateClient(context.Context, *connect.Request[partitionpb.CreateClientRequest]) (*connect.Response[partitionpb.CreateClientResponse], error) {
+func (s *stubTenancyServiceClient) CreateClient(context.Context, *connect.Request[tenancypb.CreateClientRequest]) (*connect.Response[tenancypb.CreateClientResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) GetClient(context.Context, *connect.Request[partitionpb.GetClientRequest]) (*connect.Response[partitionpb.GetClientResponse], error) {
+func (s *stubTenancyServiceClient) GetClient(context.Context, *connect.Request[tenancypb.GetClientRequest]) (*connect.Response[tenancypb.GetClientResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) ListClient(context.Context, *connect.Request[partitionpb.ListClientRequest]) (*connect.ServerStreamForClient[partitionpb.ListClientResponse], error) {
+func (s *stubTenancyServiceClient) ListClient(context.Context, *connect.Request[tenancypb.ListClientRequest]) (*connect.ServerStreamForClient[tenancypb.ListClientResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) UpdateClient(context.Context, *connect.Request[partitionpb.UpdateClientRequest]) (*connect.Response[partitionpb.UpdateClientResponse], error) {
+func (s *stubTenancyServiceClient) UpdateClient(context.Context, *connect.Request[tenancypb.UpdateClientRequest]) (*connect.Response[tenancypb.UpdateClientResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
-func (s *stubPartitionServiceClient) RemoveClient(context.Context, *connect.Request[partitionpb.RemoveClientRequest]) (*connect.Response[partitionpb.RemoveClientResponse], error) {
+func (s *stubTenancyServiceClient) RemoveClient(context.Context, *connect.Request[tenancypb.RemoveClientRequest]) (*connect.Response[tenancypb.RemoveClientResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
@@ -285,8 +285,8 @@ func (bs *BaseTestSuite) GetProfileCli(_ context.Context) profilev1connect.Profi
 	return &stubProfileServiceClient{}
 }
 
-func (bs *BaseTestSuite) GetPartitionCli(_ context.Context) partitionv1connect.PartitionServiceClient {
-	return &stubPartitionServiceClient{}
+func (bs *BaseTestSuite) GetTenancyCli(_ context.Context) tenancyv1connect.TenancyServiceClient {
+	return &stubTenancyServiceClient{}
 }
 
 func (bs *BaseTestSuite) TearDownSuite() {
