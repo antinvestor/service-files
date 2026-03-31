@@ -34,8 +34,10 @@ func (mas *MediaAuditSaveEvent) Validate(_ context.Context, payload any) error {
 func (mas *MediaAuditSaveEvent) Execute(ctx context.Context, payload any) error {
 	audit := payload.(*models.MediaAudit)
 
-	logger := util.Log(ctx).WithField("payload", audit).
-		WithField("type", mas.Name())
+	logger := util.Log(ctx).WithFields(map[string]any{
+		"payload": audit,
+		"type":    mas.Name(),
+	})
 	logger.Debug("handling file audit save event")
 
 	err := mas.AuditRepository.Create(ctx, audit)
@@ -44,7 +46,6 @@ func (mas *MediaAuditSaveEvent) Execute(ctx context.Context, payload any) error 
 			logger.Debug("record already exists, skipping duplicate")
 			return nil
 		}
-		logger.WithError(err).Error("could not save to db")
 		return err
 	}
 	return nil

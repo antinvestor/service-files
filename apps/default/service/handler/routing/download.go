@@ -105,7 +105,7 @@ func Download(
 	// Stream the file content
 	_, err = io.Copy(w, result.FileData)
 	if err != nil {
-		util.Log(req.Context()).WithError(err).Error("Failed to stream file content")
+		util.Log(req.Context()).WithError(err).With("media_id", mediaID).Error("failed to stream file content")
 	}
 }
 

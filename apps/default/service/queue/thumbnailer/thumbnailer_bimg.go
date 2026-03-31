@@ -120,9 +120,9 @@ func createThumbnail(
 	encryptionKey string,
 ) error {
 	logger = logger.With(
-		"Width", config.Width,
-		"Height", config.Height,
-		"ResizeMethod", config.ResizeMethod,
+		"width", config.Width,
+		"height", config.Height,
+		"resize_method", config.ResizeMethod,
 	)
 
 	if isLargerThanOriginal(config, img) {
@@ -145,10 +145,10 @@ func createThumbnail(
 		return err
 	}
 	logger.With(
-		"ActualWidth", width,
-		"ActualHeight", height,
-		"processTime", time.Since(start),
-	).Info("Generated thumbnail")
+		"actual_width", width,
+		"actual_height", height,
+		"process_time", time.Since(start),
+	).Debug("generated thumbnail")
 
 	hash, size, err := utils.ComputeHashAndSize(tempThumbnailPath)
 	if err != nil {
@@ -205,14 +205,14 @@ func createThumbnail(
 		return err
 	}
 	if duplicate {
-		logger.WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
+		logger.With("dst", finalPath).Debug("file already stored, discarding duplicate")
 	}
 
 	if err = db.StoreThumbnail(ctx, thumbnailMetadata); err != nil {
 		logger.WithError(err).With(
-			"ActualWidth", width,
-			"ActualHeight", height,
-		).Error("Failed to store thumbnail metadata in database.")
+			"actual_width", width,
+			"actual_height", height,
+		).Error("failed to store thumbnail metadata")
 		return err
 	}
 
@@ -261,7 +261,6 @@ func resize(dst types.Path, inImage *bimg.Image, w, h int, crop bool, logger *ut
 	}
 
 	if err = bimg.Write(string(dst), newImage); err != nil {
-		logger.WithError(err).Error("Failed to resize image")
 		return -1, -1, err
 	}
 

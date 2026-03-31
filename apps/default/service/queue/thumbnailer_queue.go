@@ -48,7 +48,7 @@ func (fq *ThumbnailQueueHandler) Handle(ctx context.Context, _ map[string]string
 		ctx, thumbnailSizes, mediaMetadata, cfg.AbsBasePath, fq.mediaDatabase, fq.provider, logger, cfg.EnvStorageEncryptionPhrase,
 	)
 	if err != nil {
-		logger.WithError(err).Warn("Error generating thumbnails")
+		logger.WithError(err).With("media_id", mediaMetadata.MediaID).Warn("failed to generate thumbnails")
 	}
 
 	return nil

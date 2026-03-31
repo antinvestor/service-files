@@ -326,9 +326,10 @@ func (m *Metrics) Middleware() func(http.Handler) http.Handler {
 			m.RecordRequest(r.Method, r.URL.Path, duration, wrapped.statusCode)
 
 			if duration > 5*time.Second {
-				util.Log(r.Context()).WithField("duration", duration).
-					WithField("path", r.URL.Path).
-					Warn("slow request detected")
+				util.Log(r.Context()).WithFields(map[string]any{
+					"duration": duration,
+					"path":     r.URL.Path,
+				}).Warn("slow request detected")
 			}
 		})
 	}

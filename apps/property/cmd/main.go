@@ -21,7 +21,7 @@ func main() {
 
 	cfg, err := fconfig.LoadWithOIDC[config.PropertyConfig](tmpCtx)
 	if err != nil {
-		slog.Error("main -- could not load config", "error", err)
+		slog.Error("could not load config", "error", err)
 		return
 	}
 
@@ -34,7 +34,7 @@ func main() {
 
 	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
 	if dbPool == nil {
-		slog.Error("main -- database pool is nil")
+		slog.Error("database pool is nil")
 		return
 	}
 
@@ -47,7 +47,7 @@ func main() {
 			models.PropertyType{}, models.Locality{}, models.PropertyState{},
 			models.Property{}, models.Subscription{})
 		if err != nil {
-			slog.Error("main -- could not migrate", "error", err)
+			slog.Error("could not migrate database", "error", err)
 			return
 		}
 		return
@@ -61,7 +61,7 @@ func main() {
 
 	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
 	if err != nil {
-		slog.Error("main -- could not create default interceptors", "error", err)
+		slog.Error("could not create default interceptors", "error", err)
 		return
 	}
 
@@ -72,6 +72,6 @@ func main() {
 
 	err = svc.Run(ctx, "")
 	if err != nil {
-		slog.Error("main -- could not run server", "error", err)
+		slog.Error("could not run server", "error", err)
 	}
 }

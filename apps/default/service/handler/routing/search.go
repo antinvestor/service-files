@@ -97,13 +97,12 @@ func Search(
 		}
 	}
 
-	// Log the search request
-	logger.WithFields(map[string]interface{}{
+	logger.WithFields(map[string]any{
 		"owner_id": ownerID,
 		"query":    queryStr,
 		"page":     page,
 		"limit":    limit,
-	}).Info("Search request")
+	}).Debug("search request")
 
 	// Create business request
 	businessReq := &business.SearchRequest{
@@ -116,7 +115,7 @@ func Search(
 	// Execute business logic
 	result, err := mediaService.SearchMedia(ctx, businessReq)
 	if err != nil {
-		logger.WithError(err).Error("Search failed")
+		logger.WithError(err).With("owner_id", ownerID).Error("search failed")
 		return util.JSONResponse{
 			Code: http.StatusInternalServerError,
 			JSON: map[string]interface{}{

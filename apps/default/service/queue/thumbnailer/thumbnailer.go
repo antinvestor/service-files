@@ -97,7 +97,7 @@ func isThumbnailExists(
 		ctx, mediaMetadata.MediaID, config.Width, config.Height, config.ResizeMethod,
 	)
 	if err != nil {
-		logger.Error("Failed to query database for thumbnail.")
+		logger.WithError(err).With("media_id", mediaMetadata.MediaID).Error("failed to query database for thumbnail")
 		return false, err
 	}
 	if thumbnailMetadata != nil {

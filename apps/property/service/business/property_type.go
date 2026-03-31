@@ -2,7 +2,6 @@ package business
 
 import (
 	"context"
-	"log/slog"
 
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
 	"connectrpc.com/connect"
@@ -58,7 +57,7 @@ func (pt *propertyTypeBusiness) ListPropertyType(ctx context.Context, request *p
 			Data: responses,
 		})
 		if err != nil {
-			slog.Info("ListPropertyType -- unable to send a result", "error", err)
+			return err
 		}
 	}
 

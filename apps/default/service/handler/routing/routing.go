@@ -323,7 +323,7 @@ func CreateHandler(f func(*http.Request) util.JSONResponse) http.Handler {
 			encoder := json.NewEncoder(w)
 			encoder.SetEscapeHTML(false)
 			if err := encoder.Encode(response.JSON); err != nil {
-				util.Log(req.Context()).WithError(err).Error("Failed to write JSON response")
+				util.Log(req.Context()).WithError(err).With("path", req.URL.Path).Error("failed to write JSON response")
 			}
 		}
 	})

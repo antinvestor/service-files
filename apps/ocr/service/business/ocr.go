@@ -2,7 +2,6 @@ package business
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
@@ -16,6 +15,7 @@ import (
 	"github.com/pitabwire/frame"
 	"github.com/pitabwire/frame/queue"
 	"github.com/pitabwire/frame/security"
+	"github.com/pitabwire/util"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -190,7 +190,7 @@ func (ob *ocrBusiness) recognise(ctx context.Context, ocrLog *models.OcrLog) (*m
 	ocrLog.Text, err = ob.recognizer.Recognise(ctx, readFile)
 	if err != nil {
 		ocrLog.Status = int32(commonv1.STATUS_FAILED)
-		fmt.Printf(" recognise -- there was an error recognising text : %v", err)
+		util.Log(ctx).WithError(err).With("file_id", ocrLog.FileID).Warn("failed to recognise text")
 	} else {
 		ocrLog.Status = int32(commonv1.STATUS_SUCCESSFUL)
 	}

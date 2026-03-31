@@ -2,7 +2,6 @@ package business
 
 import (
 	"context"
-	"log/slog"
 
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
 	"connectrpc.com/connect"
@@ -72,7 +71,7 @@ func (s *subscriptionBusiness) ListSubscription(ctx context.Context, request *pr
 			Data: responses,
 		})
 		if err != nil {
-			slog.Info("ListSubscription -- unable to send a result", "error", err)
+			return err
 		}
 	}
 

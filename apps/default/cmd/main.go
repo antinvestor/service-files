@@ -49,7 +49,7 @@ func main() {
 	}
 
 	if err = cfg.Normalise(); err != nil {
-		util.Log(ctx).WithError(err).Fatal("invalid configuration")
+		util.Log(ctx).WithError(err).Fatal("invalid files configuration")
 	}
 
 	if err = validateEncryptionConfig(&cfg); err != nil {
@@ -70,7 +70,7 @@ func main() {
 
 	storageProvider, err := provider.GetStorageProvider(ctx, &cfg)
 	if err != nil {
-		log.WithError(err).Fatal("main -- Could not setup or access storage")
+		log.WithError(err).Fatal("could not setup storage provider")
 	}
 
 	mediaRepo := repository.NewMediaRepository(ctx, dbPool, workManager)
@@ -87,7 +87,7 @@ func main() {
 		repository.NewStorageStatsRepository(ctx, dbPool, workManager),
 	)
 	if err != nil {
-		log.WithError(err).Fatal("main -- failed to setup storage")
+		log.WithError(err).Fatal("failed to setup media database")
 	}
 
 	mediaService := business.NewMediaService(metadataStore, storageProvider)
@@ -111,7 +111,7 @@ func main() {
 
 	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), tenancyAccessInterceptor, functionAccessInterceptor)
 	if err != nil {
-		log.WithError(err).Fatal("main -- could not create default interceptors")
+		log.WithError(err).Fatal("could not create default interceptors")
 	}
 
 	connectPath, connectHandler := filesv1connect.NewFilesServiceHandler(
@@ -141,7 +141,7 @@ func main() {
 
 	err = svc.Run(ctx, "")
 	if err != nil {
-		log.WithError(err).Fatal("main -- Could not run Server : %v", err)
+		log.WithError(err).Fatal("could not run server")
 	}
 
 }
@@ -156,7 +156,7 @@ func handleDatabaseMigration(
 
 		err := repository.Migrate(ctx, dbManager, cfg.GetDatabaseMigrationPath())
 		if err != nil {
-			util.Log(ctx).WithError(err).Fatal("main -- Could not migrate successfully")
+			util.Log(ctx).WithError(err).Fatal("could not migrate database")
 		}
 		return true
 	}

@@ -2,7 +2,6 @@ package business
 
 import (
 	"context"
-	"log/slog"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
@@ -224,7 +223,6 @@ func (pb *propertyBusiness) SearchProperty(ctx context.Context, request *propert
 	for _, property := range propertyList {
 		apiProperty, convErr := pb.ToApi(ctx, &property)
 		if convErr != nil {
-			slog.Info("SearchProperty -- unable to convert a result", "error", convErr)
 			continue
 		}
 		responses = append(responses, apiProperty)

@@ -200,20 +200,20 @@ func (s *mediaService) validateUploadRequest(req *UploadRequest) error {
 // processUpload handles the actual file upload process
 func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*UploadResult, error) {
 	logger := util.Log(ctx).With(
-		"UploadName", req.UploadName,
-		"FileSizeBytes", req.FileSizeBytes,
-		"ContentType", req.ContentType,
+		"upload_name", req.UploadName,
+		"file_size_bytes", req.FileSizeBytes,
+		"content_type", req.ContentType,
 	)
-	logger.Debug("Uploading file")
+	logger.Debug("uploading file")
 
 	// Limit file size if configured
 	reader := req.FileData
 	if req.Config.MaxFileSizeBytes > 0 {
 		if req.Config.MaxFileSizeBytes+1 <= 0 {
 			logger.With(
-				"MaxFileSizeBytes", req.Config.MaxFileSizeBytes,
-				"Default File SizeBytes", config.DefaultMaxFileSizeBytes,
-			).Warn("Configured MaxFileSizeBytes overflows int64")
+				"max_file_size_bytes", req.Config.MaxFileSizeBytes,
+				"default_file_size_bytes", config.DefaultMaxFileSizeBytes,
+			).Warn("configured max file size overflows int64")
 			req.Config.MaxFileSizeBytes = config.DefaultMaxFileSizeBytes
 		}
 		reader = io.LimitReader(reader, int64(req.Config.MaxFileSizeBytes)+1)
@@ -223,8 +223,8 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	hash, bytesWritten, tmpDir, err := utils.WriteTempFile(ctx, reader, req.Config.AbsBasePath)
 	if err != nil {
 		logger.WithError(err).With(
-			"MaxFileSizeBytes", req.Config.MaxFileSizeBytes,
-		).Warn("Error while transferring file")
+			"max_file_size_bytes", req.Config.MaxFileSizeBytes,
+		).Warn("failed to transfer file")
 		return nil, fmt.Errorf("invalid parameter: Failed to upload")
 	}
 
@@ -238,7 +238,6 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	existingMetadata, err := s.db.GetMediaMetadataByHash(ctx, req.OwnerID, hash)
 	if err != nil {
 		utils.RemoveDir(tmpDir, logger)
-		logger.WithError(err).Error("Error querying the database by hash.")
 		return nil, fmt.Errorf("internal server error")
 	}
 
@@ -280,12 +279,13 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 		}
 	}
 
-	logger.WithField("media_id", mediaMetadata.MediaID).With(
-		"Base64Hash", mediaMetadata.Base64Hash,
-		"UploadName", mediaMetadata.UploadName,
-		"FileSizeBytes", mediaMetadata.FileSizeBytes,
-		"ContentType", mediaMetadata.ContentType,
-	).Info("File uploaded")
+	logger.With(
+		"media_id", mediaMetadata.MediaID,
+		"base64_hash", mediaMetadata.Base64Hash,
+		"upload_name", mediaMetadata.UploadName,
+		"file_size_bytes", mediaMetadata.FileSizeBytes,
+		"content_type", mediaMetadata.ContentType,
+	).Info("file uploaded")
 
 	if reusedExistingMetadata {
 		return &UploadResult{
@@ -298,7 +298,6 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 	// Store file and metadata
 	err = s.storeFileAndMetadata(ctx, tmpDir, mediaMetadata, req.Config)
 	if err != nil {
-		logger.WithError(err).Error("Failed to upload file.")
 		return nil, fmt.Errorf("invalid parameter: %s", err.Error())
 	}
 
@@ -522,11 +521,11 @@ func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Pa
 	}
 
 	if duplicate {
-		logger.WithField("dst", finalPath).Info("File was stored previously - discarding duplicate")
+		logger.With("dst", finalPath).Debug("file already stored, discarding duplicate")
 	}
 
 	if err = s.db.StoreMediaMetadata(ctx, mediaMetadata); err != nil {
-		logger.WithError(err).Warn("Failed to store metadata")
+		logger.WithError(err).Warn("failed to store metadata")
 		// Clean up file if it's not a duplicate
 		if !duplicate {
 			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), logger)

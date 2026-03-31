@@ -34,8 +34,10 @@ func (fms *MediaMetadataSaveEvent) Validate(_ context.Context, payload any) erro
 func (fms *MediaMetadataSaveEvent) Execute(ctx context.Context, payload any) error {
 	metadata := payload.(*models.MediaMetadata)
 
-	logger := util.Log(ctx).WithField("payload", metadata).
-		WithField("type", fms.Name())
+	logger := util.Log(ctx).WithFields(map[string]any{
+		"payload": metadata,
+		"type":    fms.Name(),
+	})
 	logger.Debug("handling file metadata save event")
 
 	err := fms.MediaRepository.Create(ctx, metadata)
@@ -44,7 +46,6 @@ func (fms *MediaMetadataSaveEvent) Execute(ctx context.Context, payload any) err
 			logger.Debug("record already exists, skipping duplicate")
 			return nil
 		}
-		logger.WithError(err).Error("could not save to db")
 		return err
 	}
 	return nil
