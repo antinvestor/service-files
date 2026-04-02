@@ -10,7 +10,7 @@ info:
     name: Apache License
     url: https://github.com/antinvestor/apis/blob/master/LICENSE
   version: v1.0.0
-x-service-namespace: service_files
+x-service-namespace: service_file
 x-service-permissions:
   - content_view
   - content_upload
