@@ -1,3 +1,5 @@
+//go:build cgo_tesseract
+
 package business
 
 import (
