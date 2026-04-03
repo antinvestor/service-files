@@ -179,7 +179,7 @@ func createThumbnail(
 	}
 
 	start := time.Now()
-	width, height, err := adjustSize(tempThumbnailPath, img, config.Width, config.Height, config.ResizeMethod == types.Crop, logger)
+	width, height, err := adjustSize(tempThumbnailPath, img, config.Width, config.Height, config.ResizeMethod == types.Crop)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func createThumbnail(
 // adjustSize scales an image to fit within the provided width and height
 // If the source aspect ratio is different to the target dimensions, one edge will be smaller than requested
 // If crop is set to true, the image will be scaled to fill the width and height with any excess being cropped off
-func adjustSize(dst types.Path, img image.Image, w, h int, crop bool, logger *util.LogEntry) (int, int, error) {
+func adjustSize(dst types.Path, img image.Image, w, h int, crop bool) (int, int, error) {
 	var out image.Image
 	var err error
 	if crop {

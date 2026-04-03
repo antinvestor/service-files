@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/property/v1/propertyv1connect"
+	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/v1/propertyv1connect"
 	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/config"
 	"github.com/antinvestor/service-files/apps/property/service/handlers"

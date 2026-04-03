@@ -3,8 +3,8 @@ package handlers
 import (
 	"context"
 
-	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/property/v1/propertyv1connect"
-	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
+	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/v1/propertyv1connect"
+	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
 	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/service/business"
 	"github.com/pitabwire/frame/datastore/pool"

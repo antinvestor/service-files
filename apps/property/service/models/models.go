@@ -4,7 +4,7 @@ import (
 	"time"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
-	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
+	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
 	"github.com/pitabwire/frame/data"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"

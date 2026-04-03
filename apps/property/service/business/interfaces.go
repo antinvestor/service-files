@@ -3,7 +3,7 @@ package business
 import (
 	"context"
 
-	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
+	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
 	"connectrpc.com/connect"
 	"github.com/pitabwire/frame/datastore/pool"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
-	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/property/v1"
+	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
 	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/service/models"
 	"github.com/antinvestor/service-files/apps/property/service/repository"
