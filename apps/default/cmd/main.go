@@ -126,8 +126,11 @@ func main() {
 		framehttp.TenancyAccessMiddleware(mediaRouter, tenancyAccessChecker),
 		sm.GetAuthenticator(ctx)))
 
+	// Register permission manifest for the files service namespace.
+	filesSD := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
+
 	defaultServer := frame.WithHTTPHandler(mux)
-	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(
+	serviceOptions := []frame.Option{defaultServer, frame.WithPermissionRegistration(filesSD), frame.WithRegisterEvents(
 		events.NewAuditSaveHandler(auditRepo),
 		events.NewMetadataSaveHandler(mediaRepo),
 	)}
