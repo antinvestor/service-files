@@ -264,6 +264,18 @@ func (s *stubTenancyServiceClient) RemoveClient(context.Context, *connect.Reques
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
+func (s *stubTenancyServiceClient) ListServiceNamespaces(context.Context, *connect.Request[tenancypb.ListServiceNamespacesRequest]) (*connect.Response[tenancypb.ListServiceNamespacesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
+}
+
+func (s *stubTenancyServiceClient) GrantPermission(context.Context, *connect.Request[tenancypb.GrantPermissionRequest]) (*connect.Response[tenancypb.GrantPermissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
+}
+
+func (s *stubTenancyServiceClient) RevokePermission(context.Context, *connect.Request[tenancypb.RevokePermissionRequest]) (*connect.Response[tenancypb.RevokePermissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
+}
+
 // --- BaseTestSuite ---
 
 type BaseTestSuite struct {
