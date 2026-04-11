@@ -20,7 +20,7 @@
 // file resources (e.g., chat service attaching files to messages) can
 // discover and reuse these namespace definitions.
 //
-// The service-level namespace (service_files) with functional role grants
+// The service-level namespace (service_file) with functional role grants
 // is generated from proto annotations and lives in apps/default/.
 // ---------------------------------------------------------------------------
 
