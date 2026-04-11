@@ -1,0 +1,28 @@
+name: antinvestor_ui_files
+description: >
+  File management UI library for Antinvestor. Upload, browse, access control, versioning.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  antinvestor_ui_core:
+    path: ../../common/ui_core
+  antinvestor_api_files: ^1.54.0
+  antinvestor_api_common: ^1.52.0
+  connectrpc: ^1.0.0
+  flutter_riverpod: ^3.2.1
+  go_router: ^17.1.0
+  protobuf: ^4.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
