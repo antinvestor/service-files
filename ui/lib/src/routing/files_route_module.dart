@@ -1,5 +1,6 @@
 import 'package:antinvestor_api_files/antinvestor_api_files.dart';
 import 'package:antinvestor_ui_core/navigation/nav_items.dart';
+import 'package:antinvestor_ui_core/permissions/permission_manifest.dart';
 import 'package:antinvestor_ui_core/routing/route_module.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -78,30 +79,35 @@ class FilesRouteModule extends RouteModule {
         icon: Icons.folder_outlined,
         activeIcon: Icons.folder,
         route: '/files',
+        requiredPermissions: {'file_view'},
         children: [
           NavItem(
             id: 'files-browser',
             label: 'Browse',
             icon: Icons.grid_view,
             route: '/files',
+            requiredPermissions: {'file_view'},
           ),
           NavItem(
             id: 'files-upload',
             label: 'Upload',
             icon: Icons.upload_file,
             route: '/files/upload',
+            requiredPermissions: {'file_upload'},
           ),
           NavItem(
             id: 'files-storage',
             label: 'Storage',
             icon: Icons.storage,
             route: '/files/storage',
+            requiredPermissions: {'file_view'},
           ),
           NavItem(
             id: 'files-retention',
             label: 'Retention',
             icon: Icons.schedule,
             route: '/files/retention',
+            requiredPermissions: {'file_retention_manage'},
           ),
         ],
       ),
@@ -110,11 +116,48 @@ class FilesRouteModule extends RouteModule {
 
   @override
   Map<String, Set<String>> get routePermissions => {
-        '/files': {'files:read', 'admin'},
-        '/files/upload': {'files:write', 'admin'},
-        '/files/storage': {'files:read', 'admin'},
-        '/files/retention': {'files:write', 'admin'},
-        '/files/:contentId': {'files:read', 'admin'},
-        '/files/:contentId/access': {'files:write', 'admin'},
+        '/files': {'file_view'},
+        '/files/upload': {'file_upload'},
+        '/files/storage': {'file_view'},
+        '/files/retention': {'file_retention_manage'},
+        '/files/:contentId': {'file_view'},
+        '/files/:contentId/access': {'file_access_manage'},
       };
+
+  @override
+  PermissionManifest get permissionManifest => const PermissionManifest(
+        namespace: 'service_files',
+        permissions: [
+          PermissionEntry(
+            key: 'file_view',
+            label: 'View Files',
+            scope: PermissionScope.service,
+          ),
+          PermissionEntry(
+            key: 'file_upload',
+            label: 'Upload Files',
+            scope: PermissionScope.action,
+          ),
+          PermissionEntry(
+            key: 'file_delete',
+            label: 'Delete Files',
+            scope: PermissionScope.action,
+          ),
+          PermissionEntry(
+            key: 'file_access_manage',
+            label: 'Manage File Access',
+            scope: PermissionScope.feature,
+          ),
+          PermissionEntry(
+            key: 'file_version_manage',
+            label: 'Manage File Versions',
+            scope: PermissionScope.feature,
+          ),
+          PermissionEntry(
+            key: 'file_retention_manage',
+            label: 'Manage Retention Policies',
+            scope: PermissionScope.feature,
+          ),
+        ],
+      );
 }
