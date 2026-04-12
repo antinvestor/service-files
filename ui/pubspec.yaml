@@ -1,7 +1,7 @@
 name: antinvestor_ui_files
 description: >
   File management UI library for Antinvestor. Upload, browse, access control, versioning.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/antinvestor/service-files
 homepage: https://github.com/antinvestor/service-files/tree/main/ui
 issue_tracker: https://github.com/antinvestor/service-files/issues
