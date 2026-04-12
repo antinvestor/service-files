@@ -1,5 +1,4 @@
 import 'package:antinvestor_api_files/antinvestor_api_files.dart';
-import 'package:antinvestor_ui_core/api/stream_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'files_transport_provider.dart';
@@ -9,17 +8,16 @@ final listAccessProvider =
     FutureProvider.family<List<AccessGrant>, String>((ref, contentId) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = ListAccessRequest()..mediaId = contentId;
-  final stream = client.listAccess(request);
-  return collectStream<ListAccessResponse, AccessGrant>(
-    stream,
-    extract: (r) => r.data,
-  );
+  final response = await client.listAccess(request);
+  return response.grants;
 });
 
 /// Notifier for access mutations (grant, revoke).
-class AccessNotifier extends StateNotifier<AsyncValue<void>> {
-  AccessNotifier(this._client) : super(const AsyncValue.data(null));
-  final FilesServiceClient _client;
+class AccessNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  FilesServiceClient get _client => ref.read(filesServiceClientProvider);
 
   /// Grant access to a principal.
   Future<void> grantAccess({
@@ -64,7 +62,5 @@ class AccessNotifier extends StateNotifier<AsyncValue<void>> {
 }
 
 final accessNotifierProvider =
-    StateNotifierProvider<AccessNotifier, AsyncValue<void>>((ref) {
-  final client = ref.watch(filesServiceClientProvider);
-  return AccessNotifier(client);
-});
+    NotifierProvider<AccessNotifier, AsyncValue<void>>(
+        AccessNotifier.new);

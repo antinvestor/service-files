@@ -1,5 +1,5 @@
 import 'package:antinvestor_api_files/antinvestor_api_files.dart';
-import 'package:antinvestor_ui_core/api/stream_helpers.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'files_transport_provider.dart';
@@ -10,17 +10,16 @@ final getVersionsProvider =
         (ref, contentId) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = GetVersionsRequest()..mediaId = contentId;
-  final stream = client.getVersions(request);
-  return collectStream<GetVersionsResponse, FileVersion>(
-    stream,
-    extract: (r) => r.data,
-  );
+  final response = await client.getVersions(request);
+  return response.versions;
 });
 
 /// Notifier for version mutations (restore).
-class VersionNotifier extends StateNotifier<AsyncValue<void>> {
-  VersionNotifier(this._client) : super(const AsyncValue.data(null));
-  final FilesServiceClient _client;
+class VersionNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  FilesServiceClient get _client => ref.read(filesServiceClientProvider);
 
   /// Restore a specific version of the content.
   Future<void> restoreVersion({
@@ -31,7 +30,7 @@ class VersionNotifier extends StateNotifier<AsyncValue<void>> {
     try {
       final request = RestoreVersionRequest()
         ..mediaId = mediaId
-        ..versionNumber = versionNumber;
+        ..version = Int64(versionNumber);
       await _client.restoreVersion(request);
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -42,7 +41,5 @@ class VersionNotifier extends StateNotifier<AsyncValue<void>> {
 }
 
 final versionNotifierProvider =
-    StateNotifierProvider<VersionNotifier, AsyncValue<void>>((ref) {
-  final client = ref.watch(filesServiceClientProvider);
-  return VersionNotifier(client);
-});
+    NotifierProvider<VersionNotifier, AsyncValue<void>>(
+        VersionNotifier.new);

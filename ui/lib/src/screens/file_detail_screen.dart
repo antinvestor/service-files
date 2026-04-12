@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../providers/access_providers.dart';
 import '../providers/files_providers.dart';
 import '../providers/version_providers.dart';
-import '../widgets/access_role_badge.dart';
 import '../widgets/file_access_chip.dart';
 import '../widgets/file_preview_card.dart';
 import '../widgets/media_state_badge.dart';
@@ -311,7 +310,7 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
     return ListView.separated(
       padding: const EdgeInsets.all(24),
       itemCount: entries.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = entries[index];
         return Padding(
@@ -564,7 +563,6 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
       await ref.read(contentNotifierProvider.notifier).patchContent(
             mediaId: media.mediaId,
             filename: _filenameController.text.trim(),
-            contentType: _contentTypeController.text.trim(),
           );
       if (mounted) {
         setState(() => _isEditing = false);

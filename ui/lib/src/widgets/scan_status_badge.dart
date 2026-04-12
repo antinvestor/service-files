@@ -13,11 +13,11 @@ class ScanStatusBadge extends StatelessWidget {
     return StatusBadge.fromEnum(
       value: status,
       mapper: (s) => switch (s) {
-        ScanStatus.PENDING => ('Pending', Colors.amber, Icons.hourglass_empty),
-        ScanStatus.CLEAN => ('Clean', Colors.green, Icons.check_circle),
-        ScanStatus.INFECTED =>
+        ScanStatus.SCAN_STATUS_PENDING => ('Pending', Colors.amber, Icons.hourglass_empty),
+        ScanStatus.SCAN_STATUS_CLEAN => ('Clean', Colors.green, Icons.check_circle),
+        ScanStatus.SCAN_STATUS_INFECTED =>
           ('Infected', Colors.red, Icons.warning_amber_rounded),
-        ScanStatus.FAILED => ('Failed', Colors.orange, Icons.error_outline),
+        ScanStatus.SCAN_STATUS_FAILED => ('Failed', Colors.orange, Icons.error_outline),
         _ => ('Unknown', Colors.grey, null),
       },
     );

@@ -102,7 +102,7 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
                       label: 'Principal Type',
                       isRequired: true,
                       child: DropdownButtonFormField<PrincipalType>(
-                        value: _principalType,
+                        initialValue: _principalType,
                         items: const [
                           DropdownMenuItem(
                               value: PrincipalType.PRINCIPAL_TYPE_USER,
@@ -126,7 +126,7 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
                       label: 'Role',
                       isRequired: true,
                       child: DropdownButtonFormField<AccessRole>(
-                        value: _selectedRole,
+                        initialValue: _selectedRole,
                         items: const [
                           DropdownMenuItem(
                               value: AccessRole.ACCESS_ROLE_READER,

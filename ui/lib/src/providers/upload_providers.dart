@@ -52,9 +52,9 @@ class UploadState {
 ///
 /// The actual byte upload happens outside of gRPC -- callers should
 /// HTTP PUT the file data to [UploadState.contentUri].
-class UploadNotifier extends StateNotifier<UploadState> {
-  UploadNotifier(this._client) : super(const UploadState());
-  final FilesServiceClient _client;
+class UploadNotifier extends Notifier<UploadState> {
+  @override
+  UploadState build() => const UploadState();
 
   bool _cancelled = false;
 
@@ -67,6 +67,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
     required String contentType,
     Map<String, String>? labels,
   }) async {
+    final client = ref.read(filesServiceClientProvider);
     _cancelled = false;
     state = UploadState(filename: filename, isUploading: true);
 
@@ -83,7 +84,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
         return;
       }
 
-      final response = await _client.createContent(request);
+      final response = await client.createContent(request);
 
       if (_cancelled) {
         state = state.copyWith(isUploading: false, error: 'Upload cancelled');
@@ -119,7 +120,5 @@ class UploadNotifier extends StateNotifier<UploadState> {
 }
 
 final uploadNotifierProvider =
-    StateNotifierProvider<UploadNotifier, UploadState>((ref) {
-  final client = ref.watch(filesServiceClientProvider);
-  return UploadNotifier(client);
-});
+    NotifierProvider<UploadNotifier, UploadState>(
+        UploadNotifier.new);

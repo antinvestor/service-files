@@ -2,7 +2,7 @@
 ///
 /// Provides embeddable screens, widgets, and Riverpod providers for uploading,
 /// browsing, access control, versioning, and retention management.
-library antinvestor_ui_files;
+library;
 
 // Providers
 export 'src/providers/files_transport_provider.dart';

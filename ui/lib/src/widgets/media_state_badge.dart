@@ -13,11 +13,11 @@ class MediaStateBadge extends StatelessWidget {
     return StatusBadge.fromEnum(
       value: state,
       mapper: (s) => switch (s) {
-        MediaState.CREATING => ('Creating', Colors.blue, null),
-        MediaState.AVAILABLE => ('Available', Colors.green, null),
-        MediaState.ARCHIVED => ('Archived', Colors.grey, null),
-        MediaState.DELETED => ('Deleted', Colors.red, null),
-        MediaState.FAILED => ('Failed', Colors.orange, null),
+        MediaState.MEDIA_STATE_CREATING => ('Creating', Colors.blue, null),
+        MediaState.MEDIA_STATE_AVAILABLE => ('Available', Colors.green, null),
+        MediaState.MEDIA_STATE_ARCHIVED => ('Archived', Colors.grey, null),
+        MediaState.MEDIA_STATE_DELETED => ('Deleted', Colors.red, null),
+        MediaState.MEDIA_STATE_FAILED => ('Failed', Colors.orange, null),
         _ => ('Unknown', Colors.grey, null),
       },
     );

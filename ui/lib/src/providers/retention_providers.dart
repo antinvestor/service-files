@@ -1,5 +1,4 @@
 import 'package:antinvestor_api_files/antinvestor_api_files.dart';
-import 'package:antinvestor_ui_core/api/stream_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'files_transport_provider.dart';
@@ -10,7 +9,7 @@ final getRetentionPolicyProvider =
   final client = ref.watch(filesServiceClientProvider);
   final request = GetRetentionPolicyRequest()..mediaId = mediaId;
   final response = await client.getRetentionPolicy(request);
-  return response.data;
+  return response.policy;
 });
 
 /// List all retention policies.
@@ -18,30 +17,27 @@ final listRetentionPoliciesProvider =
     FutureProvider<List<RetentionPolicy>>((ref) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = ListRetentionPoliciesRequest();
-  final stream = client.listRetentionPolicies(request);
-  return collectStream<ListRetentionPoliciesResponse, RetentionPolicy>(
-    stream,
-    extract: (r) => r.data,
-  );
+  final response = await client.listRetentionPolicies(request);
+  return response.policies;
 });
 
 /// Notifier for retention policy mutations (set).
-class RetentionNotifier extends StateNotifier<AsyncValue<void>> {
-  RetentionNotifier(this._client) : super(const AsyncValue.data(null));
-  final FilesServiceClient _client;
+class RetentionNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  FilesServiceClient get _client => ref.read(filesServiceClientProvider);
 
   /// Set a retention policy for a content item.
   Future<void> setRetentionPolicy({
     required String mediaId,
-    required RetentionMode mode,
-    required String duration,
+    required String policyId,
   }) async {
     state = const AsyncValue.loading();
     try {
       final request = SetRetentionPolicyRequest()
         ..mediaId = mediaId
-        ..mode = mode
-        ..duration = duration;
+        ..policyId = policyId;
       await _client.setRetentionPolicy(request);
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -52,7 +48,5 @@ class RetentionNotifier extends StateNotifier<AsyncValue<void>> {
 }
 
 final retentionNotifierProvider =
-    StateNotifierProvider<RetentionNotifier, AsyncValue<void>>((ref) {
-  final client = ref.watch(filesServiceClientProvider);
-  return RetentionNotifier(client);
-});
+    NotifierProvider<RetentionNotifier, AsyncValue<void>>(
+        RetentionNotifier.new);

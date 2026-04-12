@@ -37,7 +37,7 @@ class StorageDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDashboard(ThemeData theme, StorageStatsResponse stats) {
+  Widget _buildDashboard(ThemeData theme, GetStorageStatsResponse stats) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -64,9 +64,9 @@ class StorageDashboardScreen extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: StorageUsageBar(
-                usedBytes: stats.usedBytes.toInt(),
+                usedBytes: stats.totalBytes.toInt(),
                 totalBytes: stats.totalBytes.toInt(),
-                label: 'Overall Storage Usage',
+                label: 'Total Storage',
               ),
             ),
           ),
@@ -92,7 +92,7 @@ class StorageDashboardScreen extends ConsumerWidget {
                   iconColor: Colors.teal,
                   label: 'Total Size',
                   value: FilePreviewCard.formatFileSize(
-                      stats.usedBytes.toInt()),
+                      stats.totalBytes.toInt()),
                 ),
               ),
             ],
@@ -103,81 +103,16 @@ class StorageDashboardScreen extends ConsumerWidget {
               Expanded(
                 child: _StatCard(
                   theme: theme,
-                  icon: Icons.check_circle,
+                  icon: Icons.people,
                   iconColor: Colors.green,
-                  label: 'Available',
-                  value: '${stats.availableFiles}',
+                  label: 'Total Users',
+                  value: '${stats.totalUsers}',
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  theme: theme,
-                  icon: Icons.archive,
-                  iconColor: Colors.grey,
-                  label: 'Archived',
-                  value: '${stats.archivedFiles}',
-                ),
-              ),
+              const Expanded(child: SizedBox.shrink()),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // Per-type breakdown
-          Text(
-            'Breakdown by Type',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          ...stats.typeBreakdown.entries.map((entry) {
-            final contentType = entry.key;
-            final bytes = entry.value.toInt();
-            final icon = FilePreviewCard.iconForContentType(contentType);
-            final color = FilePreviewCard.colorForContentType(
-                contentType, theme.colorScheme);
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: color.withAlpha(25),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(icon, color: color, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          contentType,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        FilePreviewCard.formatFileSize(bytes),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
         ],
       ),
     );

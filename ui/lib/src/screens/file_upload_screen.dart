@@ -20,7 +20,7 @@ class _FileUploadScreenState extends ConsumerState<FileUploadScreen> {
   final _filenameController = TextEditingController();
   final _contentTypeController = TextEditingController(text: 'application/octet-stream');
 
-  bool _fileSelected = false;
+  final bool _fileSelected = false;
   String? _selectedFileName;
 
   @override

@@ -36,7 +36,7 @@ class FileAttachmentChip extends ConsumerWidget {
     return metaAsync.when(
       data: (meta) {
         final filename = meta.filename.isNotEmpty ? meta.filename : 'file';
-        final sizeLabel = _formatSize(meta.sizeBytes.toInt());
+        final sizeLabel = _formatSize(meta.fileSizeBytes.toInt());
         final contentType = meta.contentType.toLowerCase();
         final icon = FileThumbnailWidget.iconForContentType(contentType);
         final color = FileThumbnailWidget.colorForContentType(contentType);
@@ -56,7 +56,7 @@ class FileAttachmentChip extends ConsumerWidget {
         label: _truncateId(contentId),
         subtitle: null,
       ),
-      error: (_, __) => _buildChip(
+      error: (_, _) => _buildChip(
         theme,
         icon: Icons.error_outline,
         color: theme.colorScheme.error,

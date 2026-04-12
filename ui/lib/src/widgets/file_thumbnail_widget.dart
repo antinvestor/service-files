@@ -36,7 +36,7 @@ class FileThumbnailWidget extends ConsumerWidget {
     return metaAsync.when(
       data: (meta) => _buildThumbnail(theme, meta),
       loading: () => _buildPlaceholder(theme, isLoading: true),
-      error: (_, __) => _buildPlaceholder(theme, isError: true),
+      error: (_, _) => _buildPlaceholder(theme, isError: true),
     );
   }
 

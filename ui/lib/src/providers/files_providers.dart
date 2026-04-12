@@ -1,5 +1,4 @@
 import 'package:antinvestor_api_files/antinvestor_api_files.dart';
-import 'package:antinvestor_ui_core/api/stream_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'files_transport_provider.dart';
@@ -34,11 +33,8 @@ final searchMediaProvider =
   if (params.state != null) {
     request.state = params.state!;
   }
-  final stream = client.searchMedia(request);
-  return collectStream<SearchMediaResponse, MediaMetadata>(
-    stream,
-    extract: (r) => r.data,
-  );
+  final response = await client.searchMedia(request);
+  return response.results;
 });
 
 /// Get content metadata by ID.
@@ -47,7 +43,7 @@ final getContentProvider =
   final client = ref.watch(filesServiceClientProvider);
   final request = GetContentRequest()..mediaId = contentId;
   final response = await client.getContent(request);
-  return response.data;
+  return response.metadata;
 });
 
 /// Head content (metadata without body) by ID.
@@ -56,29 +52,31 @@ final headContentProvider =
   final client = ref.watch(filesServiceClientProvider);
   final request = HeadContentRequest()..mediaId = contentId;
   final response = await client.headContent(request);
-  return response.data;
+  return response.metadata;
 });
 
 /// Get storage stats.
 final getStorageStatsProvider =
-    FutureProvider<StorageStatsResponse>((ref) async {
+    FutureProvider<GetStorageStatsResponse>((ref) async {
   final client = ref.watch(filesServiceClientProvider);
-  final request = StorageStatsRequest();
+  final request = GetStorageStatsRequest();
   return client.getStorageStats(request);
 });
 
 /// Get user usage stats.
 final getUserUsageProvider =
-    FutureProvider.family<UserUsageResponse, String>((ref, userId) async {
+    FutureProvider.family<GetUserUsageResponse, String>((ref, userId) async {
   final client = ref.watch(filesServiceClientProvider);
-  final request = UserUsageRequest()..userId = userId;
+  final request = GetUserUsageRequest()..userId = userId;
   return client.getUserUsage(request);
 });
 
 /// Notifier for content mutations (delete, patch).
-class ContentNotifier extends StateNotifier<AsyncValue<void>> {
-  ContentNotifier(this._client) : super(const AsyncValue.data(null));
-  final FilesServiceClient _client;
+class ContentNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  FilesServiceClient get _client => ref.read(filesServiceClientProvider);
 
   Future<void> deleteContent(String mediaId) async {
     state = const AsyncValue.loading();
@@ -95,15 +93,13 @@ class ContentNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> patchContent({
     required String mediaId,
     String? filename,
-    String? contentType,
     Map<String, String>? labels,
   }) async {
     state = const AsyncValue.loading();
     try {
       final request = PatchContentRequest()..mediaId = mediaId;
       if (filename != null) request.filename = filename;
-      if (contentType != null) request.contentType = contentType;
-      if (labels != null) request.labels.addAll(labels);
+      if (labels != null) request.setLabels.addAll(labels);
       await _client.patchContent(request);
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -114,7 +110,5 @@ class ContentNotifier extends StateNotifier<AsyncValue<void>> {
 }
 
 final contentNotifierProvider =
-    StateNotifierProvider<ContentNotifier, AsyncValue<void>>((ref) {
-  final client = ref.watch(filesServiceClientProvider);
-  return ContentNotifier(client);
-});
+    NotifierProvider<ContentNotifier, AsyncValue<void>>(
+        ContentNotifier.new);

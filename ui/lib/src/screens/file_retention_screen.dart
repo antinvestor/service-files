@@ -18,13 +18,12 @@ class FileRetentionScreen extends ConsumerStatefulWidget {
 class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
   bool _showForm = false;
   final _mediaIdController = TextEditingController();
-  final _durationController = TextEditingController(text: '30d');
-  RetentionMode _selectedMode = RetentionMode.DELETE;
+  final _policyIdController = TextEditingController();
 
   @override
   void dispose() {
     _mediaIdController.dispose();
-    _durationController.dispose();
+    _policyIdController.dispose();
     super.dispose();
   }
 
@@ -58,7 +57,7 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                   _showForm ? Icons.close : Icons.add,
                   size: 18,
                 ),
-                label: Text(_showForm ? 'Cancel' : 'New Policy'),
+                label: Text(_showForm ? 'Cancel' : 'Apply Policy'),
               ),
             ],
           ),
@@ -75,7 +74,7 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Create Retention Policy',
+                      'Apply Retention Policy',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: theme.colorScheme.primary,
@@ -94,36 +93,27 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                       ),
                     ),
                     FormFieldCard(
-                      label: 'Mode',
+                      label: 'Policy ID',
                       isRequired: true,
-                      description: 'Action to take when the retention period expires.',
-                      child: DropdownButtonFormField<RetentionMode>(
-                        value: _selectedMode,
-                        items: const [
-                          DropdownMenuItem(
-                            value: RetentionMode.DELETE,
-                            child: Text('Delete'),
-                          ),
-                          DropdownMenuItem(
-                            value: RetentionMode.ARCHIVE,
-                            child: Text('Archive'),
-                          ),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setState(() => _selectedMode = v);
-                        },
-                      ),
-                    ),
-                    FormFieldCard(
-                      label: 'Duration',
-                      isRequired: true,
-                      description:
-                          'Retention period (e.g. 30d, 90d, 1y, 365d).',
-                      child: TextField(
-                        controller: _durationController,
-                        decoration: const InputDecoration(
-                          hintText: 'e.g. 30d',
+                      description: 'The retention policy ID to apply.',
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _policyIdController.text.isEmpty
+                            ? null
+                            : _policyIdController.text,
+                        items: asyncPolicies.whenOrNull(
+                          data: (policies) => policies
+                              .map((p) => DropdownMenuItem(
+                                    value: p.policyId,
+                                    child: Text(
+                                        '${p.name} (${p.retentionDays}d)'),
+                                  ))
+                              .toList(),
                         ),
+                        onChanged: (v) {
+                          if (v != null) {
+                            _policyIdController.text = v;
+                          }
+                        },
                       ),
                     ),
                     Row(
@@ -135,8 +125,8 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                         ),
                         const SizedBox(width: 12),
                         FilledButton(
-                          onPressed: _createPolicy,
-                          child: const Text('Create'),
+                          onPressed: _applyPolicy,
+                          child: const Text('Apply'),
                         ),
                       ],
                     ),
@@ -193,7 +183,7 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 itemCount: policies.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final policy = policies[index];
                   return _RetentionPolicyCard(policy: policy);
@@ -206,10 +196,10 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
     );
   }
 
-  Future<void> _createPolicy() async {
+  Future<void> _applyPolicy() async {
     final mediaId = _mediaIdController.text.trim();
-    final duration = _durationController.text.trim();
-    if (mediaId.isEmpty || duration.isEmpty) {
+    final policyId = _policyIdController.text.trim();
+    if (mediaId.isEmpty || policyId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All fields are required')),
       );
@@ -219,15 +209,15 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
     try {
       await ref.read(retentionNotifierProvider.notifier).setRetentionPolicy(
             mediaId: mediaId,
-            mode: _selectedMode,
-            duration: duration,
+            policyId: policyId,
           );
       if (mounted) {
         _mediaIdController.clear();
+        _policyIdController.clear();
         setState(() => _showForm = false);
         ref.invalidate(listRetentionPoliciesProvider);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Retention policy created')),
+          const SnackBar(content: Text('Retention policy applied')),
         );
       }
     } catch (e) {
@@ -248,7 +238,7 @@ class _RetentionPolicyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDelete = policy.mode == RetentionMode.DELETE;
+    final isDelete = policy.mode == RetentionPolicy_Mode.MODE_DELETE;
 
     return Card(
       child: Padding(
@@ -274,7 +264,7 @@ class _RetentionPolicyCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Media: ${policy.mediaId}',
+                    policy.name.isNotEmpty ? policy.name : policy.policyId,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -302,7 +292,7 @@ class _RetentionPolicyCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Duration: ${policy.duration}',
+                        'Retention: ${policy.retentionDays} days',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

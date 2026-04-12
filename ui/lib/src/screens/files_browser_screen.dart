@@ -1,6 +1,5 @@
 import 'package:antinvestor_api_files/antinvestor_api_files.dart';
 import 'package:antinvestor_ui_core/antinvestor_ui_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,9 +43,9 @@ class _FilesBrowserScreenState extends ConsumerState<FilesBrowserScreen> {
               data: (s) => Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
                 child: StorageUsageBar(
-                  usedBytes: s.usedBytes.toInt(),
+                  usedBytes: s.totalBytes.toInt(),
                   totalBytes: s.totalBytes.toInt(),
-                  label: 'Storage Usage',
+                  label: 'Storage: ${s.totalFiles} files',
                 ),
               ),
             ) ??
@@ -61,13 +60,13 @@ class _FilesBrowserScreenState extends ConsumerState<FilesBrowserScreen> {
               children: [
                 _filterChip(theme, null, 'All'),
                 const SizedBox(width: 8),
-                _filterChip(theme, MediaState.AVAILABLE, 'Available'),
+                _filterChip(theme, MediaState.MEDIA_STATE_AVAILABLE, 'Available'),
                 const SizedBox(width: 8),
-                _filterChip(theme, MediaState.CREATING, 'Creating'),
+                _filterChip(theme, MediaState.MEDIA_STATE_CREATING, 'Creating'),
                 const SizedBox(width: 8),
-                _filterChip(theme, MediaState.ARCHIVED, 'Archived'),
+                _filterChip(theme, MediaState.MEDIA_STATE_ARCHIVED, 'Archived'),
                 const SizedBox(width: 8),
-                _filterChip(theme, MediaState.DELETED, 'Deleted'),
+                _filterChip(theme, MediaState.MEDIA_STATE_DELETED, 'Deleted'),
               ],
             ),
           ),
