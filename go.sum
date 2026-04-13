@@ -1,11 +1,7 @@
 buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20260325040325-9771112f2289.1 h1:dth6SgfGACypQX3HqB37zd/OATeXAKQjn0M3r2e59HA=
 buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20260325040325-9771112f2289.1/go.mod h1:pIhhXoB1KgaAfsCc0hZ16ZEibXvXn0OoDnJKdYpP6JU=
-buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20260328115041-0585dfdeba0b.2 h1:K5F0DkY64M4MQYBwu49pIyts0AHO5D6uWftOKr7Dh2Q=
-buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20260328115041-0585dfdeba0b.2/go.mod h1:lo6dxG8reAVszylOALbt3IPtUC2B2QoxsG9fei6LIGQ=
 buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20260402081919-eb61e2edf446.2 h1:FfLClEIBBMhkg7mq9wfcxvS3BFBGDIs37grNKmy1YxI=
 buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20260402081919-eb61e2edf446.2/go.mod h1:zwn1lxLV2YaHPyk64+nta+Di31UEOsrQxe93MM1cZ74=
-buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20260328115041-0585dfdeba0b.1 h1:fexEdVXxuCtCi+HFzf8RrBT63glVvXGt1rxNj8b+bGw=
-buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20260328115041-0585dfdeba0b.1/go.mod h1:1UNXVrDNlJ8Po05hA3ijyRJDq8AOAQ/j7D72/3Vj16Q=
 buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20260402081919-eb61e2edf446.1 h1:R5qytf8J9gvBYR2k7Fgk/rvsaZzKoFJOgxWPqvMGlU4=
 buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20260402081919-eb61e2edf446.1/go.mod h1:1UNXVrDNlJ8Po05hA3ijyRJDq8AOAQ/j7D72/3Vj16Q=
 buf.build/gen/go/antinvestor/ocr/connectrpc/go v1.19.1-20260330075109-06528e2a9184.2 h1:lRfwH8ItI1OFOnexSGlWpIGTVsVjRVTbP4AnAtvCTC8=
@@ -84,8 +80,8 @@ github.com/alecthomas/assert/v2 v2.10.0 h1:jjRCHsj6hBJhkmhznrCzoNpbA3zqy0fYiUcYZ
 github.com/alecthomas/assert/v2 v2.10.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
-github.com/antinvestor/common v1.4.3 h1:hLtlNqBrQp2OBD2C0p9XFX6R2v4yOTsnGAYnmKCeht4=
-github.com/antinvestor/common v1.4.3/go.mod h1:frfqoRfB9ZZQ9EAtz5WJ6BFGvqqLRS911Aw3IO0OjIA=
+github.com/antinvestor/common v1.4.4 h1:PxXEpSuBIwzKguGJYY0GkI0i5BDEULSfMN6rxPJGe5U=
+github.com/antinvestor/common v1.4.4/go.mod h1:frfqoRfB9ZZQ9EAtz5WJ6BFGvqqLRS911Aw3IO0OjIA=
 github.com/antithesishq/antithesis-sdk-go v0.6.0-default-no-op h1:kpBdlEPbRvff0mDD1gk7o9BhI16b9p5yYAXRlidpqJE=
 github.com/antithesishq/antithesis-sdk-go v0.6.0-default-no-op/go.mod h1:IUpT2DPAKh6i/YhSbt6Gl3v2yvUZjmKncl7U91fup7E=
 github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYWrPrQ=
