@@ -12,7 +12,7 @@ require (
 	buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.11-20260330075109-06528e2a9184.1
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260329102136-78f37154a063.2
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260329102136-78f37154a063.1
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
 	connectrpc.com/connect v1.19.1
 	github.com/antinvestor/common v1.4.4
 	github.com/aws/aws-sdk-go-v2 v1.41.5
