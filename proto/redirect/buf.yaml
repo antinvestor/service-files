@@ -8,6 +8,10 @@ lint:
   except:
     - FIELD_NOT_REQUIRED
     - PACKAGE_NO_IMPORT_CYCLE
+    # Historical layout: proto file lives at redirect/redirect/v1/ but
+    # declares package redirect.v1. Moving the file would break every
+    # existing import path in the antinvestor/apis generated code.
+    - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:
     - FILE
