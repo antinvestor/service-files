@@ -15,9 +15,10 @@ ARG BUILDTIME
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy project files
+# Copy project files. This repo has no top-level pkg/ — the redirect
+# service lives entirely under apps/redirect/ and shares nothing
+# outside that tree.
 COPY ./apps/redirect ./apps/redirect
-COPY ./pkg ./pkg
 
 # Build static binary for target platform
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
