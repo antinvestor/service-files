@@ -87,7 +87,7 @@ func main() {
 
 	// Fast redirect handler with batched async click recording via Frame cache.
 	// This is the PUBLIC path — no authentication required.
-	redirectHandler := handler.NewRedirectHandler(linkBiz, rawCache, dbPool, analyticsClient, cfg.JobsBaseURL)
+	redirectHandler := handler.NewRedirectHandler(linkBiz, rawCache, dbPool, analyticsClient, cfg.JobsBaseURL, cfg.LinkExpiredWebhooks)
 	redirectHandler.Start(ctx)
 
 	// Connect RPC handler for link management — AUTHENTICATED via OIDC interceptors.

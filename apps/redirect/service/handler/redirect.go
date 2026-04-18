@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -50,6 +51,12 @@ type RedirectHandler struct {
 	jobsBaseURL  string
 	livenessGate *livenessGate
 
+	// expiredWebhooks are the URLs to POST when a link flips to
+	// EXPIRED. Each one receives {link_id, slug, affiliate_id,
+	// destination_url, expired_at}. Subscribers filter on
+	// affiliate_id to decide relevance; calls are best-effort.
+	expiredWebhooks []string
+
 	clickCh chan *models.Click
 	wg      sync.WaitGroup
 }
@@ -60,15 +67,17 @@ func NewRedirectHandler(
 	dbPool pool.Pool,
 	analyticsClient *analytics.Client,
 	jobsBaseURL string,
+	expiredWebhooks []string,
 ) *RedirectHandler {
 	return &RedirectHandler{
-		linkBiz:      linkBiz,
-		rawCache:     rawCache,
-		dbPool:       dbPool,
-		analytics:    analyticsClient,
-		jobsBaseURL:  jobsBaseURL,
-		livenessGate: newLivenessGate(),
-		clickCh:      make(chan *models.Click, clickBufferSize),
+		linkBiz:         linkBiz,
+		rawCache:        rawCache,
+		dbPool:          dbPool,
+		analytics:       analyticsClient,
+		jobsBaseURL:     jobsBaseURL,
+		livenessGate:    newLivenessGate(),
+		expiredWebhooks: expiredWebhooks,
+		clickCh:         make(chan *models.Click, clickBufferSize),
 	}
 }
 
@@ -261,12 +270,61 @@ func (rh *RedirectHandler) maybeProbeAsync(link *models.Link) {
 				// Cache invalidation so the dead-link page shows up on
 				// the very next request, not after cache TTL.
 				rh.InvalidateCache(ctx, link.Slug)
+
+				// Fire a best-effort link.expired webhook to any
+				// subscribers configured to react (e.g. stawi-jobs
+				// flipping canonical_jobs.status + emailing saved-job
+				// bookmarkers). Detached goroutine with its own short
+				// timeout — the redirect state change is already
+				// persisted, webhook failures don't revert it.
+				go rh.postLinkExpired(link)
 			}
 			rh.emitLivenessEvent(ctx, link, status, perr, reachable, nextFailures, true)
 			return
 		}
 		rh.emitLivenessEvent(ctx, link, status, perr, reachable, nextFailures, false)
 	}()
+}
+
+// postLinkExpired notifies every configured subscriber that a link has
+// been marked EXPIRED. Calls are POST with a small JSON body — the
+// receiving service is expected to match on `affiliate_id` to decide
+// whether the signal is theirs.
+func (rh *RedirectHandler) postLinkExpired(link *models.Link) {
+	if len(rh.expiredWebhooks) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	body, _ := json.Marshal(map[string]any{
+		"link_id":         link.GetID(),
+		"slug":            link.Slug,
+		"affiliate_id":    link.AffiliateID,
+		"destination_url": link.DestinationURL,
+		"expired_at":      time.Now().UTC().Format(time.RFC3339),
+	})
+
+	for _, url := range rh.expiredWebhooks {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			util.Log(ctx).Warn("link.expired webhook: build request failed",
+				"error", err, "url", url)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			util.Log(ctx).Warn("link.expired webhook: request failed",
+				"error", err, "url", url, "link_id", link.GetID())
+			continue
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode >= 300 {
+			util.Log(ctx).Warn("link.expired webhook: non-2xx",
+				"status", resp.StatusCode, "url", url, "link_id", link.GetID())
+		}
+	}
 }
 
 func (rh *RedirectHandler) emitClickAnalytics(ctx context.Context, link *models.Link, slug string, r *http.Request, kind string) {
