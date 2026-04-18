@@ -10,6 +10,12 @@ lint:
   except:
     - FIELD_NOT_REQUIRED
     - PACKAGE_NO_IMPORT_CYCLE
+    # The redirect module lives at proto/redirect/redirect/v1/ —
+    # historical layout locked in by every downstream consumer of
+    # github.com/antinvestor/apis/go/redirect/v1. Moving the file
+    # would rename the go_package and break ecosystem imports, so
+    # except the directory check at the workspace level.
+    - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:
     - FILE
