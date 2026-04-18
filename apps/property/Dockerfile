@@ -17,7 +17,6 @@ RUN go mod download
 
 # Copy project files
 COPY ./apps/property ./apps/property
-COPY ./pkg ./pkg
 
 # Build static binary for target platform
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
