@@ -2,12 +2,12 @@ syntax = "proto3";
 
 package redirect.v1;
 
+import "buf/validate/validate.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/antinvestor/apis/go/redirect/v1;redirectv1";
 option java_package = "redirectv1";
-
-import "buf/validate/validate.proto";
-import "google/protobuf/timestamp.proto";
-import "google/protobuf/struct.proto";
 
 // RedirectService manages short links, affiliate tracking, and click telemetry.
 service RedirectService {
