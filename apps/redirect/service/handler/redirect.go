@@ -51,6 +51,12 @@ type RedirectHandler struct {
 	jobsBaseURL  string
 	livenessGate *livenessGate
 
+	// httpClient is Frame's managed HTTP client, shared by the
+	// destination-URL probe and the link-expired webhook dispatcher.
+	// Avoids per-request client allocation and inherits Frame's
+	// instrumentation + connection pooling.
+	httpClient *http.Client
+
 	// expiredWebhooks are the URLs to POST when a link flips to
 	// EXPIRED. Each one receives {link_id, slug, affiliate_id,
 	// destination_url, expired_at}. Subscribers filter on
@@ -66,6 +72,7 @@ func NewRedirectHandler(
 	rawCache cache.RawCache,
 	dbPool pool.Pool,
 	analyticsClient *analytics.Client,
+	httpClient *http.Client,
 	jobsBaseURL string,
 	expiredWebhooks []string,
 ) *RedirectHandler {
@@ -74,6 +81,7 @@ func NewRedirectHandler(
 		rawCache:        rawCache,
 		dbPool:          dbPool,
 		analytics:       analyticsClient,
+		httpClient:      httpClient,
 		jobsBaseURL:     jobsBaseURL,
 		livenessGate:    newLivenessGate(),
 		expiredWebhooks: expiredWebhooks,
@@ -246,7 +254,7 @@ func (rh *RedirectHandler) maybeProbeAsync(link *models.Link) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		status, perr := probeDestination(ctx, link.DestinationURL)
+		status, perr := probeDestination(ctx, rh.httpClient, link.DestinationURL)
 		reachable := perr == nil && isReachableStatus(status)
 
 		var nextFailures int
@@ -313,7 +321,7 @@ func (rh *RedirectHandler) postLinkExpired(link *models.Link) {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := rh.httpClient.Do(req)
 		if err != nil {
 			util.Log(ctx).Warn("link.expired webhook: request failed",
 				"error", err, "url", url, "link_id", link.GetID())

@@ -77,8 +77,13 @@ func (g *livenessGate) acquire(linkID string) (bool, func()) {
 // fronted sites). Returns the best-observed status and any transport
 // error; a zero status with non-nil error means the request never
 // reached a server.
-func probeDestination(ctx context.Context, url string) (int, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
+//
+// The client is Frame's managed HTTP client (OTel-instrumented,
+// pooled connections); RedirectHandler injects it once at startup
+// instead of each probe allocating its own. The 10s ctx timeout is
+// the per-probe safety net so one slow destination can't hold a
+// livenessGate slot indefinitely.
+func probeDestination(ctx context.Context, client *http.Client, url string) (int, error) {
 	pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
