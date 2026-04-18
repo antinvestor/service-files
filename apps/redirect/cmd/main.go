@@ -8,6 +8,7 @@ import (
 	"github.com/antinvestor/service-files/apps/redirect/config"
 	redirectpb "github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1"
 	"github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1/redirectv1connect"
+	"github.com/antinvestor/service-files/apps/redirect/service/analytics"
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/handler"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
@@ -69,9 +70,24 @@ func main() {
 		return
 	}
 
+	// Analytics client — batches click + liveness events to OpenObserve.
+	// Nil-safe: a blank ANALYTICS_BASE_URL keeps the handler silent in
+	// local dev without branches in the handler code path.
+	analyticsClient := analytics.New(analytics.Config{
+		BaseURL:  cfg.AnalyticsBaseURL,
+		Org:      cfg.AnalyticsOrg,
+		Username: cfg.AnalyticsUsername,
+		Password: cfg.AnalyticsPassword,
+	})
+	if analyticsClient != nil {
+		svc.AddCleanupMethod(func(cleanupCtx context.Context) {
+			_ = analyticsClient.Close(cleanupCtx)
+		})
+	}
+
 	// Fast redirect handler with batched async click recording via Frame cache.
 	// This is the PUBLIC path — no authentication required.
-	redirectHandler := handler.NewRedirectHandler(linkBiz, rawCache, dbPool)
+	redirectHandler := handler.NewRedirectHandler(linkBiz, rawCache, dbPool, analyticsClient, cfg.JobsBaseURL)
 	redirectHandler.Start(ctx)
 
 	// Connect RPC handler for link management — AUTHENTICATED via OIDC interceptors.

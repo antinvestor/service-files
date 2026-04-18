@@ -82,6 +82,16 @@ type Link struct {
 	State            LinkState `gorm:"column:state;type:smallint;default:1;index"`
 	ClickCount       int64     `gorm:"column:click_count;default:0"`
 	UniqueClickCount int64     `gorm:"column:unique_click_count;default:0"`
+
+	// Destination reachability. Every time a /r/{slug} redirect path
+	// probes the destination (throttled to once per link per configured
+	// interval), these fields are refreshed. Three consecutive
+	// unreachable outcomes flip State to LinkStateExpired, at which
+	// point the hot path stops redirecting and serves the dead-link
+	// page instead.
+	LastCheckedAt            time.Time `gorm:"column:last_checked_at"`
+	LastCheckStatus          int       `gorm:"column:last_check_status;default:0"`
+	ConsecutiveCheckFailures int       `gorm:"column:consecutive_check_failures;default:0"`
 }
 
 func (Link) TableName() string { return "links" }

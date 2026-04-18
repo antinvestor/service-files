@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/antinvestor/service-files/apps/redirect/service/analytics"
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
 	"github.com/antinvestor/service-files/apps/redirect/service/repository"
@@ -41,6 +42,14 @@ type RedirectHandler struct {
 	rawCache cache.RawCache
 	dbPool   pool.Pool
 
+	// Analytics + liveness wiring. analytics may be nil in local dev;
+	// the jobsBaseURL drives the "Find other jobs" CTA on the dead-
+	// link page. Liveness probing shares a single gate per handler
+	// instance so concurrent clicks coalesce into one inflight probe.
+	analytics    *analytics.Client
+	jobsBaseURL  string
+	livenessGate *livenessGate
+
 	clickCh chan *models.Click
 	wg      sync.WaitGroup
 }
@@ -49,12 +58,17 @@ func NewRedirectHandler(
 	linkBiz business.LinkBusiness,
 	rawCache cache.RawCache,
 	dbPool pool.Pool,
+	analyticsClient *analytics.Client,
+	jobsBaseURL string,
 ) *RedirectHandler {
 	return &RedirectHandler{
-		linkBiz:  linkBiz,
-		rawCache: rawCache,
-		dbPool:   dbPool,
-		clickCh:  make(chan *models.Click, clickBufferSize),
+		linkBiz:      linkBiz,
+		rawCache:     rawCache,
+		dbPool:       dbPool,
+		analytics:    analyticsClient,
+		jobsBaseURL:  jobsBaseURL,
+		livenessGate: newLivenessGate(),
+		clickCh:      make(chan *models.Click, clickBufferSize),
 	}
 }
 
@@ -148,7 +162,12 @@ func (rh *RedirectHandler) batchWorker(ctx context.Context) {
 	}
 }
 
-// ServeHTTP handles GET /r/{slug} — the hot redirect path.
+// ServeHTTP handles GET /r/{slug} — the hot redirect path. In order:
+// (1) resolve the link by slug; (2) if dead, render a branded page;
+// (3) record the click for attribution; (4) opportunistically fire a
+// throttled destination-URL probe in the background; (5) 302 to the
+// destination. X-Robots-Tag: noindex so search engines don't index
+// tracking hops.
 func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	slug := extractSlug(r.URL.Path)
 	if slug == "" {
@@ -162,8 +181,16 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Dead link: render the nice "this posting has been removed" page
+	// instead of a raw 410. The redirect service has no job-domain
+	// knowledge, but we can still show the link's title + a CTA back
+	// to jobs.stawi.org to keep the user moving.
 	if !link.IsActive() {
-		http.Error(w, "Link is no longer active", http.StatusGone)
+		renderDeadLinkPage(w, deadLinkData{
+			Title:       link.Title,
+			JobsBaseURL: rh.jobsBaseURL,
+		})
+		rh.emitClickAnalytics(r.Context(), link, slug, r, "link_inactive")
 		return
 	}
 
@@ -182,11 +209,106 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		util.Log(r.Context()).Warn("click buffer full, dropping click", "slug", slug)
 	}
+	rh.emitClickAnalytics(r.Context(), link, slug, r, "redirect")
+
+	// Fire-and-forget destination liveness probe. The gate bounds fan-
+	// out to one inflight probe per link + throttles to once per
+	// livenessProbeThrottle window. Detached context so the user's
+	// redirect latency isn't coupled to a third-party HEAD.
+	rh.maybeProbeAsync(link)
 
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Set("Location", link.DestinationURL)
 	w.WriteHeader(http.StatusFound)
+}
+
+// maybeProbeAsync runs a throttled liveness probe in the background.
+// On repeated failure the link is flipped to EXPIRED so subsequent
+// clicks see the dead-link page. Click accounting is unaffected.
+func (rh *RedirectHandler) maybeProbeAsync(link *models.Link) {
+	ok, release := rh.livenessGate.acquire(link.GetID())
+	if !ok {
+		return
+	}
+	go func() {
+		defer release()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		status, perr := probeDestination(ctx, link.DestinationURL)
+		reachable := perr == nil && isReachableStatus(status)
+
+		var nextFailures int
+		if reachable {
+			nextFailures = 0
+		} else {
+			nextFailures = link.ConsecutiveCheckFailures + 1
+		}
+
+		linkRepo := repository.NewLinkRepository(rh.dbPool)
+		if err := linkRepo.RecordCheck(ctx, link.GetID(), status, nextFailures); err != nil {
+			util.Log(ctx).Warn("record link check failed", "error", err, "link_id", link.GetID())
+		}
+
+		terminal := status == 404 || status == 410
+		exhausted := nextFailures >= consecutiveFailuresToExpire
+		if !reachable && (terminal || exhausted) {
+			if err := linkRepo.ExpireLink(ctx, link.GetID()); err != nil {
+				util.Log(ctx).Warn("expire link failed", "error", err, "link_id", link.GetID())
+			} else {
+				// Cache invalidation so the dead-link page shows up on
+				// the very next request, not after cache TTL.
+				rh.InvalidateCache(ctx, link.Slug)
+			}
+			rh.emitLivenessEvent(ctx, link, status, perr, reachable, nextFailures, true)
+			return
+		}
+		rh.emitLivenessEvent(ctx, link, status, perr, reachable, nextFailures, false)
+	}()
+}
+
+func (rh *RedirectHandler) emitClickAnalytics(ctx context.Context, link *models.Link, slug string, r *http.Request, kind string) {
+	if rh.analytics == nil {
+		return
+	}
+	rh.analytics.Send(ctx, "stawi_jobs_applies", map[string]any{
+		"event":        kind, // "redirect" or "link_inactive"
+		"link_id":      link.GetID(),
+		"affiliate_id": link.AffiliateID, // canonical_job_<id> for stawi-jobs
+		"slug":         slug,
+		"campaign":     link.Campaign,
+		"source":       link.Source,
+		"medium":       link.Medium,
+		"ip_address":   extractIP(r),
+		"user_agent":   r.UserAgent(),
+		"referer":      r.Referer(),
+		"cf_country":   r.Header.Get("CF-IPCountry"),
+		"cf_ray":       r.Header.Get("CF-Ray"),
+	})
+}
+
+func (rh *RedirectHandler) emitLivenessEvent(ctx context.Context, link *models.Link, status int, perr error, reachable bool, consecutiveFailures int, expired bool) {
+	if rh.analytics == nil {
+		return
+	}
+	errStr := ""
+	if perr != nil {
+		errStr = perr.Error()
+	}
+	rh.analytics.Send(ctx, "stawi_jobs_events", map[string]any{
+		"event":                "redirect_probe",
+		"link_id":              link.GetID(),
+		"affiliate_id":         link.AffiliateID,
+		"slug":                 link.Slug,
+		"destination":          link.DestinationURL,
+		"probe_status":         status,
+		"probe_error":          errStr,
+		"reachable":            reachable,
+		"consecutive_failures": consecutiveFailures,
+		"link_expired":         expired,
+	})
 }
 
 func (rh *RedirectHandler) resolveLink(ctx context.Context, slug string) (*models.Link, error) {
