@@ -235,11 +235,10 @@ type FileRetention struct {
 // StorageStats model for tracking storage statistics
 type StorageStats struct {
 	data.BaseModel
-	RecordDate   time.Time `gorm:"type:DATE;not null;index:idx_storage_stats_record_date"`
-	TotalBytes   int64     `gorm:"default:0"`
-	FileCount    int       `gorm:"default:0"`
-	UserCount    int       `gorm:"default:0"`
-	PublicBytes  int64     `gorm:"default:0"`
-	PrivateBytes int64     `gorm:"default:0"`
+	TotalBytes   int64 `gorm:"default:0"`
+	FileCount    int   `gorm:"default:0"`
+	UserCount    int   `gorm:"default:0"`
+	PublicBytes  int64 `gorm:"default:0"`
+	PrivateBytes int64 `gorm:"default:0"`
 	Metadata     data.JSONMap
 }

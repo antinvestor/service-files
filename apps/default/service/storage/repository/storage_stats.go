@@ -37,7 +37,7 @@ type storageStatsRepository struct {
 func (r *storageStatsRepository) GetByDate(ctx context.Context, date time.Time) (*models.StorageStats, error) {
 	stats := &models.StorageStats{}
 	truncatedDate := date.Truncate(24 * time.Hour)
-	err := r.Pool().DB(ctx, true).Where("record_date = ?", truncatedDate).First(stats).Error
+	err := r.Pool().DB(ctx, true).Where("date(created_at) = date(?)", truncatedDate).First(stats).Error
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,8 @@ func (r *storageStatsRepository) GetByDate(ctx context.Context, date time.Time) 
 // GetRange retrieves storage stats for a date range
 func (r *storageStatsRepository) GetRange(ctx context.Context, start, end time.Time) ([]*models.StorageStats, error) {
 	var statsList []*models.StorageStats
-	err := r.Pool().DB(ctx, true).Where("record_date >= ? AND record_date <= ?", start, end).
-		Order("record_date ASC").
+	err := r.Pool().DB(ctx, true).Where("created_at >= ? AND created_at <= ?", start, end).
+		Order("created_at ASC").
 		Find(&statsList).Error
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (r *storageStatsRepository) GetRange(ctx context.Context, start, end time.T
 // GetLatest retrieves the most recent storage stats
 func (r *storageStatsRepository) GetLatest(ctx context.Context) (*models.StorageStats, error) {
 	stats := &models.StorageStats{}
-	err := r.Pool().DB(ctx, true).Order("record_date DESC").First(stats).Error
+	err := r.Pool().DB(ctx, true).Order("created_at DESC").First(stats).Error
 	if err != nil {
 		return nil, err
 	}

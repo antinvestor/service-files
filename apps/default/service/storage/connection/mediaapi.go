@@ -712,7 +712,6 @@ func (d *Database) RecordStats(ctx context.Context, stats interface {
 }) error {
 	s := &models.StorageStats{
 		BaseModel:    data.BaseModel{ID: util.IDString()},
-		RecordDate:   time.Now().Truncate(24 * time.Hour),
 		TotalBytes:   stats.GetTotalBytes(),
 		FileCount:    stats.GetFileCount(),
 		UserCount:    stats.GetUserCount(),
@@ -740,7 +739,7 @@ type dbStorageStatsRange struct {
 	s *models.StorageStats
 }
 
-func (s *dbStorageStatsRange) Date() time.Time   { return s.s.RecordDate }
+func (s *dbStorageStatsRange) Date() time.Time   { return s.s.CreatedAt }
 func (s *dbStorageStatsRange) TotalBytes() int64 { return s.s.TotalBytes }
 func (s *dbStorageStatsRange) FileCount() int    { return s.s.FileCount }
 func (s *dbStorageStatsRange) UserCount() int    { return s.s.UserCount }

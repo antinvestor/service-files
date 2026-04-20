@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS storage_stats (
     access_id VARCHAR(50),
     deleted_at TIMESTAMPTZ,
 
-    record_date DATE NOT NULL,
     total_bytes BIGINT DEFAULT 0,
     file_count INTEGER DEFAULT 0,
     user_count INTEGER DEFAULT 0,
@@ -18,7 +17,7 @@ CREATE TABLE IF NOT EXISTS storage_stats (
     metadata JSONB
 );
 
-CREATE INDEX IF NOT EXISTS idx_storage_stats_record_date ON storage_stats (record_date);
+CREATE INDEX IF NOT EXISTS idx_storage_stats_created_at ON storage_stats (created_at);
 
 -- Materialized view for daily snapshots (refreshed daily)
 CREATE TABLE IF NOT EXISTS storage_daily_snapshot (
