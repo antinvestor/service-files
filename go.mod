@@ -6,18 +6,18 @@ toolchain go1.26.1
 
 require (
 	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20260325040325-9771112f2289.1
-	buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.1-20260418163144-8859a39db5b5.2
+	buf.build/gen/go/antinvestor/files/connectrpc/go v1.19.2-20260418163144-8859a39db5b5.1
 	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20260418163144-8859a39db5b5.1
-	buf.build/gen/go/antinvestor/ocr/connectrpc/go v1.19.1-20260415203305-689f8d903115.2
+	buf.build/gen/go/antinvestor/ocr/connectrpc/go v1.19.2-20260415203305-689f8d903115.1
 	buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.11-20260415203305-689f8d903115.1
-	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.1-20260420185500-760e7020fa14.2
+	buf.build/gen/go/antinvestor/property/connectrpc/go v1.19.2-20260420185500-760e7020fa14.1
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260420185500-760e7020fa14.1
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
 	connectrpc.com/connect v1.19.2
 	github.com/antinvestor/common v1.4.4
 	github.com/aws/aws-sdk-go-v2 v1.41.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.15
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.1
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.100.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
@@ -41,7 +41,7 @@ require (
 
 require (
 	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.11-20230414000709-087bc8072ce4.1 // indirect
-	buf.build/go/protovalidate v1.1.3 // indirect
+	buf.build/go/protovalidate v1.2.0 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.20.0 // indirect
@@ -63,7 +63,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.9 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.16 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.22 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.15 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.16 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.22 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.22 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.23 // indirect
