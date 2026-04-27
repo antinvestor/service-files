@@ -2,7 +2,12 @@ ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 
 # ---------- Builder ----------
+# Note: no --platform=$BUILDPLATFORM here. CGO links against libtesseract /
+# libleptonica which must match the target arch. Building under emulation
+# (QEMU via buildx) keeps the toolchain and libs consistent with TARGETARCH.
 FROM golang:1.26 AS builder
+ARG TARGETOS
+ARG TARGETARCH
 
 RUN apt-get update -qq && apt-get install -y ca-certificates libtesseract-dev libleptonica-dev
 
