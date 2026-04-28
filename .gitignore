@@ -28,3 +28,4 @@ apps/default/service/handler/routing/testdata/tmp/
 # Shared Makefile cache
 .tmp/
 WORK_STATE.md
+.claude/
