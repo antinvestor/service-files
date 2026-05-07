@@ -4,9 +4,6 @@
 #   "gcc: unrecognized command-line option '-m64'" issue when cross-building
 #   for arm64. Pinning to amd64 until a proper aarch64 cross-toolchain is set
 #   up in the builder.
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
-
 # ---------- Builder ----------
 # Note: no --platform=$BUILDPLATFORM here. CGO links against libtesseract /
 # libleptonica which must match the target arch. Building under emulation
