@@ -18,6 +18,7 @@ import (
 	"github.com/pitabwire/frame"
 	fconfig "github.com/pitabwire/frame/config"
 	"github.com/pitabwire/frame/datastore"
+	"github.com/pitabwire/frame/datastore/pool"
 	"github.com/pitabwire/frame/security"
 	connectInterceptors "github.com/pitabwire/frame/security/interceptors/connect"
 	"github.com/pitabwire/util"
@@ -79,7 +80,7 @@ func main() {
 	ocrRepo := repository.NewOcrRepository(dbPool)
 	ocrBusiness := business.NewOcrBusiness(ctx, svc, filesCli, ocrRepo, queueMan)
 
-	connectHandler := setupConnectServer(ctx, sm, ocrBusiness)
+	connectHandler := setupConnectServer(ctx, sm, dbPool, ocrBusiness)
 
 	ocrSyncQueueHandler := queue.NewOCRQueueHandler(ocrRepo)
 
@@ -115,10 +116,18 @@ func setupFilesClient(
 	}, filesv1connect.NewFilesServiceClient)
 }
 
-func setupConnectServer(ctx context.Context, sm security.Manager, ocrBusiness business.OCRBusiness) http.Handler {
+func setupConnectServer(ctx context.Context, sm security.Manager, dbPool pool.Pool, ocrBusiness business.OCRBusiness) http.Handler {
 	implementation := handlers.NewOCRServer(ocrBusiness)
 
-	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+	// TenancyTxInterceptor opens a request-scoped transaction after auth
+	// has populated the claims, publishes app.tenant_id + app.partition_id
+	// from the claims via set_config, and binds the transaction to the
+	// request context. Repository code then calls pool.DB(ctx, _) and gets
+	// the bound tx transparently; tenancy is enforced by Row-Level Security
+	// at the database layer.
+	tenancyTxInterceptor := connectInterceptors.NewTenancyTxInterceptor(dbPool)
+
+	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), tenancyTxInterceptor)
 	if err != nil {
 		util.Log(ctx).WithError(err).Fatal("could not create default interceptors")
 	}

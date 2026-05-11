@@ -96,7 +96,16 @@ func main() {
 
 	// Connect RPC handler for link management — AUTHENTICATED via OIDC interceptors.
 	sm := svc.SecurityManager()
-	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+
+	// TenancyTxInterceptor opens a request-scoped transaction after auth
+	// has populated the claims, publishes app.tenant_id + app.partition_id
+	// from the claims via set_config, and binds the transaction to the
+	// request context. Repository code then calls pool.DB(ctx, _) and gets
+	// the bound tx transparently; tenancy is enforced by Row-Level Security
+	// at the database layer.
+	tenancyTxInterceptor := connectinterceptors.NewTenancyTxInterceptor(dbPool)
+
+	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), tenancyTxInterceptor)
 	if err != nil {
 		log.WithError(err).Fatal("could not create default interceptors")
 		return
