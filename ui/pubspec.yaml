@@ -1,7 +1,7 @@
 name: antinvestor_ui_files
 description: >
   File management UI library for Antinvestor. Upload, browse, access control, versioning.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/antinvestor/service-files
 homepage: https://github.com/antinvestor/service-files/tree/main/ui
 issue_tracker: https://github.com/antinvestor/service-files/issues
@@ -18,7 +18,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  antinvestor_ui_core: ^0.2.0
+  # 0.5.0 ships the thesa-gated analytics pipeline (ServiceAnalyticsSpec,
+  # ThesaAnalyticsDataSource). Not on pub.dev yet -- develop against the
+  # local checkout via the gitignored pubspec_overrides.yaml.
+  antinvestor_ui_core: ^0.5.0
   antinvestor_api_files: ^1.54.0
   antinvestor_api_common: ^1.52.0
   connectrpc: ^1.0.0
@@ -32,6 +35,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  http: ^1.6.0
 
 flutter:
   uses-material-design: true
