@@ -4,6 +4,9 @@
 /// browsing, access control, versioning, and retention management.
 library;
 
+// Analytics
+export 'src/analytics/files_analytics.dart';
+
 // Providers
 export 'src/providers/files_transport_provider.dart';
 export 'src/providers/files_providers.dart';
