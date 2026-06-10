@@ -13,6 +13,7 @@ import (
 	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/pitabwire/frame/frametests/deps/testpostgres"
+	"github.com/pitabwire/frame/frametests/rlstest"
 	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +61,10 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	profileConfig.DatabaseMigrate = true
 	profileConfig.RunServiceSecurely = false
 	profileConfig.ServerPort = ""
-	profileConfig.DatabaseMaxOpenConnections = 1
+	// Migrate pins a dedicated connection for its advisory lock (frame
+	// >= v1.95) and runs the migration queries on a second one, so a
+	// single-connection pool deadlocks before the first table exists.
+	profileConfig.DatabaseMaxOpenConnections = 2
 	profileConfig.DatabaseMaxIdleConnections = 0
 	profileConfig.EnvStorageEncryptionPhrase = "0123456789abcdef0123456789abcdef"
 	profileConfig.BasePath = aconfig.Path(t.TempDir())
@@ -79,8 +83,16 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
 	profileConfig.DatabaseReplicaURL = []string{}
 
+	// The postgres testcontainer user is a SUPERUSER which bypasses RLS even
+	// with FORCE ROW LEVEL SECURITY, so tenancy isolation would never be
+	// exercised. rlstest drops application connections to an unprivileged
+	// role after migration so the suite runs with RLS actually enforced.
+	require.NoError(t, rlstest.CreateRole(ctx, testDS.String()))
+	rlsProv := rlstest.New()
+
 	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithName("profile tests"),
 		frame.WithConfig(&profileConfig),
+		frame.WithTenancyProvider(rlsProv),
 		frame.WithDatastore(),
 		frametests.WithNoopDriver())
 
@@ -105,6 +117,11 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 
 	err = repository.Migrate(ctx, dbManager, "../../migrations/0001")
 	require.NoError(t, err)
+
+	// Migration ran as superuser; grant the restricted role access to the
+	// migrated tables, then switch all application queries to it.
+	require.NoError(t, rlstest.GrantAll(ctx, testDS.String()))
+	rlsProv.Enable()
 
 	err = svc.Run(ctx, "")
 	require.NoError(t, err)
