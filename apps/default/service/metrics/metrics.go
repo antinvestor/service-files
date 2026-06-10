@@ -1,29 +1,68 @@
+// Package metrics exposes the file service's product metrics through
+// OpenTelemetry. Instruments are created with frame's BusinessMetrics
+// factory, so every measurement transparently carries tenant_id and
+// partition_id derived from the context's security claims. The historic
+// file_service_* metric names are preserved so existing dashboards and
+// alerts keep working; metrics are exported through the service's OTel
+// pipeline instead of the previous bespoke Prometheus text handler.
 package metrics
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/pitabwire/frame/telemetry"
 	"github.com/pitabwire/util"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
-// writeIgnoreErr writes to the response writer, ignoring errors
-// For metrics output, we continue even if some writes fail
+const meterName = "file_service"
+
+// writeIgnoreErr writes to the response writer, ignoring errors.
+// For probe output, we continue even if some writes fail.
 func writeIgnoreErr(w io.Writer, format string, args ...any) {
 	_, _ = fmt.Fprintf(w, format, args...)
 }
 
-// Metrics represents the application metrics
+// Metrics wraps the service's OTel instruments behind the same simple
+// recording API the previous in-memory registry offered. A small amount of
+// internal state is retained: gauges (active requests, storage totals) need
+// current values to record, and the Get* accessors used by tests and
+// diagnostics read from it.
 type Metrics struct {
-	// Request metrics
+	// Request instruments.
+	requestsTotalCounter telemetry.Counter
+	activeRequestsGauge  telemetry.Gauge
+
+	// File transfer instruments.
+	uploadsCounter        telemetry.Counter
+	uploadBytesCounter    telemetry.Counter
+	uploadErrorsCounter   telemetry.Counter
+	downloadsCounter      telemetry.Counter
+	downloadBytesCounter  telemetry.Counter
+	downloadErrorsCounter telemetry.Counter
+
+	// Storage instruments.
+	storageBytesGauge        telemetry.Gauge
+	storageFilesGauge        telemetry.Gauge
+	storageUsersGauge        telemetry.Gauge
+	storagePublicBytesGauge  telemetry.Gauge
+	storagePrivateBytesGauge telemetry.Gauge
+
+	// Cache instruments.
+	cacheHitsCounter   telemetry.Counter
+	cacheMissesCounter telemetry.Counter
+
+	// Internal state backing gauges and the Get* accessors.
 	requestsTotal    map[string]int64
 	requestsDuration map[string][]time.Duration
 	activeRequests   int64
 
-	// File metrics
 	uploadsTotal   int64
 	downloadsTotal int64
 	uploadBytes    int64
@@ -31,23 +70,53 @@ type Metrics struct {
 	uploadErrors   int64
 	downloadErrors int64
 
-	// Storage metrics
 	totalBytesStored   int64
 	totalFilesStored   int64
 	totalUsers         int64
 	publicBytesStored  int64
 	privateBytesStored int64
 
-	// Cache metrics
 	cacheHits   map[string]int64
 	cacheMisses map[string]int64
 
 	mu sync.RWMutex
 }
 
-// NewMetrics creates a new metrics instance
+// NewMetrics creates a new metrics instance with all OTel instruments
+// registered under their historic file_service_* names.
 func NewMetrics() *Metrics {
+	bm := telemetry.NewBusinessMetrics(meterName)
+
 	return &Metrics{
+		requestsTotalCounter: bm.Counter("file_service_requests_total", "Total requests"),
+		activeRequestsGauge:  bm.Gauge("file_service_active_requests", "Current number of active requests"),
+
+		uploadsCounter: bm.Counter("file_service_uploads_total", "Total number of file uploads"),
+		uploadBytesCounter: bm.Counter(
+			"file_service_upload_bytes_total", "Total bytes uploaded", metric.WithUnit("B"),
+		),
+		uploadErrorsCounter: bm.Counter("file_service_upload_errors_total", "Total number of upload errors"),
+		downloadsCounter:    bm.Counter("file_service_downloads_total", "Total number of file downloads"),
+		downloadBytesCounter: bm.Counter(
+			"file_service_download_bytes_total", "Total bytes downloaded", metric.WithUnit("B"),
+		),
+		downloadErrorsCounter: bm.Counter("file_service_download_errors_total", "Total number of download errors"),
+
+		storageBytesGauge: bm.Gauge(
+			"file_service_storage_bytes_total", "Total bytes stored", metric.WithUnit("B"),
+		),
+		storageFilesGauge: bm.Gauge("file_service_storage_files_total", "Total files stored"),
+		storageUsersGauge: bm.Gauge("file_service_storage_users_total", "Total users"),
+		storagePublicBytesGauge: bm.Gauge(
+			"file_service_storage_public_bytes_total", "Public bytes stored", metric.WithUnit("B"),
+		),
+		storagePrivateBytesGauge: bm.Gauge(
+			"file_service_storage_private_bytes_total", "Private bytes stored", metric.WithUnit("B"),
+		),
+
+		cacheHitsCounter:   bm.Counter("file_service_cache_hits_total", "Cache hits total"),
+		cacheMissesCounter: bm.Counter("file_service_cache_misses_total", "Cache misses total"),
+
 		requestsTotal:    make(map[string]int64),
 		requestsDuration: make(map[string][]time.Duration),
 		cacheHits:        make(map[string]int64),
@@ -55,33 +124,36 @@ func NewMetrics() *Metrics {
 	}
 }
 
-// RecordRequest records a request
-func (m *Metrics) RecordRequest(method, path string, duration time.Duration, statusCode int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+// RecordRequest records a completed request for the given endpoint.
+func (m *Metrics) RecordRequest(ctx context.Context, method, path string, duration time.Duration, _ int) {
 	key := method + ":" + path
+
+	m.mu.Lock()
 	m.requestsTotal[key]++
 	m.requestsDuration[key] = append(m.requestsDuration[key], duration)
 
-	// Keep only last 1000 durations to avoid memory issues
+	// Keep only last 1000 durations to avoid memory issues.
 	if len(m.requestsDuration[key]) > 1000 {
 		m.requestsDuration[key] = m.requestsDuration[key][len(m.requestsDuration[key])-1000:]
 	}
+	m.mu.Unlock()
+
+	m.requestsTotalCounter.Add(ctx, 1, attribute.String("endpoint", key))
 }
 
-// RecordActiveRequest records an active request
-func (m *Metrics) RecordActiveRequest(delta int64) {
+// RecordActiveRequest adjusts the active request gauge by delta.
+func (m *Metrics) RecordActiveRequest(ctx context.Context, delta int64) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.activeRequests += delta
+	active := m.activeRequests
+	m.mu.Unlock()
+
+	m.activeRequestsGauge.Record(ctx, active)
 }
 
-// RecordUpload records a file upload
-func (m *Metrics) RecordUpload(size int64, success bool) {
+// RecordUpload records a file upload.
+func (m *Metrics) RecordUpload(ctx context.Context, size int64, success bool) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	m.uploadsTotal++
 	if success {
 		m.uploadBytes += size
@@ -90,50 +162,74 @@ func (m *Metrics) RecordUpload(size int64, success bool) {
 	} else {
 		m.uploadErrors++
 	}
+	totalBytes, totalFiles := m.totalBytesStored, m.totalFilesStored
+	m.mu.Unlock()
+
+	m.uploadsCounter.Add(ctx, 1)
+	if success {
+		m.uploadBytesCounter.Add(ctx, size)
+		m.storageBytesGauge.Record(ctx, totalBytes)
+		m.storageFilesGauge.Record(ctx, totalFiles)
+	} else {
+		m.uploadErrorsCounter.Add(ctx, 1)
+	}
 }
 
-// RecordDownload records a file download
-func (m *Metrics) RecordDownload(size int64, success bool) {
+// RecordDownload records a file download.
+func (m *Metrics) RecordDownload(ctx context.Context, size int64, success bool) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	m.downloadsTotal++
 	if success {
 		m.downloadBytes += size
 	} else {
 		m.downloadErrors++
 	}
+	m.mu.Unlock()
+
+	m.downloadsCounter.Add(ctx, 1)
+	if success {
+		m.downloadBytesCounter.Add(ctx, size)
+	} else {
+		m.downloadErrorsCounter.Add(ctx, 1)
+	}
 }
 
-// RecordStorageStats records storage statistics
-func (m *Metrics) RecordStorageStats(totalBytes, totalFiles, totalUsers, publicBytes, privateBytes int64) {
+// RecordStorageStats records storage statistics.
+func (m *Metrics) RecordStorageStats(ctx context.Context, totalBytes, totalFiles, totalUsers, publicBytes, privateBytes int64) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	m.totalBytesStored = totalBytes
 	m.totalFilesStored = totalFiles
 	m.totalUsers = totalUsers
 	m.publicBytesStored = publicBytes
 	m.privateBytesStored = privateBytes
+	m.mu.Unlock()
+
+	m.storageBytesGauge.Record(ctx, totalBytes)
+	m.storageFilesGauge.Record(ctx, totalFiles)
+	m.storageUsersGauge.Record(ctx, totalUsers)
+	m.storagePublicBytesGauge.Record(ctx, publicBytes)
+	m.storagePrivateBytesGauge.Record(ctx, privateBytes)
 }
 
-// RecordCacheHit records a cache hit
-func (m *Metrics) RecordCacheHit(cacheType string) {
+// RecordCacheHit records a cache hit.
+func (m *Metrics) RecordCacheHit(ctx context.Context, cacheType string) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	m.cacheHits[cacheType]++
+	m.mu.Unlock()
+
+	m.cacheHitsCounter.Add(ctx, 1, attribute.String("cache_type", cacheType))
 }
 
-// RecordCacheMiss records a cache miss
-func (m *Metrics) RecordCacheMiss(cacheType string) {
+// RecordCacheMiss records a cache miss.
+func (m *Metrics) RecordCacheMiss(ctx context.Context, cacheType string) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	m.cacheMisses[cacheType]++
+	m.mu.Unlock()
+
+	m.cacheMissesCounter.Add(ctx, 1, attribute.String("cache_type", cacheType))
 }
 
-// GetRequestMetrics returns request metrics
+// GetRequestMetrics returns request metrics.
 func (m *Metrics) GetRequestMetrics() map[string]int64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -141,7 +237,7 @@ func (m *Metrics) GetRequestMetrics() map[string]int64 {
 	return m.requestsTotal
 }
 
-// GetActiveRequests returns the number of active requests
+// GetActiveRequests returns the number of active requests.
 func (m *Metrics) GetActiveRequests() int64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -149,7 +245,7 @@ func (m *Metrics) GetActiveRequests() int64 {
 	return m.activeRequests
 }
 
-// GetUploadMetrics returns upload metrics
+// GetUploadMetrics returns upload metrics.
 func (m *Metrics) GetUploadMetrics() (total, bytes, errors int64) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -157,7 +253,7 @@ func (m *Metrics) GetUploadMetrics() (total, bytes, errors int64) {
 	return m.uploadsTotal, m.uploadBytes, m.uploadErrors
 }
 
-// GetDownloadMetrics returns download metrics
+// GetDownloadMetrics returns download metrics.
 func (m *Metrics) GetDownloadMetrics() (total, bytes, errors int64) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -165,7 +261,7 @@ func (m *Metrics) GetDownloadMetrics() (total, bytes, errors int64) {
 	return m.downloadsTotal, m.downloadBytes, m.downloadErrors
 }
 
-// GetStorageMetrics returns storage metrics
+// GetStorageMetrics returns storage metrics.
 func (m *Metrics) GetStorageMetrics() (totalBytes, totalFiles, totalUsers, publicBytes, privateBytes int64) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -174,7 +270,7 @@ func (m *Metrics) GetStorageMetrics() (totalBytes, totalFiles, totalUsers, publi
 		m.publicBytesStored, m.privateBytesStored
 }
 
-// GetCacheMetrics returns cache metrics
+// GetCacheMetrics returns cache metrics.
 func (m *Metrics) GetCacheMetrics() (hits, misses map[string]int64) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -182,7 +278,7 @@ func (m *Metrics) GetCacheMetrics() (hits, misses map[string]int64) {
 	return m.cacheHits, m.cacheMisses
 }
 
-// GetAverageDuration returns the average request duration for a given endpoint
+// GetAverageDuration returns the average request duration for a given endpoint.
 func (m *Metrics) GetAverageDuration(method, path string) time.Duration {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -200,7 +296,7 @@ func (m *Metrics) GetAverageDuration(method, path string) time.Duration {
 	return sum / time.Duration(len(durations))
 }
 
-// GetPercentileDuration returns the p-th percentile duration for a given endpoint
+// GetPercentileDuration returns the p-th percentile duration for a given endpoint.
 func (m *Metrics) GetPercentileDuration(method, path string, p float64) time.Duration {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -217,102 +313,14 @@ func (m *Metrics) GetPercentileDuration(method, path string, p float64) time.Dur
 	return durations[len(durations)*int(p)/100]
 }
 
-// Handler returns an HTTP handler that exposes metrics in Prometheus format
-func (m *Metrics) Handler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-
-		// Active requests
-		active := m.GetActiveRequests()
-		writeIgnoreErr(w, "# HELP file_service_active_requests Current number of active requests")
-		writeIgnoreErr(w, "# TYPE file_service_active_requests gauge")
-		writeIgnoreErr(w, "file_service_active_requests %d\n", active)
-
-		// Upload metrics
-		uploads, uploadBytes, uploadErrors := m.GetUploadMetrics()
-		writeIgnoreErr(w, "\n# HELP file_service_uploads_total Total number of file uploads")
-		writeIgnoreErr(w, "# TYPE file_service_uploads_total counter")
-		writeIgnoreErr(w, "file_service_uploads_total %d\n", uploads)
-
-		writeIgnoreErr(w, "\n# HELP file_service_upload_bytes_total Total bytes uploaded\n")
-		writeIgnoreErr(w, "# TYPE file_service_upload_bytes_total counter\n")
-		writeIgnoreErr(w, "file_service_upload_bytes_total %d\n", uploadBytes)
-
-		writeIgnoreErr(w, "\n# HELP file_service_upload_errors_total Total number of upload errors\n")
-		writeIgnoreErr(w, "# TYPE file_service_upload_errors_total counter\n")
-		writeIgnoreErr(w, "file_service_upload_errors_total %d\n", uploadErrors)
-
-		// Download metrics
-		downloads, downloadBytes, downloadErrors := m.GetDownloadMetrics()
-		writeIgnoreErr(w, "\n# HELP file_service_downloads_total Total number of file downloads\n")
-		writeIgnoreErr(w, "# TYPE file_service_downloads_total counter\n")
-		writeIgnoreErr(w, "file_service_downloads_total %d\n", downloads)
-
-		writeIgnoreErr(w, "\n# HELP file_service_download_bytes_total Total bytes downloaded\n")
-		writeIgnoreErr(w, "# TYPE file_service_download_bytes_total counter\n")
-		writeIgnoreErr(w, "file_service_download_bytes_total %d\n", downloadBytes)
-
-		writeIgnoreErr(w, "\n# HELP file_service_download_errors_total Total number of download errors\n")
-		writeIgnoreErr(w, "# TYPE file_service_download_errors_total counter\n")
-		writeIgnoreErr(w, "file_service_download_errors_total %d\n", downloadErrors)
-
-		// Storage metrics
-		totalBytes, totalFiles, totalUsers, publicBytes, privateBytes := m.GetStorageMetrics()
-		writeIgnoreErr(w, "\n# HELP file_service_storage_bytes_total Total bytes stored\n")
-		writeIgnoreErr(w, "# TYPE file_service_storage_bytes_total gauge\n")
-		writeIgnoreErr(w, "file_service_storage_bytes_total %d\n", totalBytes)
-
-		writeIgnoreErr(w, "\n# HELP file_service_storage_files_total Total files stored\n")
-		writeIgnoreErr(w, "# TYPE file_service_storage_files_total gauge\n")
-		writeIgnoreErr(w, "file_service_storage_files_total %d\n", totalFiles)
-
-		writeIgnoreErr(w, "\n# HELP file_service_storage_users_total Total users\n")
-		writeIgnoreErr(w, "# TYPE file_service_storage_users_total gauge\n")
-		writeIgnoreErr(w, "file_service_storage_users_total %d\n", totalUsers)
-
-		writeIgnoreErr(w, "\n# HELP file_service_storage_public_bytes_total Public bytes stored\n")
-		writeIgnoreErr(w, "# TYPE file_service_storage_public_bytes_total gauge\n")
-		writeIgnoreErr(w, "file_service_storage_public_bytes_total %d\n", publicBytes)
-
-		writeIgnoreErr(w, "\n# HELP file_service_storage_private_bytes_total Private bytes stored\n")
-		writeIgnoreErr(w, "# TYPE file_service_storage_private_bytes_total gauge\n")
-		writeIgnoreErr(w, "file_service_storage_private_bytes_total %d\n", privateBytes)
-
-		// Cache metrics
-		hits, misses := m.GetCacheMetrics()
-		writeIgnoreErr(w, "\n# HELP file_service_cache_hits_total Cache hits total\n")
-		writeIgnoreErr(w, "# TYPE file_service_cache_hits_total counter\n")
-		for cacheType, count := range hits {
-			writeIgnoreErr(w, "file_service_cache_hits_total{cache_type=\"%s\"} %d\n", cacheType, count)
-		}
-
-		writeIgnoreErr(w, "\n# HELP file_service_cache_misses_total Cache misses total\n")
-		writeIgnoreErr(w, "# TYPE file_service_cache_misses_total counter\n")
-		for cacheType, count := range misses {
-			writeIgnoreErr(w, "file_service_cache_misses_total{cache_type=\"%s\"} %d\n", cacheType, count)
-		}
-
-		// Request count metrics
-		requests := m.GetRequestMetrics()
-		writeIgnoreErr(w, "\n# HELP file_service_requests_total Total requests\n")
-		writeIgnoreErr(w, "# TYPE file_service_requests_total counter\n")
-		for key, count := range requests {
-			writeIgnoreErr(w, "file_service_requests_total{endpoint=\"%s\"} %d\n", key, count)
-		}
-
-		writeIgnoreErr(w, "\n# HELP file_service_up Service health status\n")
-		writeIgnoreErr(w, "# TYPE file_service_up gauge\n")
-		writeIgnoreErr(w, "file_service_up 1\n")
-	})
-}
-
-// Middleware returns middleware that records metrics for each request
+// Middleware returns middleware that records metrics for each request.
 func (m *Metrics) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
 			start := time.Now()
-			m.RecordActiveRequest(1)
-			defer m.RecordActiveRequest(-1)
+			m.RecordActiveRequest(ctx, 1)
+			defer m.RecordActiveRequest(ctx, -1)
 
 			// Wrap response writer to capture status code
 			wrapped := &responseWriterWrapper{
@@ -323,10 +331,10 @@ func (m *Metrics) Middleware() func(http.Handler) http.Handler {
 			next.ServeHTTP(wrapped, r)
 
 			duration := time.Since(start)
-			m.RecordRequest(r.Method, r.URL.Path, duration, wrapped.statusCode)
+			m.RecordRequest(ctx, r.Method, r.URL.Path, duration, wrapped.statusCode)
 
 			if duration > 5*time.Second {
-				util.Log(r.Context()).WithFields(map[string]any{
+				util.Log(ctx).WithFields(map[string]any{
 					"duration": duration,
 					"path":     r.URL.Path,
 				}).Warn("slow request detected")
