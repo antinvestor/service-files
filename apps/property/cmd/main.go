@@ -43,9 +43,12 @@ func main() {
 		if migrationPool == nil {
 			migrationPool = dbPool
 		}
+		// Models must be passed as pointers: tenancy enrollment checks for
+		// the tenancy.Tenanted interface whose methods have pointer
+		// receivers, so value models silently skip RLS policy installation.
 		err = dbManager.Migrate(ctx, migrationPool, cfg.GetDatabaseMigrationPath(),
-			models.PropertyType{}, models.Locality{}, models.PropertyState{},
-			models.Property{}, models.Subscription{})
+			&models.PropertyType{}, &models.Locality{}, &models.PropertyState{},
+			&models.Property{}, &models.Subscription{})
 		if err != nil {
 			slog.Error("could not migrate database", "error", err)
 			return

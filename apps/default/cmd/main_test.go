@@ -5,6 +5,9 @@ import (
 
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
+	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/config"
+	"github.com/pitabwire/frame/frametests"
 	"github.com/pitabwire/frame/frametests/definition"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,10 +79,46 @@ func (suite *MainTestSuite) TestHandleDatabaseMigration() {
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				ctx, svc, _ := suite.CreateService(t, dep)
-				cfg := *(svc.Config().(*aconfig.FilesConfig))
-				cfg.DatabaseMigrate = tc.migrate
-				cfg.DatabaseMigrationPath = "apps/default/migrations/0001"
+				if !tc.migrate {
+					ctx, svc, _ := suite.CreateService(t, dep)
+					cfg := *(svc.Config().(*aconfig.FilesConfig))
+					cfg.DatabaseMigrate = tc.migrate
+					cfg.DatabaseMigrationPath = "apps/default/migrations/0001"
+
+					result := handleDatabaseMigration(ctx, svc.DatastoreManager(), cfg)
+					assert.Equal(t, tc.wantTrue, result)
+					return
+				}
+
+				// Migration must run on a privileged connection. The suite's
+				// CreateService drops application connections to the
+				// unprivileged rlstest role once migration completes, so
+				// re-running migrations through that service would (rightly)
+				// fail with permission errors. Use a dedicated service over a
+				// fresh database instead, mirroring production where the
+				// migration runner owns the schema.
+				ctx := t.Context()
+				cfg, err := config.FromEnv[aconfig.FilesConfig]()
+				require.NoError(t, err)
+				cfg.DatabaseMigrate = true
+				cfg.DatabaseMigrationPath = "../migrations/0001"
+				cfg.EnvStorageEncryptionPhrase = "0123456789abcdef0123456789abcdef"
+				cfg.BasePath = aconfig.Path(t.TempDir())
+				require.NoError(t, cfg.Normalise())
+
+				res := dep.ByIsDatabase(ctx)
+				testDS, cleanup, err0 := res.GetRandomisedDS(ctx, dep.Prefix()+"mig")
+				require.NoError(t, err0)
+				t.Cleanup(func() { cleanup(ctx) })
+				cfg.DatabasePrimaryURL = []string{testDS.String()}
+				cfg.DatabaseReplicaURL = []string{}
+
+				ctx, svc := frame.NewServiceWithContext(ctx, frame.WithName("migration tests"),
+					frame.WithConfig(&cfg),
+					frame.WithDatastore(),
+					frametests.WithNoopDriver())
+				t.Cleanup(func() { svc.Stop(ctx) })
+				svc.Init(ctx)
 
 				result := handleDatabaseMigration(ctx, svc.DatastoreManager(), cfg)
 				assert.Equal(t, tc.wantTrue, result)
