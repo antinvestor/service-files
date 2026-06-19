@@ -14,7 +14,7 @@ require (
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260509053930-1d8c1a60ae05.1
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
 	connectrpc.com/connect v1.20.0
-	github.com/antinvestor/common v1.5.0
+	github.com/antinvestor/common v1.5.2
 	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
@@ -27,7 +27,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/twpayne/go-geom v1.6.1
 	gocloud.dev v0.46.0
-	golang.org/x/image v0.42.0
+	golang.org/x/image v0.43.0
 	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.21.0
@@ -120,8 +120,8 @@ require (
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
-	github.com/moby/moby/api v1.54.2 // indirect
-	github.com/moby/moby/client v0.4.1 // indirect
+	github.com/moby/moby/api v1.55.0 // indirect
+	github.com/moby/moby/client v0.5.0 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/sys/sequential v0.7.0 // indirect
 	github.com/moby/sys/user v0.4.0 // indirect
