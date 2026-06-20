@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,8 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pitabwire/frame/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestNewMetrics(t *testing.T) {
@@ -22,9 +27,10 @@ func TestNewMetrics(t *testing.T) {
 
 func TestRecordRequest(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
-	m.RecordRequest("GET", "/api/test", 100*time.Millisecond, 200)
-	m.RecordRequest("GET", "/api/test", 150*time.Millisecond, 200)
+	m.RecordRequest(ctx, "GET", "/api/test", 100*time.Millisecond, 200)
+	m.RecordRequest(ctx, "GET", "/api/test", 150*time.Millisecond, 200)
 
 	reqMetrics := m.GetRequestMetrics()
 	assert.Equal(t, int64(2), reqMetrics["GET:/api/test"])
@@ -36,25 +42,27 @@ func TestRecordRequest(t *testing.T) {
 
 func TestRecordActiveRequest(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
 	assert.Equal(t, int64(0), m.GetActiveRequests())
 
-	m.RecordActiveRequest(1)
+	m.RecordActiveRequest(ctx, 1)
 	assert.Equal(t, int64(1), m.GetActiveRequests())
 
-	m.RecordActiveRequest(1)
+	m.RecordActiveRequest(ctx, 1)
 	assert.Equal(t, int64(2), m.GetActiveRequests())
 
-	m.RecordActiveRequest(-1)
+	m.RecordActiveRequest(ctx, -1)
 	assert.Equal(t, int64(1), m.GetActiveRequests())
 }
 
 func TestRecordUpload(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
-	m.RecordUpload(1024, true)
-	m.RecordUpload(2048, true)
-	m.RecordUpload(512, false)
+	m.RecordUpload(ctx, 1024, true)
+	m.RecordUpload(ctx, 2048, true)
+	m.RecordUpload(ctx, 512, false)
 
 	total, bytes, errors := m.GetUploadMetrics()
 	assert.Equal(t, int64(3), total)
@@ -64,9 +72,10 @@ func TestRecordUpload(t *testing.T) {
 
 func TestRecordDownload(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
-	m.RecordDownload(1024, true)
-	m.RecordDownload(2048, false)
+	m.RecordDownload(ctx, 1024, true)
+	m.RecordDownload(ctx, 2048, false)
 
 	total, bytes, errors := m.GetDownloadMetrics()
 	assert.Equal(t, int64(2), total)
@@ -77,7 +86,7 @@ func TestRecordDownload(t *testing.T) {
 func TestRecordStorageStats(t *testing.T) {
 	m := NewMetrics()
 
-	m.RecordStorageStats(1000000, 100, 10, 500000, 500000)
+	m.RecordStorageStats(context.Background(), 1000000, 100, 10, 500000, 500000)
 
 	totalBytes, totalFiles, totalUsers, publicBytes, privateBytes := m.GetStorageMetrics()
 	assert.Equal(t, int64(1000000), totalBytes)
@@ -89,10 +98,11 @@ func TestRecordStorageStats(t *testing.T) {
 
 func TestRecordCacheHit(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
-	m.RecordCacheHit("thumbnail")
-	m.RecordCacheHit("thumbnail")
-	m.RecordCacheHit("metadata")
+	m.RecordCacheHit(ctx, "thumbnail")
+	m.RecordCacheHit(ctx, "thumbnail")
+	m.RecordCacheHit(ctx, "metadata")
 
 	hits, _ := m.GetCacheMetrics()
 	assert.Equal(t, int64(2), hits["thumbnail"])
@@ -101,9 +111,10 @@ func TestRecordCacheHit(t *testing.T) {
 
 func TestRecordCacheMiss(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
-	m.RecordCacheMiss("thumbnail")
-	m.RecordCacheMiss("metadata")
+	m.RecordCacheMiss(ctx, "thumbnail")
+	m.RecordCacheMiss(ctx, "metadata")
 
 	_, misses := m.GetCacheMetrics()
 	assert.Equal(t, int64(1), misses["thumbnail"])
@@ -112,15 +123,16 @@ func TestRecordCacheMiss(t *testing.T) {
 
 func TestGetAverageDuration(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
 	// Test with no requests
 	avg := m.GetAverageDuration("GET", "/test")
 	assert.Equal(t, time.Duration(0), avg)
 
 	// Test with requests
-	m.RecordRequest("GET", "/test", 100*time.Millisecond, 200)
-	m.RecordRequest("GET", "/test", 200*time.Millisecond, 200)
-	m.RecordRequest("GET", "/test", 300*time.Millisecond, 200)
+	m.RecordRequest(ctx, "GET", "/test", 100*time.Millisecond, 200)
+	m.RecordRequest(ctx, "GET", "/test", 200*time.Millisecond, 200)
+	m.RecordRequest(ctx, "GET", "/test", 300*time.Millisecond, 200)
 
 	avg = m.GetAverageDuration("GET", "/test")
 	assert.Equal(t, 200*time.Millisecond, avg)
@@ -128,6 +140,7 @@ func TestGetAverageDuration(t *testing.T) {
 
 func TestGetPercentileDuration(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
 	// Test with no requests
 	pct := m.GetPercentileDuration("GET", "/test", 50)
@@ -138,7 +151,7 @@ func TestGetPercentileDuration(t *testing.T) {
 	// 50th percentile = index 5 (6th item) = 600ms
 	// 90th percentile = index 9 (10th item) = 1000ms
 	for i := 0; i < 10; i++ {
-		m.RecordRequest("GET", "/test", time.Duration(i+1)*100*time.Millisecond, 200)
+		m.RecordRequest(ctx, "GET", "/test", time.Duration(i+1)*100*time.Millisecond, 200)
 	}
 
 	pct = m.GetPercentileDuration("GET", "/test", 50)
@@ -150,38 +163,15 @@ func TestGetPercentileDuration(t *testing.T) {
 
 func TestRequestDurationLimit(t *testing.T) {
 	m := NewMetrics()
+	ctx := context.Background()
 
 	// Add many requests to test the 1000 limit
 	for i := 0; i < 1500; i++ {
-		m.RecordRequest("GET", "/test", time.Duration(i)*time.Millisecond, 200)
+		m.RecordRequest(ctx, "GET", "/test", time.Duration(i)*time.Millisecond, 200)
 	}
 
 	reqMetrics := m.GetRequestMetrics()
 	assert.Equal(t, int64(1500), reqMetrics["GET:/test"])
-}
-
-func TestHandler(t *testing.T) {
-	m := NewMetrics()
-
-	// Record some metrics
-	m.RecordRequest("GET", "/test", 100*time.Millisecond, 200)
-	m.RecordUpload(1024, true)
-	m.RecordCacheHit("thumbnail")
-
-	handler := m.Handler()
-	require.NotNil(t, handler)
-
-	req := httptest.NewRequest("GET", "/metrics", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	assert.Equal(t, "text/plain; version=0.0.4", w.Header().Get("Content-Type"))
-	body := w.Body.String()
-	assert.Contains(t, body, "file_service_active_requests")
-	assert.Contains(t, body, "file_service_uploads_total")
-	assert.Contains(t, body, "file_service_cache_hits_total")
-	assert.Contains(t, body, "file_service_up")
 }
 
 func TestMiddleware(t *testing.T) {
@@ -288,37 +278,83 @@ func TestReadyCheckHandlerWithNilFunction(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"status":"ready"`)
 }
 
-func TestMetricsFormat(t *testing.T) {
+// findMetric returns the metric with the given name, or nil when absent.
+func findMetric(rm metricdata.ResourceMetrics, name string) *metricdata.Metrics {
+	for _, sm := range rm.ScopeMetrics {
+		for i := range sm.Metrics {
+			if sm.Metrics[i].Name == name {
+				return &sm.Metrics[i]
+			}
+		}
+	}
+	return nil
+}
+
+// TestMetricsTenantAttribution proves, via a ManualReader, that the ported
+// instruments keep their exact file_service_* names and automatically attach
+// tenant_id/partition_id from the context claims: one counter (cache hits,
+// with its cache_type attribute) and one gauge (active requests).
+func TestMetricsTenantAttribution(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	otel.SetMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
+
 	m := NewMetrics()
 
-	m.RecordRequest("GET", "/api/test", 100*time.Millisecond, 200)
-	m.RecordUpload(1024, true)
-	m.RecordCacheHit("thumbnail")
+	claims := &security.AuthenticationClaims{
+		TenantID:    "tenant-files-attr",
+		PartitionID: "partition-files-attr",
+	}
+	claims.Subject = "subject-files-attr"
+	ctx := claims.ClaimsToContext(context.Background())
 
-	handler := m.Handler()
-	req := httptest.NewRequest("GET", "/metrics", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
+	m.RecordCacheHit(ctx, "thumbnail")
+	m.RecordActiveRequest(ctx, 1)
 
-	body := w.Body.String()
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(context.Background(), &rm))
 
-	// Check HELP comments
-	assert.Contains(t, body, "# HELP file_service_active_requests")
-	assert.Contains(t, body, "# HELP file_service_uploads_total")
-	assert.Contains(t, body, "# HELP file_service_downloads_total")
-	assert.Contains(t, body, "# HELP file_service_storage_bytes_total")
-	assert.Contains(t, body, "# HELP file_service_cache_hits_total")
-	assert.Contains(t, body, "# HELP file_service_requests_total")
-	assert.Contains(t, body, "# HELP file_service_up")
+	// Counter: exact name, cache_type plus tenant attributes.
+	hits := findMetric(rm, "file_service_cache_hits_total")
+	require.NotNil(t, hits, "cache hits counter must keep its metric name")
+	sum, ok := hits.Data.(metricdata.Sum[int64])
+	require.True(t, ok, "cache hits must be an int64 sum")
 
-	// Check TYPE comments
-	assert.Contains(t, body, "# TYPE file_service_active_requests gauge")
-	assert.Contains(t, body, "# TYPE file_service_uploads_total counter")
-	assert.Contains(t, body, "# TYPE file_service_downloads_total counter")
-	assert.Contains(t, body, "# TYPE file_service_storage_bytes_total gauge")
-	assert.Contains(t, body, "# TYPE file_service_cache_hits_total counter")
-	assert.Contains(t, body, "# TYPE file_service_requests_total counter")
-	assert.Contains(t, body, "# TYPE file_service_up gauge")
+	var counterMatched bool
+	for _, dp := range sum.DataPoints {
+		tenant, hasTenant := dp.Attributes.Value("tenant_id")
+		if !hasTenant || tenant.AsString() != "tenant-files-attr" {
+			continue
+		}
+		counterMatched = true
+		partition, hasPartition := dp.Attributes.Value("partition_id")
+		require.True(t, hasPartition, "partition_id must accompany tenant_id")
+		require.Equal(t, "partition-files-attr", partition.AsString())
+		cacheType, hasCacheType := dp.Attributes.Value("cache_type")
+		require.True(t, hasCacheType, "cache_type attribute must be preserved")
+		require.Equal(t, "thumbnail", cacheType.AsString())
+		require.Equal(t, int64(1), dp.Value)
+	}
+	require.True(t, counterMatched, "expected a cache hit datapoint attributed to tenant-files-attr")
+
+	// Gauge: exact name with tenant attribution and the recorded value.
+	active := findMetric(rm, "file_service_active_requests")
+	require.NotNil(t, active, "active requests gauge must keep its metric name")
+	gauge, ok := active.Data.(metricdata.Gauge[int64])
+	require.True(t, ok, "active requests must be an int64 gauge")
+
+	var gaugeMatched bool
+	for _, dp := range gauge.DataPoints {
+		tenant, hasTenant := dp.Attributes.Value("tenant_id")
+		if !hasTenant || tenant.AsString() != "tenant-files-attr" {
+			continue
+		}
+		gaugeMatched = true
+		partition, hasPartition := dp.Attributes.Value("partition_id")
+		require.True(t, hasPartition, "partition_id must accompany tenant_id")
+		require.Equal(t, "partition-files-attr", partition.AsString())
+		require.Equal(t, int64(1), dp.Value)
+	}
+	require.True(t, gaugeMatched, "expected an active requests datapoint attributed to tenant-files-attr")
 }
 
 func TestResponseWriterWrapper(t *testing.T) {
