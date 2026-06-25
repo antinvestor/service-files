@@ -36,7 +36,7 @@ require (
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/h2non/bimg.v1 v1.1.9
 	gorm.io/datatypes v1.2.7
-	gorm.io/gorm v1.31.1
+	gorm.io/gorm v1.31.2
 )
 
 require (
