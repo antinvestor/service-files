@@ -69,6 +69,13 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	profileConfig.EnvStorageEncryptionPhrase = "0123456789abcdef0123456789abcdef"
 	profileConfig.BasePath = aconfig.Path(t.TempDir())
 
+	// Frame defaults AuthorizationMode=enforced. Base suite tests do not
+	// start Keto (testketo tests import this package — keep no import cycle).
+	// Suites that need real ReBAC (middleware) configure Keto themselves.
+	if profileConfig.AuthorizationServiceWriteURI == "" {
+		profileConfig.AuthorizationMode = config.AuthorizationModeDisabled
+	}
+
 	err = profileConfig.Normalise()
 	require.NoError(t, err)
 
