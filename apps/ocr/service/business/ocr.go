@@ -12,9 +12,9 @@ import (
 	"github.com/antinvestor/service-files/apps/ocr/config"
 	"github.com/antinvestor/service-files/apps/ocr/service/models"
 	"github.com/antinvestor/service-files/apps/ocr/service/repository"
-	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/queue"
-	"github.com/pitabwire/frame/security"
+	"github.com/pitabwire/frame/v2"
+	"github.com/pitabwire/frame/v2/queue"
+	"github.com/pitabwire/frame/v2/security"
 	"github.com/pitabwire/util"
 	"google.golang.org/protobuf/types/known/structpb"
 )

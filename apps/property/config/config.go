@@ -1,7 +1,7 @@
 package config
 
 import (
-	fconfig "github.com/pitabwire/frame/config"
+	fconfig "github.com/pitabwire/frame/v2/config"
 )
 
 type PropertyConfig struct {

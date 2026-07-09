@@ -12,10 +12,10 @@ import (
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/handler"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
-	"github.com/pitabwire/frame"
-	fconfig "github.com/pitabwire/frame/config"
-	"github.com/pitabwire/frame/datastore"
-	connectinterceptors "github.com/pitabwire/frame/security/interceptors/connect"
+	"github.com/pitabwire/frame/v2"
+	fconfig "github.com/pitabwire/frame/v2/config"
+	"github.com/pitabwire/frame/v2/datastore"
+	connectinterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
 	"github.com/pitabwire/util"
 )
 

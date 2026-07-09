@@ -27,7 +27,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame"
+	"github.com/pitabwire/frame/v2"
 	"github.com/pitabwire/util"
 )
 

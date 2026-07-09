@@ -7,7 +7,7 @@ import (
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
 	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/service/business"
-	"github.com/pitabwire/frame/datastore/pool"
+	"github.com/pitabwire/frame/v2/datastore/pool"
 )
 
 type PropertyServer struct {

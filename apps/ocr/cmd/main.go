@@ -7,19 +7,20 @@ import (
 	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	"buf.build/gen/go/antinvestor/ocr/connectrpc/go/ocr/v1/ocrv1connect"
 	"connectrpc.com/connect"
-	"github.com/antinvestor/common"
-	"github.com/antinvestor/common/connection"
+	"github.com/antinvestor/common/v2"
+	"github.com/antinvestor/common/v2/connection"
+	"github.com/antinvestor/common/v2/servicecatalog"
 	"github.com/antinvestor/service-files/apps/ocr/config"
 	"github.com/antinvestor/service-files/apps/ocr/service/business"
 	"github.com/antinvestor/service-files/apps/ocr/service/handlers"
 	"github.com/antinvestor/service-files/apps/ocr/service/models"
 	"github.com/antinvestor/service-files/apps/ocr/service/queue"
 	"github.com/antinvestor/service-files/apps/ocr/service/repository"
-	"github.com/pitabwire/frame"
-	fconfig "github.com/pitabwire/frame/config"
-	"github.com/pitabwire/frame/datastore"
-	"github.com/pitabwire/frame/security"
-	connectInterceptors "github.com/pitabwire/frame/security/interceptors/connect"
+	"github.com/pitabwire/frame/v2"
+	fconfig "github.com/pitabwire/frame/v2/config"
+	"github.com/pitabwire/frame/v2/datastore"
+	"github.com/pitabwire/frame/v2/security"
+	connectInterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
 	"github.com/pitabwire/util"
 )
 
@@ -62,9 +63,7 @@ func main() {
 
 	sm := svc.SecurityManager()
 
-	audienceList := cfg.GetOauth2ServiceAudience()
-
-	filesCli, err := setupFilesClient(ctx, cfg, audienceList)
+	filesCli, err := setupFilesClient(ctx, cfg)
 	if err != nil {
 		log.WithError(err).Fatal("could not setup files client")
 	}
@@ -106,12 +105,11 @@ func main() {
 func setupFilesClient(
 	ctx context.Context,
 	cfg config.OcrConfig,
-	audiences []string,
 ) (filesv1connect.FilesServiceClient, error) {
 	return connection.NewServiceClient(ctx, &cfg, common.ServiceTarget{
 		Endpoint:              cfg.FilesServiceURI,
 		WorkloadAPITargetPath: cfg.FilesServiceWorkloadAPITargetPath,
-		Audiences:             audiences,
+		ServiceID:             servicecatalog.ServiceFiles,
 	}, filesv1connect.NewFilesServiceClient)
 }
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/pitabwire/frame/data"
-	"github.com/pitabwire/frame/events"
+	"github.com/pitabwire/frame/v2/data"
+	"github.com/pitabwire/frame/v2/events"
 	"github.com/pitabwire/util"
 )
 

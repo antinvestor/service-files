@@ -7,7 +7,7 @@ import (
 
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
 	"github.com/antinvestor/service-files/apps/redirect/service/repository"
-	"github.com/pitabwire/frame/datastore/pool"
+	"github.com/pitabwire/frame/v2/datastore/pool"
 )
 
 var ErrorInitializationFail = errors.New("business initialization failed: nil pool")
