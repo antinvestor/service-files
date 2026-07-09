@@ -1,6 +1,6 @@
 package config
 
-import "github.com/pitabwire/frame/config"
+import "github.com/pitabwire/frame/v2/config"
 
 type OcrConfig struct {
 	config.ConfigurationDefault

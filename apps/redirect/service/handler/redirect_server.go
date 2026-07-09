@@ -10,7 +10,7 @@ import (
 	"github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1/redirectv1connect"
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
-	"github.com/pitabwire/frame/datastore/pool"
+	"github.com/pitabwire/frame/v2/datastore/pool"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/datatypes"

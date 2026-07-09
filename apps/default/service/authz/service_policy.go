@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/pitabwire/frame/security"
+	"github.com/pitabwire/frame/v2/security"
 )
 
 // ServicePermission defines what an internal service is allowed to do.

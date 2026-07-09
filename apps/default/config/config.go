@@ -3,7 +3,7 @@ package config
 import (
 	"path/filepath"
 
-	"github.com/pitabwire/frame/config"
+	"github.com/pitabwire/frame/v2/config"
 )
 
 // A Path on the filesystem.

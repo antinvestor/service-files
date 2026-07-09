@@ -9,10 +9,10 @@ import (
 	"github.com/antinvestor/service-files/apps/property/config"
 	"github.com/antinvestor/service-files/apps/property/service/handlers"
 	"github.com/antinvestor/service-files/apps/property/service/models"
-	"github.com/pitabwire/frame"
-	fconfig "github.com/pitabwire/frame/config"
-	"github.com/pitabwire/frame/datastore"
-	connectinterceptors "github.com/pitabwire/frame/security/interceptors/connect"
+	"github.com/pitabwire/frame/v2"
+	fconfig "github.com/pitabwire/frame/v2/config"
+	"github.com/pitabwire/frame/v2/datastore"
+	connectinterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
 )
 
 func main() {

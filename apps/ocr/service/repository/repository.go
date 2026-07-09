@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/antinvestor/service-files/apps/ocr/service/models"
-	"github.com/pitabwire/frame/datastore/pool"
+	"github.com/pitabwire/frame/v2/datastore/pool"
 )
 
 type OcrRepository interface {

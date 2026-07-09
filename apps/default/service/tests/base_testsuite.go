@@ -7,13 +7,13 @@ import (
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	events2 "github.com/antinvestor/service-files/apps/default/service/events"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/pitabwire/frame"
-	"github.com/pitabwire/frame/config"
-	"github.com/pitabwire/frame/datastore"
-	"github.com/pitabwire/frame/frametests"
-	"github.com/pitabwire/frame/frametests/definition"
-	"github.com/pitabwire/frame/frametests/deps/testpostgres"
-	"github.com/pitabwire/frame/frametests/rlstest"
+	"github.com/pitabwire/frame/v2"
+	"github.com/pitabwire/frame/v2/config"
+	"github.com/pitabwire/frame/v2/datastore"
+	"github.com/pitabwire/frame/v2/frametests"
+	"github.com/pitabwire/frame/v2/frametests/definition"
+	"github.com/pitabwire/frame/v2/frametests/deps/testpostgres"
+	"github.com/pitabwire/frame/v2/frametests/rlstest"
 	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/require"
 )
@@ -68,6 +68,13 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	profileConfig.DatabaseMaxIdleConnections = 0
 	profileConfig.EnvStorageEncryptionPhrase = "0123456789abcdef0123456789abcdef"
 	profileConfig.BasePath = aconfig.Path(t.TempDir())
+
+	// Frame defaults AuthorizationMode=enforced. Base suite tests do not
+	// start Keto (testketo tests import this package — keep no import cycle).
+	// Suites that need real ReBAC (middleware) configure Keto themselves.
+	if profileConfig.AuthorizationServiceWriteURI == "" {
+		profileConfig.AuthorizationMode = config.AuthorizationModeDisabled
+	}
 
 	err = profileConfig.Normalise()
 	require.NoError(t, err)
