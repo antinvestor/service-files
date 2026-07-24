@@ -21,7 +21,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame/v2 v2.0.8
+	github.com/pitabwire/frame/v2 v2.0.12
 	github.com/pitabwire/util v0.9.1
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.43.0
@@ -49,6 +49,8 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.12.0 // indirect
 	cloud.google.com/go/monitoring v1.30.0 // indirect
+	cloud.google.com/go/pubsub v1.50.2 // indirect
+	cloud.google.com/go/pubsub/v2 v2.5.1 // indirect
 	cloud.google.com/go/storage v1.64.0 // indirect
 	connectrpc.com/otelconnect v0.9.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
