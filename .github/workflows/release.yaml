@@ -1,16 +1,48 @@
 name: Release
+
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing image tag to ship (e.g. v1.10.54). Empty = build from ref.
+        required: false
+        default: ""
+      skip_migrate:
+        description: Skip migrate job (emergency image-only)
+        type: boolean
+        default: false
+
 jobs:
   docker:
+    if: github.event_name == 'push' || inputs.tag == ''
     permissions:
       contents: read
       packages: write
     uses: antinvestor/common/.github/workflows/docker-release.yml@main
+
   buf-push:
+    if: github.event_name == 'push'
     permissions:
       contents: read
     uses: antinvestor/common/.github/workflows/buf-push.yaml@main
     secrets:
       buf_token: ${{ secrets.BUF_TOKEN }}
+
+  ship-platform-files:
+    needs: [docker]
+    if: always() && (needs.docker.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.tag != ''))
+    permissions:
+      contents: read
+      id-token: write
+    uses: antinvestor/common/.github/workflows/cloudrun-ship.yml@main
+    with:
+      image: ghcr.io/antinvestor/service-files:${{ inputs.tag != '' && inputs.tag || github.ref_name }}
+      service: platform-files
+      migrate_job: platform-files-migrate
+      project_id: stawi-platform
+      region: europe-west9
+      ship_service_account: cloudrun-ship@stawi-platform.iam.gserviceaccount.com
+      workload_identity_provider: projects/305282281906/locations/global/workloadIdentityPools/github/providers/github-ship
+      skip_migrate: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_migrate == true }}
