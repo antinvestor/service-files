@@ -16,6 +16,7 @@ import (
 	fconfig "github.com/pitabwire/frame/v2/config"
 	"github.com/pitabwire/frame/v2/datastore"
 	connectinterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
+	"github.com/pitabwire/frame/v2/setup"
 	"github.com/pitabwire/util"
 )
 
@@ -44,19 +45,15 @@ func main() {
 		return
 	}
 
-	if cfg.DoDatabaseMigrate() {
+	// Setup plan: migrate (+ permissions). Fast runtime without PreStart POSTs.
+	svc.Setup().RegisterFunc(setup.NameMigrate, func(ctx context.Context) error {
 		migrationPool := dbManager.GetPool(ctx, datastore.DefaultMigrationPoolName)
 		if migrationPool == nil {
 			migrationPool = dbPool
 		}
-		err = dbManager.Migrate(ctx, migrationPool, cfg.GetDatabaseMigrationPath(),
+		return dbManager.Migrate(ctx, migrationPool, cfg.GetDatabaseMigrationPath(),
 			models.Link{}, models.Click{})
-		if err != nil {
-			log.WithError(err).Fatal("could not migrate")
-			return
-		}
-		return
-	}
+	})
 
 	rawCache, ok := svc.GetRawCache(handler.CacheName)
 	if !ok {
@@ -126,6 +123,14 @@ func main() {
 	redirectSD := redirectpb.File_redirect_v1_redirect_proto.Services().ByName("RedirectService")
 
 	svc.Init(ctx, frame.WithHTTPHandler(mux), frame.WithPermissionRegistration(redirectSD))
+
+	if frame.ShouldRunSetup(&cfg) {
+		if setupErr := svc.RunSetupForProcess(ctx, &cfg); setupErr != nil {
+			log.WithError(setupErr).Fatal("setup plan failed")
+		}
+		log.Info("setup plan complete — exiting")
+		return
+	}
 
 	log.Info("redirect service starting")
 
