@@ -53,10 +53,6 @@ func main() {
 		util.Log(ctx).WithError(err).Fatal("invalid files configuration")
 	}
 
-	if err = validateEncryptionConfig(&cfg); err != nil {
-		util.Log(ctx).WithError(err).Fatal("invalid encryption configuration")
-	}
-
 	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithDatastore())
 
 	svc.Setup().RegisterFunc(setup.NameMigrate, func(ctx context.Context) error {
@@ -64,6 +60,22 @@ func main() {
 	})
 
 	log := svc.Log(ctx)
+
+	// Setup Job: migrate + publish service_file permission manifest only.
+	// Exit before storage/encryption wiring so the Job stays lean and reliable.
+	filesSD := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
+	if frame.ShouldRunSetup(&cfg) {
+		svc.Init(ctx, frame.WithPermissionRegistration(filesSD))
+		if setupErr := svc.RunSetupForProcess(ctx, &cfg); setupErr != nil {
+			util.Log(ctx).WithError(setupErr).Fatal("setup plan failed")
+		}
+		log.Info("setup plan complete — exiting")
+		return
+	}
+
+	if err = validateEncryptionConfig(&cfg); err != nil {
+		util.Log(ctx).WithError(err).Fatal("invalid encryption configuration")
+	}
 
 	dbManager := svc.DatastoreManager()
 	dbPool := dbManager.GetPool(ctx, datastore.DefaultPoolName)
@@ -100,12 +112,15 @@ func main() {
 
 	auth := sm.GetAuthorizer(ctx)
 
-	// Layer 1: TenancyAccessChecker verifies caller can access the partition.
-	tenancyAccessChecker := authorizer.NewTenancyAccessChecker(auth, authz.NamespaceTenancyAccess)
+	// Layer 1: TenancyAccessChecker — Plane 1 data access. Self-heal missing
+	// #service tuples for internal service bots (e.g. opportunities-matching).
+	tenancyAccessChecker := authorizer.NewTenancyAccessChecker(auth, authz.NamespaceTenancyAccess,
+		authorizer.WithOnTenancyAccessDenied(authz.HealServiceTenancyAccess),
+	)
 	tenancyAccessInterceptor := connectInterceptors.NewTenancyAccessInterceptor(tenancyAccessChecker)
 
 	// Layer 2: FunctionAccessInterceptor enforces per-RPC permissions from proto annotations.
-	sd := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
+	sd := filesSD
 	procMap := permissions.BuildProcedureMap(sd)
 	functionChecker := authorizer.NewFunctionChecker(auth, permissions.ForService(sd).Namespace)
 	functionAccessInterceptor := connectInterceptors.NewFunctionAccessInterceptor(functionChecker, procMap)
@@ -128,11 +143,9 @@ func main() {
 		framehttp.TenancyAccessMiddleware(mediaRouter, tenancyAccessChecker),
 		sm.GetAuthenticator(ctx)))
 
-	// Register permission manifest for the files service namespace.
-	filesSD := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
-
 	defaultServer := frame.WithHTTPHandler(mux)
-	serviceOptions := []frame.Option{defaultServer, frame.WithPermissionRegistration(filesSD), frame.WithRegisterEvents(
+	// Permission registration stays setup-only; runtime does not re-POST manifests.
+	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(
 		events.NewAuditSaveHandler(auditRepo),
 		events.NewMetadataSaveHandler(mediaRepo),
 	)}
@@ -143,13 +156,6 @@ func main() {
 	serviceOptions = append(serviceOptions, thumbnailGenerateQueue, thumbnailGeneratePublish)
 
 	svc.Init(ctx, serviceOptions...)
-
-	if frame.ShouldRunSetup(&cfg) {
-		if setupErr := svc.RunSetupForProcess(ctx, &cfg); setupErr != nil {
-			util.Log(ctx).WithError(setupErr).Fatal("setup plan failed")
-		}
-		return
-	}
 
 	err = svc.Run(ctx, "")
 	if err != nil {
