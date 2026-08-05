@@ -1932,8 +1932,15 @@ service FilesService {
         ]
       },
       {
+        // Partition members (e.g. opportunities candidates after login) may
+        // upload their own content. Per-file Plane-3 grants still protect
+        // other users' objects; this only unlocks functional content_upload.
         role: ROLE_MEMBER
-        permissions: ["content_view"]
+        permissions: [
+          "content_view",
+          "content_upload",
+          "file_access_view"
+        ]
       },
       {
         role: ROLE_SERVICE

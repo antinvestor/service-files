@@ -55,6 +55,17 @@ func main() {
 			models.Link{}, models.Click{})
 	})
 
+	// Setup Job exits before redirect handlers / analytics wiring.
+	redirectSD := redirectpb.File_redirect_v1_redirect_proto.Services().ByName("RedirectService")
+	if frame.ShouldRunSetup(&cfg) {
+		svc.Init(ctx, frame.WithPermissionRegistration(redirectSD))
+		if setupErr := svc.RunSetupForProcess(ctx, &cfg); setupErr != nil {
+			log.WithError(setupErr).Fatal("setup plan failed")
+		}
+		log.Info("setup plan complete — exiting")
+		return
+	}
+
 	rawCache, ok := svc.GetRawCache(handler.CacheName)
 	if !ok {
 		log.Fatal("redirect cache not available")
@@ -119,18 +130,8 @@ func main() {
 	// Connect RPC management API — protected by OIDC auth interceptors.
 	mux.Handle("/redirect.v1.RedirectService/", connectHandler)
 
-	// Register permission manifest for the redirect service namespace.
-	redirectSD := redirectpb.File_redirect_v1_redirect_proto.Services().ByName("RedirectService")
-
-	svc.Init(ctx, frame.WithHTTPHandler(mux), frame.WithPermissionRegistration(redirectSD))
-
-	if frame.ShouldRunSetup(&cfg) {
-		if setupErr := svc.RunSetupForProcess(ctx, &cfg); setupErr != nil {
-			log.WithError(setupErr).Fatal("setup plan failed")
-		}
-		log.Info("setup plan complete — exiting")
-		return
-	}
+	// Runtime: HTTP only — permission manifests publish on the setup Job path.
+	svc.Init(ctx, frame.WithHTTPHandler(mux))
 
 	log.Info("redirect service starting")
 
