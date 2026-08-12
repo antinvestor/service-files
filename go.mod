@@ -5,14 +5,14 @@ go 1.26
 toolchain go1.26.1
 
 require (
-	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.11-20260509050709-3f270876dbf3.1
+	buf.build/gen/go/antinvestor/common/protocolbuffers/go v1.36.12-20260509050709-3f270876dbf3.1
 	buf.build/gen/go/antinvestor/files/connectrpc/go v1.20.0-20260805203521-5b67b91e6685.1
-	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.11-20260805203521-5b67b91e6685.1
+	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.12-20260805203521-5b67b91e6685.1
 	buf.build/gen/go/antinvestor/ocr/connectrpc/go v1.20.0-20260709214326-35d11f0da1af.1
-	buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.11-20260709214326-35d11f0da1af.1
+	buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20260709214326-35d11f0da1af.1
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.20.0-20260724174013-1fb2cfa243e1.1
-	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.11-20260724174013-1fb2cfa243e1.1
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
+	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.12-20260724174013-1fb2cfa243e1.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260709200747-435963d16310.1
 	connectrpc.com/connect v1.20.0
 	github.com/antinvestor/common/v2 v2.0.4
 	github.com/aws/aws-sdk-go-v2 v1.43.4
@@ -36,15 +36,15 @@ require (
 	golang.org/x/sync v0.22.0
 	golang.org/x/time v0.15.0
 	google.golang.org/api v0.292.0
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/h2non/bimg.v1 v1.1.9
 	gorm.io/datatypes v1.2.7
 	gorm.io/gorm v1.31.2
 )
 
 require (
-	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.11-20230414000709-087bc8072ce4.1 // indirect
-	buf.build/go/protovalidate v1.2.0 // indirect
+	buf.build/gen/go/gnostic/gnostic/protocolbuffers/go v1.36.12-20230414000709-087bc8072ce4.1 // indirect
+	buf.build/go/protovalidate v1.3.0 // indirect
 	cel.dev/expr v0.25.2 // indirect
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.23.0 // indirect
