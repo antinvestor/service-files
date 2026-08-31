@@ -14,14 +14,14 @@ require (
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.12-20260724174013-1fb2cfa243e1.1
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
 	connectrpc.com/connect v1.20.0
-	github.com/antinvestor/common/v2 v2.0.5
+	github.com/antinvestor/common/v2 v2.0.7
 	github.com/aws/aws-sdk-go-v2 v1.45.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.109.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame/v2 v2.1.6
+	github.com/pitabwire/frame/v2 v2.1.7
 	github.com/pitabwire/util v0.9.1
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
