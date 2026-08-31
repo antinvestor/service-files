@@ -1,6 +1,6 @@
 module github.com/antinvestor/service-files
 
-go 1.26
+go 1.26.0
 
 toolchain go1.26.1
 
@@ -14,14 +14,14 @@ require (
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.12-20260724174013-1fb2cfa243e1.1
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
 	connectrpc.com/connect v1.20.0
-	github.com/antinvestor/common/v2 v2.0.4
+	github.com/antinvestor/common/v2 v2.0.5
 	github.com/aws/aws-sdk-go-v2 v1.45.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.109.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/pitabwire/frame/v2 v2.1.4
+	github.com/pitabwire/frame/v2 v2.1.6
 	github.com/pitabwire/util v0.9.1
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
@@ -140,7 +140,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/ory/keto/proto v0.13.0-alpha.0.0.20260420082854-eb334a7a5cf0 // indirect
 	github.com/panjf2000/ants/v2 v2.12.1 // indirect
-	github.com/pitabwire/natspubsub v0.8.4 // indirect
+	github.com/pitabwire/natspubsub v0.8.5 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
