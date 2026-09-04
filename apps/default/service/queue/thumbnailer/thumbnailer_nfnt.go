@@ -25,10 +25,7 @@ import (
 	// Imported for gif codec
 	_ "image/gif"
 	"image/jpeg"
-
-	// Imported for png codec
-	_ "image/png"
-	// Imported for webp codec
+	"image/png"
 	"os"
 	"time"
 
@@ -131,13 +128,28 @@ func readFile(ctx context.Context, provider storage2.Provider, absBasePath confi
 	return img, nil
 }
 
-func writeFile(img image.Image, dst string) (err error) {
+// thumbnailContentType picks the encoding for a thumbnail from its source content type.
+// PNG and GIF sources may carry transparency, so they are re-encoded as PNG; everything else
+// (JPEG, WebP, unknown) becomes JPEG. The returned value is what serving reports as Content-Type.
+func thumbnailContentType(source types.ContentType) types.ContentType {
+	switch source {
+	case "image/png", "image/gif":
+		return "image/png"
+	default:
+		return "image/jpeg"
+	}
+}
+
+func writeFile(img image.Image, dst string, contentType types.ContentType) (err error) {
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer (func() { err = out.Close() })()
 
+	if contentType == "image/png" {
+		return png.Encode(out, img)
+	}
 	return jpeg.Encode(out, img, &jpeg.Options{
 		Quality: 85,
 	})
@@ -179,7 +191,8 @@ func createThumbnail(
 	}
 
 	start := time.Now()
-	width, height, err := adjustSize(tempThumbnailPath, img, config.Width, config.Height, config.ResizeMethod == types.Crop)
+	contentType := thumbnailContentType(mediaMetadata.ContentType)
+	width, height, err := adjustSize(tempThumbnailPath, img, config.Width, config.Height, config.ResizeMethod == types.Crop, contentType)
 	if err != nil {
 		return err
 	}
@@ -198,8 +211,7 @@ func createThumbnail(
 			MediaID:  types.MediaID(utils.GenerateRandomString(32)),
 			ParentID: mediaMetadata.MediaID,
 
-			// Note: the code currently always creates a JPEG thumbnail
-			ContentType:       types.ContentType("image/jpeg"),
+			ContentType:       contentType,
 			FileSizeBytes:     size,
 			Base64Hash:        hash,
 			OwnerID:           mediaMetadata.OwnerID,
@@ -263,7 +275,7 @@ func createThumbnail(
 // adjustSize scales an image to fit within the provided width and height
 // If the source aspect ratio is different to the target dimensions, one edge will be smaller than requested
 // If crop is set to true, the image will be scaled to fill the width and height with any excess being cropped off
-func adjustSize(dst types.Path, img image.Image, w, h int, crop bool) (int, int, error) {
+func adjustSize(dst types.Path, img image.Image, w, h int, crop bool, contentType types.ContentType) (int, int, error) {
 	var out image.Image
 	var err error
 	if crop {
@@ -294,7 +306,7 @@ func adjustSize(dst types.Path, img image.Image, w, h int, crop bool) (int, int,
 		out = resize.Thumbnail(uint(w), uint(h), img, resize.Lanczos3)
 	}
 
-	if err = writeFile(out, string(dst)); err != nil {
+	if err = writeFile(out, string(dst), contentType); err != nil {
 		return -1, -1, err
 	}
 

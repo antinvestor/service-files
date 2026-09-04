@@ -69,7 +69,7 @@ func (s *mediaService) DownloadFile(ctx context.Context, req *DownloadRequest) (
 		return nil, fmt.Errorf("failed to get media metadata: %w", err)
 	}
 	if mediaMetadata == nil {
-		return nil, fmt.Errorf("media not found")
+		return nil, ErrMediaNotFound
 	}
 
 	if req.IsThumbnailRequest {
@@ -312,26 +312,26 @@ func (s *mediaService) processUpload(ctx context.Context, req *UploadRequest) (*
 func (s *mediaService) validateDownloadRequest(req *DownloadRequest) error {
 	// Validate media ID format
 	if !isValidMediaID(string(req.MediaID)) {
-		return fmt.Errorf("invalid parameter: mediaId must be a non-empty string and contain only characters A-Za-z0-9_=-")
+		return fmt.Errorf("%w: mediaId must be a non-empty string and contain only characters A-Za-z0-9_=-", ErrInvalidParameter)
 	}
 
 	// Validate thumbnail parameters if it's a thumbnail request
 	if req.IsThumbnailRequest {
 		if req.ThumbnailSize == nil {
-			return fmt.Errorf("invalid parameter: thumbnail size is required")
+			return fmt.Errorf("%w: thumbnail size is required", ErrInvalidParameter)
 		}
 		if req.ThumbnailSize.Width <= 0 || req.ThumbnailSize.Height <= 0 {
-			return fmt.Errorf("invalid parameter: width and height must be > 0")
+			return fmt.Errorf("%w: width and height must be > 0", ErrInvalidParameter)
 		}
 		maxDim := req.Config.MaxThumbnailDimension
 		if maxDim == 0 {
 			maxDim = 2048
 		}
 		if req.ThumbnailSize.Width > maxDim || req.ThumbnailSize.Height > maxDim {
-			return fmt.Errorf("invalid parameter: width and height must be <= %d", maxDim)
+			return fmt.Errorf("%w: width and height must be <= %d", ErrInvalidParameter, maxDim)
 		}
 		if req.ThumbnailSize.ResizeMethod != types.Crop && req.ThumbnailSize.ResizeMethod != types.Scale {
-			return fmt.Errorf("invalid parameter: unsupported resize method")
+			return fmt.Errorf("%w: unsupported resize method", ErrInvalidParameter)
 		}
 	}
 
@@ -449,11 +449,25 @@ func (s *mediaService) encryptToPath(
 	return nil
 }
 
+// ResolveThumbnail implements MediaService.
+func (s *mediaService) ResolveThumbnail(ctx context.Context, mediaMetadata *types.MediaMetadata, req *DownloadRequest) (*types.ThumbnailMetadata, error) {
+	if mediaMetadata == nil {
+		return nil, ErrMediaNotFound
+	}
+	if !req.IsThumbnailRequest {
+		return nil, fmt.Errorf("%w: thumbnail request expected", ErrInvalidParameter)
+	}
+	if err := s.validateDownloadRequest(req); err != nil {
+		return nil, err
+	}
+	return s.resolveThumbnail(ctx, req, mediaMetadata)
+}
+
 func (s *mediaService) resolveThumbnail(ctx context.Context, req *DownloadRequest, mediaMetadata *types.MediaMetadata) (*types.ThumbnailMetadata, error) {
 	cfg := req.Config
 	thumbnailSize := req.ThumbnailSize
 	if thumbnailSize == nil {
-		return nil, fmt.Errorf("thumbnail size is required")
+		return nil, fmt.Errorf("%w: thumbnail size is required", ErrInvalidParameter)
 	}
 
 	thumbnails, err := s.db.GetThumbnails(ctx, req.MediaID)
@@ -467,12 +481,12 @@ func (s *mediaService) resolveThumbnail(ctx context.Context, req *DownloadReques
 	}
 
 	if sizeToGenerate == nil {
-		return nil, fmt.Errorf("thumbnail not found")
+		return nil, ErrThumbnailNotFound
 	}
 
 	if !cfg.DynamicThumbnails {
 		if !thumbnailSizeEqual(*sizeToGenerate, *thumbnailSize) {
-			return nil, fmt.Errorf("thumbnail not found")
+			return nil, ErrThumbnailNotFound
 		}
 	}
 
@@ -488,7 +502,8 @@ func (s *mediaService) resolveThumbnail(ctx context.Context, req *DownloadReques
 		return nil, err
 	}
 	if thumbnailMetadata == nil {
-		return nil, fmt.Errorf("thumbnail generation failed")
+		// The source is no larger than the requested size, so no thumbnail was produced.
+		return nil, ErrThumbnailNotFound
 	}
 	return thumbnailMetadata, nil
 }

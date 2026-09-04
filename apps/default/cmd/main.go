@@ -135,13 +135,17 @@ func main() {
 		fileServer, connect.WithInterceptors(defaultInterceptorList...))
 
 	mediaRouter := routing.SetupMediaRoutes(svc, metadataStore, storageProvider, mediaService, authzMiddleware)
+	publicMediaRouter := routing.SetupPublicMediaRoutes(svc, metadataStore, storageProvider, mediaService)
 
 	mux := http.NewServeMux()
 	mux.Handle(connectPath, connectHandler)
 	mux.Handle("/openapi.yaml", common.NewOpenAPIHandler(apiSpecFile, nil))
-	mux.Handle("/v1/media/", framehttp.AuthenticationMiddleware(
+	mux.Handle(routing.PublicMediaPathPrefix, framehttp.AuthenticationMiddleware(
 		framehttp.TenancyAccessMiddleware(mediaRouter, tenancyAccessChecker),
 		sm.GetAuthenticator(ctx)))
+	// Anonymous access to PUBLIC-visibility media: mounted outside authentication on purpose.
+	// The handler's only gate is Visibility == PUBLIC and not deleted (see routing/public.go).
+	mux.Handle(routing.AnonymousMediaPathPrefix, publicMediaRouter)
 
 	defaultServer := frame.WithHTTPHandler(mux)
 	// Permission registration stays setup-only; runtime does not re-POST manifests.
