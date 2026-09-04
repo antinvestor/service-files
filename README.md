@@ -47,3 +47,32 @@ git config core.hooksPath .githooks
 git commit --no-verify
 ```
     
+## Public media serving
+
+Media uploaded with `PUBLIC` visibility can be fetched anonymously (no bearer token, no
+ownership/Keto check) so catalogue pages, Open Graph crawlers and CDNs can reference file-service
+URLs directly:
+
+| Route | Description |
+|-------|-------------|
+| `GET\|HEAD /v1/public/media/{serverName}/{mediaId}` | Original bytes. Supports `Range` (206) and `If-None-Match` (304). |
+| `GET\|HEAD /v1/public/media/{serverName}/{mediaId}/thumbnail?width=&height=&method=` | Closest pre-generated thumbnail (`method` is `crop` or `scale`, default `scale`). Generated on demand for configured sizes, or for any size when `DYNAMIC_THUMBNAILS=true`. |
+
+Responses carry `Content-Type`, `Content-Length`, `ETag` (quoted SHA-256 checksum of the served
+object), `Last-Modified`, `Accept-Ranges: bytes`, `Cache-Control: public, max-age=31536000, immutable`,
+`Cross-Origin-Resource-Policy: cross-origin` and `Access-Control-Allow-Origin: *`. A media id
+never changes bytes, so responses are safe to cache indefinitely.
+
+Anything that is not an existing, non-deleted, `PUBLIC` file answers `404` (never `401`/`403`)
+so private media cannot be enumerated. Authenticated access remains under `/v1/media/`.
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAX_FILE_SIZE_BYTES` | `10485760` | Maximum upload size in bytes. |
+| `THUMBNAIL_SIZES` | `32x32:crop,96x96:crop,640x480:scale` | Comma-separated `WIDTHxHEIGHT[:METHOD]` sizes pre-generated for every uploaded image. `METHOD` is `crop` or `scale` (default `scale`). Each dimension must be `<= MAX_THUMBNAIL_DIMENSION`. |
+| `MAX_THUMBNAIL_DIMENSION` | `2048` | Largest width/height accepted for thumbnails. |
+| `DYNAMIC_THUMBNAILS` | `false` | Generate thumbnails on demand for sizes not listed in `THUMBNAIL_SIZES`. |
+| `ENCRYPTION_PHRASE` | – | 32-byte AES-256-GCM key for private files (required). |
+| `STORAGE_PROVIDER` | `LOCAL` | `LOCAL`, `GCS` or `S3`; see `apps/default/config/config.go` for bucket variables. |

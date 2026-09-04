@@ -1,7 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/pitabwire/frame/v2/config"
 )
@@ -26,31 +29,6 @@ type ThumbnailSize struct {
 
 // DefaultMaxFileSizeBytes defines the default file size allowed in transfers
 var DefaultMaxFileSizeBytes = FileSizeBytes(10485760)
-
-//func (c *MediaAPI) Defaults(opts DefaultOpts) {
-//	c.MaxFileSizeBytes = DefaultMaxFileSizeBytes
-//	c.MaxThumbnailGenerators = 10
-//	c.ThumbnailSizes = []ThumbnailSize{
-//		{
-//			Width:        32,
-//			Height:       32,
-//			ResizeMethod: "crop",
-//		},
-//		{
-//			Width:        96,
-//			Height:       96,
-//			ResizeMethod: "crop",
-//		},
-//		{
-//			Width:        640,
-//			Height:       480,
-//			ResizeMethod: "scale",
-//		},
-//	}
-//	c.Database.ConnectionString = opts.DatabaseConnectionStr
-//	c.BasePath = "/tmp/media_store"
-//
-//}
 
 type FilesConfig struct {
 	config.ConfigurationDefault
@@ -85,12 +63,11 @@ type FilesConfig struct {
 	AbsBasePath Path `yaml:"-"`
 
 	// The maximum file size in bytes that is allowed to be stored on this server.
-	// Note: if max_file_size_bytes is set to 0, the size is unlimited.
-	// Note: if max_file_size_bytes is not set, it will default to 10485760 (10MB)
-	MaxFileSizeBytes FileSizeBytes `yaml:"max_file_size_bytes,omitempty"`
+	// Note: if max_file_size_bytes is not set (or 0), it will default to 10485760 (10MB)
+	MaxFileSizeBytes FileSizeBytes `yaml:"max_file_size_bytes,omitempty" env:"MAX_FILE_SIZE_BYTES"`
 
 	// Whether to dynamically generate thumbnails on-the-fly if the requested resolution is not already generated
-	DynamicThumbnails bool `yaml:"dynamic_thumbnails"`
+	DynamicThumbnails bool `yaml:"dynamic_thumbnails" envDefault:"false" env:"DYNAMIC_THUMBNAILS"`
 
 	// The maximum number of simultaneous thumbnail generators. default: 10
 	MaxThumbnailGenerators int `yaml:"max_thumbnail_generators"`
@@ -98,8 +75,57 @@ type FilesConfig struct {
 	// Maximum allowed thumbnail width/height in pixels. Default: 2048
 	MaxThumbnailDimension int `envDefault:"2048" env:"MAX_THUMBNAIL_DIMENSION"`
 
+	// ThumbnailSizesSpec is the env form of ThumbnailSizes: a comma-separated list of
+	// WIDTHxHEIGHT[:METHOD] entries, e.g. "32x32:crop,96x96:crop,640x480:scale".
+	// METHOD defaults to scale. Parsed into ThumbnailSizes by Normalise.
+	ThumbnailSizesSpec string `envDefault:"" env:"THUMBNAIL_SIZES"`
+
 	// A list of thumbnail sizes to be pre-generated for downloaded remote / uploaded content
 	ThumbnailSizes []ThumbnailSize `yaml:"thumbnail_sizes"`
+}
+
+// DefaultThumbnailSizes are pre-generated when THUMBNAIL_SIZES is unset.
+func DefaultThumbnailSizes() []ThumbnailSize {
+	return []ThumbnailSize{
+		{Width: 32, Height: 32, ResizeMethod: "crop"},
+		{Width: 96, Height: 96, ResizeMethod: "crop"},
+		{Width: 640, Height: 480, ResizeMethod: "scale"},
+	}
+}
+
+// ParseThumbnailSizes parses a THUMBNAIL_SIZES specification such as
+// "32x32:crop,96x96:crop,640x480:scale". Entries are trimmed, empty entries are skipped and
+// the resize method defaults to scale.
+func ParseThumbnailSizes(spec string) ([]ThumbnailSize, error) {
+	var sizes []ThumbnailSize
+	for _, entry := range strings.Split(spec, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		dims, method, _ := strings.Cut(entry, ":")
+		method = strings.ToLower(strings.TrimSpace(method))
+		if method == "" {
+			method = "scale"
+		}
+		if method != "crop" && method != "scale" {
+			return nil, fmt.Errorf("thumbnail size %q: method must be crop or scale", entry)
+		}
+		wStr, hStr, ok := strings.Cut(strings.ToLower(strings.TrimSpace(dims)), "x")
+		if !ok {
+			return nil, fmt.Errorf("thumbnail size %q: expected WIDTHxHEIGHT[:METHOD]", entry)
+		}
+		w, err := strconv.Atoi(strings.TrimSpace(wStr))
+		if err != nil || w <= 0 {
+			return nil, fmt.Errorf("thumbnail size %q: invalid width", entry)
+		}
+		h, err := strconv.Atoi(strings.TrimSpace(hStr))
+		if err != nil || h <= 0 {
+			return nil, fmt.Errorf("thumbnail size %q: invalid height", entry)
+		}
+		sizes = append(sizes, ThumbnailSize{Width: w, Height: h, ResizeMethod: method})
+	}
+	return sizes, nil
 }
 
 // Normalise applies defaults and validates configuration values.
@@ -116,11 +142,22 @@ func (c *FilesConfig) Normalise() error {
 		c.MaxThumbnailDimension = 2048
 	}
 
+	if c.ThumbnailSizesSpec != "" {
+		sizes, err := ParseThumbnailSizes(c.ThumbnailSizesSpec)
+		if err != nil {
+			return fmt.Errorf("THUMBNAIL_SIZES: %w", err)
+		}
+		if len(sizes) > 0 {
+			c.ThumbnailSizes = sizes
+		}
+	}
 	if len(c.ThumbnailSizes) == 0 {
-		c.ThumbnailSizes = []ThumbnailSize{
-			{Width: 32, Height: 32, ResizeMethod: "crop"},
-			{Width: 96, Height: 96, ResizeMethod: "crop"},
-			{Width: 640, Height: 480, ResizeMethod: "scale"},
+		c.ThumbnailSizes = DefaultThumbnailSizes()
+	}
+	for _, size := range c.ThumbnailSizes {
+		if size.Width > c.MaxThumbnailDimension || size.Height > c.MaxThumbnailDimension {
+			return fmt.Errorf("thumbnail size %dx%d exceeds MAX_THUMBNAIL_DIMENSION (%d)",
+				size.Width, size.Height, c.MaxThumbnailDimension)
 		}
 	}
 

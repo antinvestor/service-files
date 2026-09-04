@@ -2,11 +2,21 @@ package business
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/types"
+)
+
+var (
+	// ErrInvalidParameter is returned when a request carries malformed or out-of-range input.
+	ErrInvalidParameter = errors.New("invalid parameter")
+	// ErrMediaNotFound is returned when the requested media does not exist (or has been deleted).
+	ErrMediaNotFound = errors.New("media not found")
+	// ErrThumbnailNotFound is returned when no suitable thumbnail exists and none may be generated.
+	ErrThumbnailNotFound = errors.New("thumbnail not found")
 )
 
 // MediaService defines the business logic interface for media operations
@@ -16,6 +26,11 @@ type MediaService interface {
 
 	// DownloadFile handles the business logic for downloading a file
 	DownloadFile(ctx context.Context, req *DownloadRequest) (*DownloadResult, error)
+
+	// ResolveThumbnail returns the best matching thumbnail for the given media, generating it when
+	// the requested size is a configured pre-generated size or dynamic thumbnails are enabled.
+	// The caller supplies the parent media metadata it has already loaded.
+	ResolveThumbnail(ctx context.Context, mediaMetadata *types.MediaMetadata, req *DownloadRequest) (*types.ThumbnailMetadata, error)
 
 	// SearchMedia handles the business logic for searching media files
 	SearchMedia(ctx context.Context, req *SearchRequest) (*SearchResult, error)
