@@ -9,7 +9,7 @@ require (
 	buf.build/gen/go/antinvestor/files/connectrpc/go v1.20.0-20260831171628-44ac946cc1ed.1
 	buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.12-20260831171628-44ac946cc1ed.1
 	buf.build/gen/go/antinvestor/ocr/connectrpc/go v1.20.0-20260831194050-8929a9aac7c3.1
-	buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20260831194050-8929a9aac7c3.1
+	buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20260831194050-8929a9aac7c3.2
 	buf.build/gen/go/antinvestor/property/connectrpc/go v1.20.0-20260831163205-52530d1094cd.1
 	buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.12-20260831163205-52530d1094cd.2
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
