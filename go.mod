@@ -59,7 +59,6 @@ require (
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.38.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.62.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.62.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -118,7 +117,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/lmittmann/tint v1.2.0 // indirect
+	github.com/lmittmann/tint v1.2.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260627054121-477a66015f15 // indirect
 	github.com/magiconair/properties v1.18.12 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -156,17 +155,17 @@ require (
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/bridges/otelslog v0.20.1 // indirect
-	go.opentelemetry.io/contrib/bridges/prometheus v0.71.0 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.46.0 // indirect
-	go.opentelemetry.io/contrib/exporters/autoexport v0.71.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.71.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0 // indirect
-	go.opentelemetry.io/contrib/propagators/autoprop v0.71.0 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.46.0 // indirect
+	go.opentelemetry.io/contrib/bridges/otelslog v0.21.0 // indirect
+	go.opentelemetry.io/contrib/bridges/prometheus v0.72.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.47.0 // indirect
+	go.opentelemetry.io/contrib/exporters/autoexport v0.72.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.72.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
+	go.opentelemetry.io/contrib/propagators/autoprop v0.72.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.23.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.47.0 // indirect
