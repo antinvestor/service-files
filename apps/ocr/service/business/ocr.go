@@ -5,16 +5,15 @@ import (
 	"os"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
-	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
+	"buf.build/gen/go/antinvestor/files/connectrpc/go/v2/files/v1/filesv1connect"
 	filesv1 "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
 	ocrv1 "buf.build/gen/go/antinvestor/ocr/protocolbuffers/go/ocr/v1"
-	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/ocr/config"
 	"github.com/antinvestor/service-files/apps/ocr/service/models"
 	"github.com/antinvestor/service-files/apps/ocr/service/repository"
-	"github.com/pitabwire/frame/v2"
-	"github.com/pitabwire/frame/v2/queue"
-	"github.com/pitabwire/frame/v2/security"
+	"github.com/pitabwire/frame/v3"
+	"github.com/pitabwire/frame/v3/queue"
+	"github.com/pitabwire/frame/v3/security"
 	"github.com/pitabwire/util"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -159,9 +158,9 @@ func (ob *ocrBusiness) recognise(ctx context.Context, ocrLog *models.OcrLog) (*m
 	}
 
 	// Fetch file content from Files service
-	resp, err := ob.filesCli.GetContent(ctx, connect.NewRequest(&filesv1.GetContentRequest{
+	resp, err := ob.filesCli.GetContent(ctx, &filesv1.GetContentRequest{
 		MediaId: ocrLog.FileID,
-	}))
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +172,7 @@ func (ob *ocrBusiness) recognise(ctx context.Context, ocrLog *models.OcrLog) (*m
 	}
 	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
-	_, err = tmpFile.Write(resp.Msg.GetContent())
+	_, err = tmpFile.Write(resp.GetContent())
 	if err != nil {
 		_ = tmpFile.Close()
 		return nil, err

@@ -5,292 +5,390 @@
 package redirectv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// RedirectServiceName is the fully-qualified name of the RedirectService service.
 	RedirectServiceName = "redirect.v1.RedirectService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// RedirectServiceCreateLinkProcedure is the fully-qualified name of the RedirectService's
-	// CreateLink RPC.
+	// RedirectServiceCreateLinkProcedure is the procedure name of the RedirectService's CreateLink RPC.
 	RedirectServiceCreateLinkProcedure = "/redirect.v1.RedirectService/CreateLink"
-	// RedirectServiceGetLinkProcedure is the fully-qualified name of the RedirectService's GetLink RPC.
+	// RedirectServiceGetLinkProcedure is the procedure name of the RedirectService's GetLink RPC.
 	RedirectServiceGetLinkProcedure = "/redirect.v1.RedirectService/GetLink"
-	// RedirectServiceUpdateLinkProcedure is the fully-qualified name of the RedirectService's
-	// UpdateLink RPC.
+	// RedirectServiceUpdateLinkProcedure is the procedure name of the RedirectService's UpdateLink RPC.
 	RedirectServiceUpdateLinkProcedure = "/redirect.v1.RedirectService/UpdateLink"
-	// RedirectServiceDeleteLinkProcedure is the fully-qualified name of the RedirectService's
-	// DeleteLink RPC.
+	// RedirectServiceDeleteLinkProcedure is the procedure name of the RedirectService's DeleteLink RPC.
 	RedirectServiceDeleteLinkProcedure = "/redirect.v1.RedirectService/DeleteLink"
-	// RedirectServiceListLinksProcedure is the fully-qualified name of the RedirectService's ListLinks
-	// RPC.
+	// RedirectServiceListLinksProcedure is the procedure name of the RedirectService's ListLinks RPC.
 	RedirectServiceListLinksProcedure = "/redirect.v1.RedirectService/ListLinks"
-	// RedirectServiceGetLinkStatsProcedure is the fully-qualified name of the RedirectService's
-	// GetLinkStats RPC.
+	// RedirectServiceGetLinkStatsProcedure is the procedure name of the RedirectService's GetLinkStats
+	// RPC.
 	RedirectServiceGetLinkStatsProcedure = "/redirect.v1.RedirectService/GetLinkStats"
-	// RedirectServiceListClicksProcedure is the fully-qualified name of the RedirectService's
-	// ListClicks RPC.
+	// RedirectServiceListClicksProcedure is the procedure name of the RedirectService's ListClicks RPC.
 	RedirectServiceListClicksProcedure = "/redirect.v1.RedirectService/ListClicks"
+)
+
+var (
+	redirectServiceCreateLinkSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("CreateLink"),
+			Procedure:  RedirectServiceCreateLinkProcedure,
+		}
+	})
+	redirectServiceGetLinkSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("GetLink"),
+			Procedure:  RedirectServiceGetLinkProcedure,
+		}
+	})
+	redirectServiceUpdateLinkSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("UpdateLink"),
+			Procedure:  RedirectServiceUpdateLinkProcedure,
+		}
+	})
+	redirectServiceDeleteLinkSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("DeleteLink"),
+			Procedure:  RedirectServiceDeleteLinkProcedure,
+		}
+	})
+	redirectServiceListLinksSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("ListLinks"),
+			Procedure:  RedirectServiceListLinksProcedure,
+		}
+	})
+	redirectServiceGetLinkStatsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("GetLinkStats"),
+			Procedure:  RedirectServiceGetLinkStatsProcedure,
+		}
+	})
+	redirectServiceListClicksSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods().ByName("ListClicks"),
+			Procedure:  RedirectServiceListClicksProcedure,
+		}
+	})
 )
 
 // RedirectServiceClient is a client for the redirect.v1.RedirectService service.
 type RedirectServiceClient interface {
 	// CreateLink creates a new redirect link.
-	CreateLink(context.Context, *connect.Request[v1.CreateLinkRequest]) (*connect.Response[v1.CreateLinkResponse], error)
+	CreateLink(context.Context, *v1.CreateLinkRequest) (*v1.CreateLinkResponse, error)
 	// GetLink retrieves link details by ID.
-	GetLink(context.Context, *connect.Request[v1.GetLinkRequest]) (*connect.Response[v1.GetLinkResponse], error)
+	GetLink(context.Context, *v1.GetLinkRequest) (*v1.GetLinkResponse, error)
 	// UpdateLink modifies an existing link.
-	UpdateLink(context.Context, *connect.Request[v1.UpdateLinkRequest]) (*connect.Response[v1.UpdateLinkResponse], error)
+	UpdateLink(context.Context, *v1.UpdateLinkRequest) (*v1.UpdateLinkResponse, error)
 	// DeleteLink removes a link.
-	DeleteLink(context.Context, *connect.Request[v1.DeleteLinkRequest]) (*connect.Response[v1.DeleteLinkResponse], error)
+	DeleteLink(context.Context, *v1.DeleteLinkRequest) (*v1.DeleteLinkResponse, error)
 	// ListLinks searches and lists links with filters.
-	ListLinks(context.Context, *connect.Request[v1.ListLinksRequest]) (*connect.ServerStreamForClient[v1.ListLinksResponse], error)
+	ListLinks(context.Context, *v1.ListLinksRequest) (RedirectServiceListLinksClientStream, error)
 	// GetLinkStats returns aggregate click statistics for a link.
-	GetLinkStats(context.Context, *connect.Request[v1.GetLinkStatsRequest]) (*connect.Response[v1.GetLinkStatsResponse], error)
+	GetLinkStats(context.Context, *v1.GetLinkStatsRequest) (*v1.GetLinkStatsResponse, error)
 	// ListClicks returns detailed click events for a link.
-	ListClicks(context.Context, *connect.Request[v1.ListClicksRequest]) (*connect.ServerStreamForClient[v1.ListClicksResponse], error)
+	ListClicks(context.Context, *v1.ListClicksRequest) (RedirectServiceListClicksClientStream, error)
 }
 
-// NewRedirectServiceClient constructs a client for the redirect.v1.RedirectService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewRedirectServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) RedirectServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	redirectServiceMethods := v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods()
-	return &redirectServiceClient{
-		createLink: connect.NewClient[v1.CreateLinkRequest, v1.CreateLinkResponse](
-			httpClient,
-			baseURL+RedirectServiceCreateLinkProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("CreateLink")),
-			connect.WithClientOptions(opts...),
-		),
-		getLink: connect.NewClient[v1.GetLinkRequest, v1.GetLinkResponse](
-			httpClient,
-			baseURL+RedirectServiceGetLinkProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("GetLink")),
-			connect.WithClientOptions(opts...),
-		),
-		updateLink: connect.NewClient[v1.UpdateLinkRequest, v1.UpdateLinkResponse](
-			httpClient,
-			baseURL+RedirectServiceUpdateLinkProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("UpdateLink")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteLink: connect.NewClient[v1.DeleteLinkRequest, v1.DeleteLinkResponse](
-			httpClient,
-			baseURL+RedirectServiceDeleteLinkProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("DeleteLink")),
-			connect.WithClientOptions(opts...),
-		),
-		listLinks: connect.NewClient[v1.ListLinksRequest, v1.ListLinksResponse](
-			httpClient,
-			baseURL+RedirectServiceListLinksProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("ListLinks")),
-			connect.WithClientOptions(opts...),
-		),
-		getLinkStats: connect.NewClient[v1.GetLinkStatsRequest, v1.GetLinkStatsResponse](
-			httpClient,
-			baseURL+RedirectServiceGetLinkStatsProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("GetLinkStats")),
-			connect.WithClientOptions(opts...),
-		),
-		listClicks: connect.NewClient[v1.ListClicksRequest, v1.ListClicksResponse](
-			httpClient,
-			baseURL+RedirectServiceListClicksProcedure,
-			connect.WithSchema(redirectServiceMethods.ByName("ListClicks")),
-			connect.WithClientOptions(opts...),
-		),
+// NewRedirectServiceClient constructs a client for the redirect.v1.RedirectService service.
+// Multiple service clients may share a single connect.Client.
+func NewRedirectServiceClient(client *connect.Client) RedirectServiceClient {
+	return &redirectServiceClient{client: client}
+}
+
+// RedirectServiceListLinksClientStream is the client stream for the RedirectService's ListLinks
+// RPC.
+type RedirectServiceListLinksClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s RedirectServiceListLinksClientStream) Receive() (*v1.ListLinksResponse, error) {
+	var res v1.ListLinksResponse
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// redirectServiceClient implements RedirectServiceClient.
-type redirectServiceClient struct {
-	createLink   *connect.Client[v1.CreateLinkRequest, v1.CreateLinkResponse]
-	getLink      *connect.Client[v1.GetLinkRequest, v1.GetLinkResponse]
-	updateLink   *connect.Client[v1.UpdateLinkRequest, v1.UpdateLinkResponse]
-	deleteLink   *connect.Client[v1.DeleteLinkRequest, v1.DeleteLinkResponse]
-	listLinks    *connect.Client[v1.ListLinksRequest, v1.ListLinksResponse]
-	getLinkStats *connect.Client[v1.GetLinkStatsRequest, v1.GetLinkStatsResponse]
-	listClicks   *connect.Client[v1.ListClicksRequest, v1.ListClicksResponse]
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s RedirectServiceListLinksClientStream) Close() error {
+	return s.stream.Close()
 }
 
-// CreateLink calls redirect.v1.RedirectService.CreateLink.
-func (c *redirectServiceClient) CreateLink(ctx context.Context, req *connect.Request[v1.CreateLinkRequest]) (*connect.Response[v1.CreateLinkResponse], error) {
-	return c.createLink.CallUnary(ctx, req)
+// RedirectServiceListClicksClientStream is the client stream for the RedirectService's ListClicks
+// RPC.
+type RedirectServiceListClicksClientStream struct {
+	stream connect.ClientStream
 }
 
-// GetLink calls redirect.v1.RedirectService.GetLink.
-func (c *redirectServiceClient) GetLink(ctx context.Context, req *connect.Request[v1.GetLinkRequest]) (*connect.Response[v1.GetLinkResponse], error) {
-	return c.getLink.CallUnary(ctx, req)
+// Receive returns the next response message from the server.
+func (s RedirectServiceListClicksClientStream) Receive() (*v1.ListClicksResponse, error) {
+	var res v1.ListClicksResponse
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
-// UpdateLink calls redirect.v1.RedirectService.UpdateLink.
-func (c *redirectServiceClient) UpdateLink(ctx context.Context, req *connect.Request[v1.UpdateLinkRequest]) (*connect.Response[v1.UpdateLinkResponse], error) {
-	return c.updateLink.CallUnary(ctx, req)
-}
-
-// DeleteLink calls redirect.v1.RedirectService.DeleteLink.
-func (c *redirectServiceClient) DeleteLink(ctx context.Context, req *connect.Request[v1.DeleteLinkRequest]) (*connect.Response[v1.DeleteLinkResponse], error) {
-	return c.deleteLink.CallUnary(ctx, req)
-}
-
-// ListLinks calls redirect.v1.RedirectService.ListLinks.
-func (c *redirectServiceClient) ListLinks(ctx context.Context, req *connect.Request[v1.ListLinksRequest]) (*connect.ServerStreamForClient[v1.ListLinksResponse], error) {
-	return c.listLinks.CallServerStream(ctx, req)
-}
-
-// GetLinkStats calls redirect.v1.RedirectService.GetLinkStats.
-func (c *redirectServiceClient) GetLinkStats(ctx context.Context, req *connect.Request[v1.GetLinkStatsRequest]) (*connect.Response[v1.GetLinkStatsResponse], error) {
-	return c.getLinkStats.CallUnary(ctx, req)
-}
-
-// ListClicks calls redirect.v1.RedirectService.ListClicks.
-func (c *redirectServiceClient) ListClicks(ctx context.Context, req *connect.Request[v1.ListClicksRequest]) (*connect.ServerStreamForClient[v1.ListClicksResponse], error) {
-	return c.listClicks.CallServerStream(ctx, req)
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s RedirectServiceListClicksClientStream) Close() error {
+	return s.stream.Close()
 }
 
 // RedirectServiceHandler is an implementation of the redirect.v1.RedirectService service.
 type RedirectServiceHandler interface {
 	// CreateLink creates a new redirect link.
-	CreateLink(context.Context, *connect.Request[v1.CreateLinkRequest]) (*connect.Response[v1.CreateLinkResponse], error)
+	CreateLink(context.Context, *v1.CreateLinkRequest) (*v1.CreateLinkResponse, error)
 	// GetLink retrieves link details by ID.
-	GetLink(context.Context, *connect.Request[v1.GetLinkRequest]) (*connect.Response[v1.GetLinkResponse], error)
+	GetLink(context.Context, *v1.GetLinkRequest) (*v1.GetLinkResponse, error)
 	// UpdateLink modifies an existing link.
-	UpdateLink(context.Context, *connect.Request[v1.UpdateLinkRequest]) (*connect.Response[v1.UpdateLinkResponse], error)
+	UpdateLink(context.Context, *v1.UpdateLinkRequest) (*v1.UpdateLinkResponse, error)
 	// DeleteLink removes a link.
-	DeleteLink(context.Context, *connect.Request[v1.DeleteLinkRequest]) (*connect.Response[v1.DeleteLinkResponse], error)
+	DeleteLink(context.Context, *v1.DeleteLinkRequest) (*v1.DeleteLinkResponse, error)
 	// ListLinks searches and lists links with filters.
-	ListLinks(context.Context, *connect.Request[v1.ListLinksRequest], *connect.ServerStream[v1.ListLinksResponse]) error
+	ListLinks(context.Context, *v1.ListLinksRequest, RedirectServiceListLinksServerStream) error
 	// GetLinkStats returns aggregate click statistics for a link.
-	GetLinkStats(context.Context, *connect.Request[v1.GetLinkStatsRequest]) (*connect.Response[v1.GetLinkStatsResponse], error)
+	GetLinkStats(context.Context, *v1.GetLinkStatsRequest) (*v1.GetLinkStatsResponse, error)
 	// ListClicks returns detailed click events for a link.
-	ListClicks(context.Context, *connect.Request[v1.ListClicksRequest], *connect.ServerStream[v1.ListClicksResponse]) error
+	ListClicks(context.Context, *v1.ListClicksRequest, RedirectServiceListClicksServerStream) error
 }
 
-// NewRedirectServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewRedirectServiceHandler(svc RedirectServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	redirectServiceMethods := v1.File_redirect_v1_redirect_proto.Services().ByName("RedirectService").Methods()
-	redirectServiceCreateLinkHandler := connect.NewUnaryHandler(
-		RedirectServiceCreateLinkProcedure,
-		svc.CreateLink,
-		connect.WithSchema(redirectServiceMethods.ByName("CreateLink")),
-		connect.WithHandlerOptions(opts...),
+// RegisterRedirectServiceHandler registers svc as the redirect.v1.RedirectService implementation on
+// server.
+func RegisterRedirectServiceHandler(server *connect.Server, svc RedirectServiceHandler) {
+	adapter := redirectServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: redirectServiceCreateLinkSpec(), Handler: adapter.createLink},
+		connect.Method{Spec: redirectServiceGetLinkSpec(), Handler: adapter.getLink},
+		connect.Method{Spec: redirectServiceUpdateLinkSpec(), Handler: adapter.updateLink},
+		connect.Method{Spec: redirectServiceDeleteLinkSpec(), Handler: adapter.deleteLink},
+		connect.Method{Spec: redirectServiceListLinksSpec(), Handler: adapter.listLinks},
+		connect.Method{Spec: redirectServiceGetLinkStatsSpec(), Handler: adapter.getLinkStats},
+		connect.Method{Spec: redirectServiceListClicksSpec(), Handler: adapter.listClicks},
 	)
-	redirectServiceGetLinkHandler := connect.NewUnaryHandler(
-		RedirectServiceGetLinkProcedure,
-		svc.GetLink,
-		connect.WithSchema(redirectServiceMethods.ByName("GetLink")),
-		connect.WithHandlerOptions(opts...),
-	)
-	redirectServiceUpdateLinkHandler := connect.NewUnaryHandler(
-		RedirectServiceUpdateLinkProcedure,
-		svc.UpdateLink,
-		connect.WithSchema(redirectServiceMethods.ByName("UpdateLink")),
-		connect.WithHandlerOptions(opts...),
-	)
-	redirectServiceDeleteLinkHandler := connect.NewUnaryHandler(
-		RedirectServiceDeleteLinkProcedure,
-		svc.DeleteLink,
-		connect.WithSchema(redirectServiceMethods.ByName("DeleteLink")),
-		connect.WithHandlerOptions(opts...),
-	)
-	redirectServiceListLinksHandler := connect.NewServerStreamHandler(
-		RedirectServiceListLinksProcedure,
-		svc.ListLinks,
-		connect.WithSchema(redirectServiceMethods.ByName("ListLinks")),
-		connect.WithHandlerOptions(opts...),
-	)
-	redirectServiceGetLinkStatsHandler := connect.NewUnaryHandler(
-		RedirectServiceGetLinkStatsProcedure,
-		svc.GetLinkStats,
-		connect.WithSchema(redirectServiceMethods.ByName("GetLinkStats")),
-		connect.WithHandlerOptions(opts...),
-	)
-	redirectServiceListClicksHandler := connect.NewServerStreamHandler(
-		RedirectServiceListClicksProcedure,
-		svc.ListClicks,
-		connect.WithSchema(redirectServiceMethods.ByName("ListClicks")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/redirect.v1.RedirectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case RedirectServiceCreateLinkProcedure:
-			redirectServiceCreateLinkHandler.ServeHTTP(w, r)
-		case RedirectServiceGetLinkProcedure:
-			redirectServiceGetLinkHandler.ServeHTTP(w, r)
-		case RedirectServiceUpdateLinkProcedure:
-			redirectServiceUpdateLinkHandler.ServeHTTP(w, r)
-		case RedirectServiceDeleteLinkProcedure:
-			redirectServiceDeleteLinkHandler.ServeHTTP(w, r)
-		case RedirectServiceListLinksProcedure:
-			redirectServiceListLinksHandler.ServeHTTP(w, r)
-		case RedirectServiceGetLinkStatsProcedure:
-			redirectServiceGetLinkStatsHandler.ServeHTTP(w, r)
-		case RedirectServiceListClicksProcedure:
-			redirectServiceListClicksHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// RedirectServiceListLinksServerStream is the server stream for the RedirectService's ListLinks
+// RPC.
+type RedirectServiceListLinksServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s RedirectServiceListLinksServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s RedirectServiceListLinksServerStream) Send(res *v1.ListLinksResponse) error {
+	return s.stream.Send(res)
+}
+
+// RedirectServiceListClicksServerStream is the server stream for the RedirectService's ListClicks
+// RPC.
+type RedirectServiceListClicksServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s RedirectServiceListClicksServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s RedirectServiceListClicksServerStream) Send(res *v1.ListClicksResponse) error {
+	return s.stream.Send(res)
 }
 
 // UnimplementedRedirectServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRedirectServiceHandler struct{}
 
-func (UnimplementedRedirectServiceHandler) CreateLink(context.Context, *connect.Request[v1.CreateLinkRequest]) (*connect.Response[v1.CreateLinkResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.CreateLink is not implemented"))
+func (UnimplementedRedirectServiceHandler) CreateLink(context.Context, *v1.CreateLinkRequest) (*v1.CreateLinkResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.CreateLink is not implemented")
 }
 
-func (UnimplementedRedirectServiceHandler) GetLink(context.Context, *connect.Request[v1.GetLinkRequest]) (*connect.Response[v1.GetLinkResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.GetLink is not implemented"))
+func (UnimplementedRedirectServiceHandler) GetLink(context.Context, *v1.GetLinkRequest) (*v1.GetLinkResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.GetLink is not implemented")
 }
 
-func (UnimplementedRedirectServiceHandler) UpdateLink(context.Context, *connect.Request[v1.UpdateLinkRequest]) (*connect.Response[v1.UpdateLinkResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.UpdateLink is not implemented"))
+func (UnimplementedRedirectServiceHandler) UpdateLink(context.Context, *v1.UpdateLinkRequest) (*v1.UpdateLinkResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.UpdateLink is not implemented")
 }
 
-func (UnimplementedRedirectServiceHandler) DeleteLink(context.Context, *connect.Request[v1.DeleteLinkRequest]) (*connect.Response[v1.DeleteLinkResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.DeleteLink is not implemented"))
+func (UnimplementedRedirectServiceHandler) DeleteLink(context.Context, *v1.DeleteLinkRequest) (*v1.DeleteLinkResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.DeleteLink is not implemented")
 }
 
-func (UnimplementedRedirectServiceHandler) ListLinks(context.Context, *connect.Request[v1.ListLinksRequest], *connect.ServerStream[v1.ListLinksResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.ListLinks is not implemented"))
+func (UnimplementedRedirectServiceHandler) ListLinks(context.Context, *v1.ListLinksRequest, RedirectServiceListLinksServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.ListLinks is not implemented")
 }
 
-func (UnimplementedRedirectServiceHandler) GetLinkStats(context.Context, *connect.Request[v1.GetLinkStatsRequest]) (*connect.Response[v1.GetLinkStatsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.GetLinkStats is not implemented"))
+func (UnimplementedRedirectServiceHandler) GetLinkStats(context.Context, *v1.GetLinkStatsRequest) (*v1.GetLinkStatsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.GetLinkStats is not implemented")
 }
 
-func (UnimplementedRedirectServiceHandler) ListClicks(context.Context, *connect.Request[v1.ListClicksRequest], *connect.ServerStream[v1.ListClicksResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("redirect.v1.RedirectService.ListClicks is not implemented"))
+func (UnimplementedRedirectServiceHandler) ListClicks(context.Context, *v1.ListClicksRequest, RedirectServiceListClicksServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "redirect.v1.RedirectService.ListClicks is not implemented")
+}
+
+type redirectServiceClient struct {
+	client *connect.Client
+}
+
+func (c *redirectServiceClient) CreateLink(ctx context.Context, req *v1.CreateLinkRequest) (*v1.CreateLinkResponse, error) {
+	var res v1.CreateLinkResponse
+	if err := c.client.CallUnary(ctx, redirectServiceCreateLinkSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *redirectServiceClient) GetLink(ctx context.Context, req *v1.GetLinkRequest) (*v1.GetLinkResponse, error) {
+	var res v1.GetLinkResponse
+	if err := c.client.CallUnary(ctx, redirectServiceGetLinkSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *redirectServiceClient) UpdateLink(ctx context.Context, req *v1.UpdateLinkRequest) (*v1.UpdateLinkResponse, error) {
+	var res v1.UpdateLinkResponse
+	if err := c.client.CallUnary(ctx, redirectServiceUpdateLinkSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *redirectServiceClient) DeleteLink(ctx context.Context, req *v1.DeleteLinkRequest) (*v1.DeleteLinkResponse, error) {
+	var res v1.DeleteLinkResponse
+	if err := c.client.CallUnary(ctx, redirectServiceDeleteLinkSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *redirectServiceClient) ListLinks(ctx context.Context, req *v1.ListLinksRequest) (RedirectServiceListLinksClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, redirectServiceListLinksSpec(), req)
+	if err != nil {
+		return RedirectServiceListLinksClientStream{}, err
+	}
+	return RedirectServiceListLinksClientStream{stream: stream}, nil
+}
+
+func (c *redirectServiceClient) GetLinkStats(ctx context.Context, req *v1.GetLinkStatsRequest) (*v1.GetLinkStatsResponse, error) {
+	var res v1.GetLinkStatsResponse
+	if err := c.client.CallUnary(ctx, redirectServiceGetLinkStatsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *redirectServiceClient) ListClicks(ctx context.Context, req *v1.ListClicksRequest) (RedirectServiceListClicksClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, redirectServiceListClicksSpec(), req)
+	if err != nil {
+		return RedirectServiceListClicksClientStream{}, err
+	}
+	return RedirectServiceListClicksClientStream{stream: stream}, nil
+}
+
+type redirectServiceHandler struct{ svc RedirectServiceHandler }
+
+func (h redirectServiceHandler) createLink(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateLinkRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateLink(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h redirectServiceHandler) getLink(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetLinkRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetLink(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h redirectServiceHandler) updateLink(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateLinkRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateLink(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h redirectServiceHandler) deleteLink(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteLinkRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteLink(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h redirectServiceHandler) listLinks(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListLinksRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.ListLinks(ctx, &req, RedirectServiceListLinksServerStream{stream: stream})
+}
+
+func (h redirectServiceHandler) getLinkStats(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetLinkStatsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetLinkStats(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h redirectServiceHandler) listClicks(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListClicksRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.ListClicks(ctx, &req, RedirectServiceListClicksServerStream{stream: stream})
 }

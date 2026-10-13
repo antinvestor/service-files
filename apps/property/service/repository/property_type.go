@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/antinvestor/service-files/apps/property/service/models"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 	"gorm.io/gorm"
 )
 

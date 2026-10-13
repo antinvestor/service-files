@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame/v2/data"
+	"github.com/pitabwire/frame/v3/data"
 )
 
 const (

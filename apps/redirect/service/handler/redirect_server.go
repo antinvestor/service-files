@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	redirectv1 "github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1"
 	"github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1/redirectv1connect"
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/datatypes"
@@ -32,45 +32,45 @@ func (s *RedirectServer) newClickBusiness() (business.ClickBusiness, error) {
 	return business.NewClickBusiness(s.DBPool)
 }
 
-func (s *RedirectServer) CreateLink(ctx context.Context, req *connect.Request[redirectv1.CreateLinkRequest]) (*connect.Response[redirectv1.CreateLinkResponse], error) {
+func (s *RedirectServer) CreateLink(ctx context.Context, req *redirectv1.CreateLinkRequest) (*redirectv1.CreateLinkResponse, error) {
 	linkBiz, err := s.newLinkBusiness()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create link: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create link: %w", err).Error())
 	}
 
-	msg := req.Msg.GetData()
+	msg := req.GetData()
 	link := protoToLink(msg)
 
 	result, err := linkBiz.CreateLink(ctx, link)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create link: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create link: %w", err).Error())
 	}
 
-	return connect.NewResponse(&redirectv1.CreateLinkResponse{Data: linkToProto(result)}), nil
+	return &redirectv1.CreateLinkResponse{Data: linkToProto(result)}, nil
 }
 
-func (s *RedirectServer) GetLink(ctx context.Context, req *connect.Request[redirectv1.GetLinkRequest]) (*connect.Response[redirectv1.GetLinkResponse], error) {
+func (s *RedirectServer) GetLink(ctx context.Context, req *redirectv1.GetLinkRequest) (*redirectv1.GetLinkResponse, error) {
 	linkBiz, err := s.newLinkBusiness()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get link: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get link: %w", err).Error())
 	}
 
-	result, err := linkBiz.GetLink(ctx, req.Msg.GetId())
+	result, err := linkBiz.GetLink(ctx, req.GetId())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("get link: %w", err))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("get link: %w", err).Error())
 	}
 
-	return connect.NewResponse(&redirectv1.GetLinkResponse{Data: linkToProto(result)}), nil
+	return &redirectv1.GetLinkResponse{Data: linkToProto(result)}, nil
 }
 
-func (s *RedirectServer) UpdateLink(ctx context.Context, req *connect.Request[redirectv1.UpdateLinkRequest]) (*connect.Response[redirectv1.UpdateLinkResponse], error) {
+func (s *RedirectServer) UpdateLink(ctx context.Context, req *redirectv1.UpdateLinkRequest) (*redirectv1.UpdateLinkResponse, error) {
 	linkBiz, err := s.newLinkBusiness()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update link: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update link: %w", err).Error())
 	}
 
 	updates := make(map[string]any)
-	msg := req.Msg
+	msg := req
 	if msg.GetDestinationUrl() != "" {
 		updates["destination_url"] = msg.GetDestinationUrl()
 	}
@@ -98,46 +98,46 @@ func (s *RedirectServer) UpdateLink(ctx context.Context, req *connect.Request[re
 
 	result, err := linkBiz.UpdateLink(ctx, msg.GetId(), updates)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update link: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update link: %w", err).Error())
 	}
 
 	s.RedirectHd.InvalidateCache(ctx, result.Slug)
 
-	return connect.NewResponse(&redirectv1.UpdateLinkResponse{Data: linkToProto(result)}), nil
+	return &redirectv1.UpdateLinkResponse{Data: linkToProto(result)}, nil
 }
 
-func (s *RedirectServer) DeleteLink(ctx context.Context, req *connect.Request[redirectv1.DeleteLinkRequest]) (*connect.Response[redirectv1.DeleteLinkResponse], error) {
+func (s *RedirectServer) DeleteLink(ctx context.Context, req *redirectv1.DeleteLinkRequest) (*redirectv1.DeleteLinkResponse, error) {
 	linkBiz, err := s.newLinkBusiness()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete link: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete link: %w", err).Error())
 	}
 
-	link, _ := linkBiz.GetLink(ctx, req.Msg.GetId())
+	link, _ := linkBiz.GetLink(ctx, req.GetId())
 
-	if err := linkBiz.DeleteLink(ctx, req.Msg.GetId()); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete link: %w", err))
+	if err := linkBiz.DeleteLink(ctx, req.GetId()); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete link: %w", err).Error())
 	}
 
 	if link != nil {
 		s.RedirectHd.InvalidateCache(ctx, link.Slug)
 	}
 
-	return connect.NewResponse(&redirectv1.DeleteLinkResponse{Success: true}), nil
+	return &redirectv1.DeleteLinkResponse{Success: true}, nil
 }
 
-func (s *RedirectServer) ListLinks(ctx context.Context, req *connect.Request[redirectv1.ListLinksRequest], stream *connect.ServerStream[redirectv1.ListLinksResponse]) error {
+func (s *RedirectServer) ListLinks(ctx context.Context, req *redirectv1.ListLinksRequest, stream redirectv1connect.RedirectServiceListLinksServerStream) error {
 	linkBiz, err := s.newLinkBusiness()
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("list links: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("list links: %w", err).Error())
 	}
 
-	msg := req.Msg
+	msg := req
 	state := models.LinkState(msg.GetState())
 	pageSize := int(msg.GetPageSize())
 
 	links, err := linkBiz.ListLinks(ctx, msg.GetQuery(), msg.GetAffiliateId(), msg.GetCampaign(), state, pageSize, 0)
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("list links: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("list links: %w", err).Error())
 	}
 
 	if len(links) > 0 {
@@ -153,13 +153,13 @@ func (s *RedirectServer) ListLinks(ctx context.Context, req *connect.Request[red
 	return nil
 }
 
-func (s *RedirectServer) GetLinkStats(ctx context.Context, req *connect.Request[redirectv1.GetLinkStatsRequest]) (*connect.Response[redirectv1.GetLinkStatsResponse], error) {
+func (s *RedirectServer) GetLinkStats(ctx context.Context, req *redirectv1.GetLinkStatsRequest) (*redirectv1.GetLinkStatsResponse, error) {
 	clickBiz, err := s.newClickBusiness()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get link stats: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get link stats: %w", err).Error())
 	}
 
-	msg := req.Msg
+	msg := req
 	var startTime, endTime time.Time
 	if msg.GetStartTime() != nil {
 		startTime = msg.GetStartTime().AsTime()
@@ -170,10 +170,10 @@ func (s *RedirectServer) GetLinkStats(ctx context.Context, req *connect.Request[
 
 	stats, err := clickBiz.GetStats(ctx, msg.GetLinkId(), startTime, endTime)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get link stats: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get link stats: %w", err).Error())
 	}
 
-	return connect.NewResponse(&redirectv1.GetLinkStatsResponse{
+	return &redirectv1.GetLinkStatsResponse{
 		Data: &redirectv1.LinkStats{
 			LinkId:           stats.LinkID,
 			TotalClicks:      stats.TotalClicks,
@@ -185,16 +185,16 @@ func (s *RedirectServer) GetLinkStats(ctx context.Context, req *connect.Request[
 			OperatingSystems: stats.OperatingSystems,
 			ClicksPerDay:     stats.ClicksPerDay,
 		},
-	}), nil
+	}, nil
 }
 
-func (s *RedirectServer) ListClicks(ctx context.Context, req *connect.Request[redirectv1.ListClicksRequest], stream *connect.ServerStream[redirectv1.ListClicksResponse]) error {
+func (s *RedirectServer) ListClicks(ctx context.Context, req *redirectv1.ListClicksRequest, stream redirectv1connect.RedirectServiceListClicksServerStream) error {
 	clickBiz, err := s.newClickBusiness()
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("list clicks: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("list clicks: %w", err).Error())
 	}
 
-	msg := req.Msg
+	msg := req
 	var startTime, endTime time.Time
 	if msg.GetStartTime() != nil {
 		startTime = msg.GetStartTime().AsTime()
@@ -205,7 +205,7 @@ func (s *RedirectServer) ListClicks(ctx context.Context, req *connect.Request[re
 
 	clicks, err := clickBiz.ListClicks(ctx, msg.GetLinkId(), msg.GetAffiliateId(), startTime, endTime, int(msg.GetPageSize()), 0)
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("list clicks: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("list clicks: %w", err).Error())
 	}
 
 	if len(clicks) > 0 {

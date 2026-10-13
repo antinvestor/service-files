@@ -3,9 +3,9 @@ package business
 import (
 	"context"
 
+	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/v2/v1/propertyv1connect"
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
-	"connectrpc.com/connect"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 )
 
 type PropertyBusiness interface {
@@ -13,8 +13,8 @@ type PropertyBusiness interface {
 	UpdateProperty(ctx context.Context, message *propertyv1.UpdatePropertyRequest) (*propertyv1.Property, error)
 	DeleteProperty(ctx context.Context, id string) error
 	StateOfProperty(ctx context.Context, id string) (*propertyv1.PropertyState, error)
-	HistoryOfProperty(ctx context.Context, id string, stream *connect.ServerStream[propertyv1.HistoryOfPropertyResponse]) error
-	SearchProperty(ctx context.Context, request *propertyv1.SearchPropertyRequest, stream *connect.ServerStream[propertyv1.SearchPropertyResponse]) error
+	HistoryOfProperty(ctx context.Context, id string, stream propertyv1connect.PropertyServiceHistoryOfPropertyServerStream) error
+	SearchProperty(ctx context.Context, request *propertyv1.SearchPropertyRequest, stream propertyv1connect.PropertyServiceSearchPropertyServerStream) error
 }
 
 func NewPropertyBusiness(dbPool pool.Pool) (PropertyBusiness, error) {
@@ -29,7 +29,7 @@ func NewPropertyBusiness(dbPool pool.Pool) (PropertyBusiness, error) {
 
 type PropertyTypeBusiness interface {
 	AddPropertyType(ctx context.Context, message *propertyv1.PropertyType) (*propertyv1.PropertyType, error)
-	ListPropertyType(ctx context.Context, request *propertyv1.ListPropertyTypeRequest, stream *connect.ServerStream[propertyv1.ListPropertyTypeResponse]) error
+	ListPropertyType(ctx context.Context, request *propertyv1.ListPropertyTypeRequest, stream propertyv1connect.PropertyServiceListPropertyTypeServerStream) error
 }
 
 func NewPropertyTypeBusiness(dbPool pool.Pool) (PropertyTypeBusiness, error) {
@@ -58,7 +58,7 @@ func NewLocalityBusiness(dbPool pool.Pool) (LocalityBusiness, error) {
 }
 
 type SubscriptionBusiness interface {
-	ListSubscription(ctx context.Context, request *propertyv1.ListSubscriptionRequest, stream *connect.ServerStream[propertyv1.ListSubscriptionResponse]) error
+	ListSubscription(ctx context.Context, request *propertyv1.ListSubscriptionRequest, stream propertyv1connect.PropertyServiceListSubscriptionServerStream) error
 	AddSubscription(ctx context.Context, message *propertyv1.Subscription) (*propertyv1.Subscription, error)
 	DeleteSubscription(ctx context.Context, id string) error
 }

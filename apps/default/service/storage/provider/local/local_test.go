@@ -15,8 +15,8 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/local"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame/v2/config"
-	"github.com/pitabwire/frame/v2/frametests/definition"
+	"github.com/pitabwire/frame/v3/config"
+	"github.com/pitabwire/frame/v3/frametests/definition"
 	"github.com/stretchr/testify/suite"
 )
 

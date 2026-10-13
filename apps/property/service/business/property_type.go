@@ -3,11 +3,11 @@ package business
 import (
 	"context"
 
+	"buf.build/gen/go/antinvestor/property/connectrpc/go/v2/v1/propertyv1connect"
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
-	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/service/models"
 	"github.com/antinvestor/service-files/apps/property/service/repository"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 )
 
 type propertyTypeBusiness struct {
@@ -38,7 +38,7 @@ func (pt *propertyTypeBusiness) AddPropertyType(ctx context.Context, message *pr
 	return propertyType.ToApi(), nil
 }
 
-func (pt *propertyTypeBusiness) ListPropertyType(ctx context.Context, request *propertyv1.ListPropertyTypeRequest, stream *connect.ServerStream[propertyv1.ListPropertyTypeResponse]) error {
+func (pt *propertyTypeBusiness) ListPropertyType(ctx context.Context, request *propertyv1.ListPropertyTypeRequest, stream propertyv1connect.PropertyServiceListPropertyTypeServerStream) error {
 
 	propertyTypeRepo := repository.NewPropertyTypeRepository(pt.dbPool)
 

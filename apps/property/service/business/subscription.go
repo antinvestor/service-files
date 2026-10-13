@@ -3,11 +3,11 @@ package business
 import (
 	"context"
 
+	"buf.build/gen/go/antinvestor/property/connectrpc/go/v2/v1/propertyv1connect"
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
-	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/service/models"
 	"github.com/antinvestor/service-files/apps/property/service/repository"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 )
 
 type subscriptionBusiness struct {
@@ -46,7 +46,7 @@ func (s *subscriptionBusiness) AddSubscription(ctx context.Context, message *pro
 	return subscription.ToApi(), nil
 }
 
-func (s *subscriptionBusiness) ListSubscription(ctx context.Context, request *propertyv1.ListSubscriptionRequest, stream *connect.ServerStream[propertyv1.ListSubscriptionResponse]) error {
+func (s *subscriptionBusiness) ListSubscription(ctx context.Context, request *propertyv1.ListSubscriptionRequest, stream propertyv1connect.PropertyServiceListSubscriptionServerStream) error {
 
 	propertyRepo := repository.NewPropertyRepository(s.dbPool)
 	subscriptionRepo := repository.NewSubscriptionRepository(s.dbPool)

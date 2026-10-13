@@ -4,23 +4,26 @@ import (
 	"context"
 	"net/http"
 
-	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
-	"buf.build/gen/go/antinvestor/ocr/connectrpc/go/ocr/v1/ocrv1connect"
-	"connectrpc.com/connect"
-	"github.com/antinvestor/common/v2"
-	"github.com/antinvestor/common/v2/connection"
-	"github.com/antinvestor/common/v2/servicecatalog"
+	"github.com/antinvestor/service-files/internal/apierror"
+
+	"buf.build/gen/go/antinvestor/files/connectrpc/go/v2/files/v1/filesv1connect"
+	"buf.build/gen/go/antinvestor/ocr/connectrpc/go/v2/ocr/v1/ocrv1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"github.com/antinvestor/common/v3"
+	"github.com/antinvestor/common/v3/connection"
+	"github.com/antinvestor/common/v3/servicecatalog"
 	"github.com/antinvestor/service-files/apps/ocr/config"
 	"github.com/antinvestor/service-files/apps/ocr/service/business"
 	"github.com/antinvestor/service-files/apps/ocr/service/handlers"
 	"github.com/antinvestor/service-files/apps/ocr/service/models"
 	"github.com/antinvestor/service-files/apps/ocr/service/queue"
 	"github.com/antinvestor/service-files/apps/ocr/service/repository"
-	"github.com/pitabwire/frame/v2"
-	fconfig "github.com/pitabwire/frame/v2/config"
-	"github.com/pitabwire/frame/v2/datastore"
-	"github.com/pitabwire/frame/v2/security"
-	connectInterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
+	"github.com/pitabwire/frame/v3"
+	fconfig "github.com/pitabwire/frame/v3/config"
+	"github.com/pitabwire/frame/v3/datastore"
+	"github.com/pitabwire/frame/v3/security"
+	connectInterceptors "github.com/pitabwire/frame/v3/security/interceptors/connect"
 	"github.com/pitabwire/util"
 )
 
@@ -116,13 +119,16 @@ func setupFilesClient(
 func setupConnectServer(ctx context.Context, sm security.Manager, ocrBusiness business.OCRBusiness) http.Handler {
 	implementation := handlers.NewOCRServer(ocrBusiness)
 
-	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), apierror.ServerInterceptor())
 	if err != nil {
 		util.Log(ctx).WithError(err).Fatal("could not create default interceptors")
 	}
 
-	_, serverHandler := ocrv1connect.NewOCRServiceHandler(
-		implementation, connect.WithInterceptors(defaultInterceptorList...))
+	server := connect.NewServer(defaultInterceptorList...)
+	ocrv1connect.RegisterOCRServiceHandler(server, implementation)
 
-	return serverHandler
+	mux := http.NewServeMux()
+	connecthttp.Mount(mux, server)
+
+	return mux
 }

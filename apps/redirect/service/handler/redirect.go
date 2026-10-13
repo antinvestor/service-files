@@ -14,8 +14,8 @@ import (
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
 	"github.com/antinvestor/service-files/apps/redirect/service/repository"
-	"github.com/pitabwire/frame/v2/cache"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/cache"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 	"github.com/pitabwire/util"
 )
 

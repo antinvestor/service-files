@@ -23,17 +23,17 @@ import (
 	"time"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
-	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
+	"buf.build/gen/go/antinvestor/files/connectrpc/go/v2/files/v1/filesv1connect"
 	filesv1 "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
-	"github.com/pitabwire/frame/v2"
-	"github.com/pitabwire/frame/v2/security"
+	"github.com/pitabwire/frame/v3"
+	"github.com/pitabwire/frame/v3/security"
 	"github.com/pitabwire/util"
 	"golang.org/x/net/html"
 	"google.golang.org/protobuf/proto"
@@ -87,26 +87,26 @@ func NewFileServer(
 }
 
 // UploadContent handles file uploads via Connect RPC streaming
-func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientStream[filesv1.UploadContentRequest]) (*connect.Response[filesv1.UploadContentResponse], error) {
+func (s *FileServer) UploadContent(ctx context.Context, stream filesv1connect.FilesServiceUploadContentServerStream) (*filesv1.UploadContentResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	if !stream.Receive() {
-		if err = stream.Err(); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
+	req, err := stream.Receive()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, connect.Errorf(connect.CodeInvalidArgument, "no metadata received")
 		}
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no metadata received"))
+		return nil, streamReceiveError(err)
 	}
 
-	req := stream.Msg()
 	metadata := req.GetMetadata()
 	if err = validateUploadMetadata(metadata, cfg); err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 
 	tempFile, err := os.CreateTemp("", "files-upload-*")
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	defer func() {
 		_ = os.Remove(tempFile.Name())
@@ -128,12 +128,12 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 
 	if metadata.TotalSize > 0 && bytesReceived != metadata.TotalSize {
 		_ = tempFile.Close()
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("metadata total_size does not match received bytes"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "metadata total_size does not match received bytes")
 	}
 
 	if _, err = tempFile.Seek(0, io.SeekStart); err != nil {
 		_ = tempFile.Close()
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, tempFile)
 
@@ -152,64 +152,84 @@ func (s *FileServer) UploadContent(ctx context.Context, stream *connect.ClientSt
 
 	result, err := s.mediaService.UploadFile(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 
 	if err = queueThumbnailGeneration(ctx, s.Service, result.MediaID); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	storedMeta, _ := s.db.GetMediaMetadata(ctx, result.MediaID)
 
-	return connect.NewResponse(&filesv1.UploadContentResponse{
+	return &filesv1.UploadContentResponse{
 		MediaId:    string(result.MediaID),
 		ServerName: result.ServerName,
 		ContentUri: result.ContentURI,
 		Metadata:   toMediaMetadata(storedMeta),
-	}), nil
+	}, nil
 }
 
 func validateUploadMetadata(metadata *filesv1.UploadMetadata, cfg *config.FilesConfig) error {
 	if metadata == nil {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("metadata is required"))
+		return connect.Errorf(connect.CodeInvalidArgument, "metadata is required")
 	}
 	if metadata.ServerName != "" && metadata.ServerName != cfg.ServerName {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("server_name mismatch"))
+		return connect.Errorf(connect.CodeInvalidArgument, "server_name mismatch")
 	}
 	if metadata.MediaId != "" && !isValidMediaID(metadata.MediaId) {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if cfg.MaxFileSizeBytes > 0 && metadata.TotalSize > int64(cfg.MaxFileSizeBytes) {
-		return connect.NewError(connect.CodeInvalidArgument,
-			fmt.Errorf("invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", cfg.MaxFileSizeBytes))
+		return connect.Errorf(connect.CodeInvalidArgument,
+			"invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", cfg.MaxFileSizeBytes)
 	}
 	return nil
 }
 
-func readUploadChunksToTempFile(stream *connect.ClientStream[filesv1.UploadContentRequest], tempFile *os.File, maxAllowed int64) (int64, error) {
+// uploadChunkReceiver is the receive side of an UploadContent stream.
+type uploadChunkReceiver interface {
+	Receive() (*filesv1.UploadContentRequest, error)
+}
+
+// streamReceiveError keeps a *connect.Error from the transport (for example
+// CodeResourceExhausted when a message exceeds the read limit) and maps any
+// other receive failure to CodeInternal.
+func streamReceiveError(err error) error {
+	var cerr *connect.Error
+	if errors.As(err, &cerr) {
+		return cerr
+	}
+	return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+}
+
+func readUploadChunksToTempFile(stream uploadChunkReceiver, tempFile *os.File, maxAllowed int64) (int64, error) {
 	bytesReceived := int64(0)
-	for stream.Receive() {
-		msg := stream.Msg()
+	for {
+		msg, err := stream.Receive()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return 0, streamReceiveError(err)
+		}
 		chunk := msg.GetChunk()
 		if chunk == nil {
 			continue
 		}
 		if int64(len(chunk)) > maxInMemoryFileBytes {
-			return 0, connect.NewError(connect.CodeFailedPrecondition,
-				fmt.Errorf("chunk exceeds maximum in-memory size of %d bytes", maxInMemoryFileBytes))
+			return 0, connect.Errorf(connect.CodeFailedPrecondition,
+				"chunk exceeds maximum in-memory size of %d bytes", maxInMemoryFileBytes)
 		}
 		bytesReceived += int64(len(chunk))
 		if maxAllowed > 0 && bytesReceived > maxAllowed {
-			return 0, connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", maxAllowed))
+			return 0, connect.Errorf(connect.CodeInvalidArgument,
+				"invalid parameter: HTTP Content-Length is greater than the maximum allowed upload size (%v)", maxAllowed)
 		}
-		if _, err := tempFile.Write(chunk); err != nil {
-			return 0, connect.NewError(connect.CodeInternal, err)
+		if _, err = tempFile.Write(chunk); err != nil {
+			return 0, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 		}
 	}
-	if err := stream.Err(); err != nil {
-		return 0, connect.NewError(connect.CodeInternal, err)
-	}
+
 	return bytesReceived, nil
 }
 
@@ -228,28 +248,28 @@ func resolveUploadVisibility(metadata *filesv1.UploadMetadata) bool {
 }
 
 // CreateContent creates a new MXC URI without uploading content
-func (s *FileServer) CreateContent(ctx context.Context, _ *connect.Request[filesv1.CreateContentRequest]) (*connect.Response[filesv1.CreateContentResponse], error) {
+func (s *FileServer) CreateContent(ctx context.Context, _ *filesv1.CreateContentRequest) (*filesv1.CreateContentResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	mediaID := utils.GenerateRandomString(32)
 	cfg := s.Service.Config().(*config.FilesConfig)
 
-	return connect.NewResponse(&filesv1.CreateContentResponse{
+	return &filesv1.CreateContentResponse{
 		MediaId:    mediaID,
 		ServerName: cfg.ServerName,
 		ContentUri: fmt.Sprintf("mxc://%s/%s", cfg.ServerName, mediaID),
-	}), nil
+	}, nil
 }
 
 // GetContent downloads content from the content repository
-func (s *FileServer) GetContent(ctx context.Context, req *connect.Request[filesv1.GetContentRequest]) (*connect.Response[filesv1.GetContentResponse], error) {
+func (s *FileServer) GetContent(ctx context.Context, req *filesv1.GetContentRequest) (*filesv1.GetContentResponse, error) {
 	cfg := s.Service.Config().(*config.FilesConfig)
 
 	sub, err := authenticatedSubject(ctx)
@@ -257,64 +277,62 @@ func (s *FileServer) GetContent(ctx context.Context, req *connect.Request[filesv
 		return nil, err
 	}
 
-	if !isValidMediaID(req.Msg.MediaId) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	if !isValidMediaID(req.MediaId) {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 
-	if err = s.authz.CanViewFile(ctx, sub, req.Msg.MediaId); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.CanViewFile(ctx, sub, req.MediaId); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	businessReq := &business.DownloadRequest{
-		MediaID:            types.MediaID(req.Msg.MediaId),
+		MediaID:            types.MediaID(req.MediaId),
 		IsThumbnailRequest: false,
 		Config:             cfg,
 	}
 
 	result, err := s.mediaService.DownloadFile(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
 	// Check file size before reading to prevent OOM
 	if result.MediaMetadata != nil && result.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxContentBytes) {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("file size %d exceeds maximum allowed %d bytes", result.MediaMetadata.FileSizeBytes, maxContentBytes))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition,
+			"file size %d exceeds maximum allowed %d bytes", result.MediaMetadata.FileSizeBytes, maxContentBytes)
 	}
 
 	// Use a size-limited reader to prevent memory issues
 	limitedReader := &io.LimitedReader{R: result.FileData, N: maxContentBytes + 1}
 	data, err := io.ReadAll(limitedReader)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	// Check if we hit the limit
 	if limitedReader.N <= 0 {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("file size exceeds maximum allowed %d bytes", maxContentBytes))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition,
+			"file size exceeds maximum allowed %d bytes", maxContentBytes)
 	}
 
-	return connect.NewResponse(&filesv1.GetContentResponse{
+	return &filesv1.GetContentResponse{
 		Content:  data,
 		Metadata: toMediaMetadata(result.MediaMetadata),
-	}), nil
+	}, nil
 }
 
 // GetContentOverrideName downloads content with a specified filename override
-func (s *FileServer) GetContentOverrideName(ctx context.Context, req *connect.Request[filesv1.GetContentOverrideNameRequest]) (*connect.Response[filesv1.GetContentOverrideNameResponse], error) {
-	response, err := s.GetContent(ctx, &connect.Request[filesv1.GetContentRequest]{
-		Msg: &filesv1.GetContentRequest{
-			MediaId: req.Msg.MediaId,
-		},
+func (s *FileServer) GetContentOverrideName(ctx context.Context, req *filesv1.GetContentOverrideNameRequest) (*filesv1.GetContentOverrideNameResponse, error) {
+	response, err := s.GetContent(ctx, &filesv1.GetContentRequest{
+		MediaId: req.MediaId,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	metadata := response.Msg.Metadata
-	filename := req.Msg.FileName
+	metadata := response.Metadata
+	filename := req.FileName
 	if filename == "" && metadata != nil {
 		filename = metadata.Filename
 	}
@@ -323,40 +341,40 @@ func (s *FileServer) GetContentOverrideName(ctx context.Context, req *connect.Re
 		metadata.Filename = filename
 	}
 
-	return connect.NewResponse(&filesv1.GetContentOverrideNameResponse{
-		Content:  response.Msg.Content,
+	return &filesv1.GetContentOverrideNameResponse{
+		Content:  response.Content,
 		Metadata: metadata,
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) HeadContent(ctx context.Context, req *connect.Request[filesv1.HeadContentRequest]) (*connect.Response[filesv1.HeadContentResponse], error) {
+func (s *FileServer) HeadContent(ctx context.Context, req *filesv1.HeadContentRequest) (*filesv1.HeadContentResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	metadata, err := s.db.GetMediaMetadata(ctx, types.MediaID(mediaID))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	if metadata == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("media not found"))
+		return nil, connect.Errorf(connect.CodeNotFound, "media not found")
 	}
 
-	return connect.NewResponse(&filesv1.HeadContentResponse{
+	return &filesv1.HeadContentResponse{
 		Metadata: toMediaMetadata(metadata),
-	}), nil
+	}, nil
 }
 
 // GetContentThumbnail retrieves a thumbnail of the content
-func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Request[filesv1.GetContentThumbnailRequest]) (*connect.Response[filesv1.GetContentThumbnailResponse], error) {
+func (s *FileServer) GetContentThumbnail(ctx context.Context, req *filesv1.GetContentThumbnailRequest) (*filesv1.GetContentThumbnailResponse, error) {
 	cfg := s.Service.Config().(*config.FilesConfig)
 
 	sub, err := authenticatedSubject(ctx)
@@ -364,23 +382,23 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 		return nil, err
 	}
 
-	if !isValidMediaID(req.Msg.MediaId) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	if !isValidMediaID(req.MediaId) {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 
-	if err = s.authz.CanViewFile(ctx, sub, req.Msg.MediaId); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.CanViewFile(ctx, sub, req.MediaId); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	businessReq := &business.DownloadRequest{
-		MediaID:            types.MediaID(req.Msg.MediaId),
+		MediaID:            types.MediaID(req.MediaId),
 		IsThumbnailRequest: true,
 		Config:             cfg,
 	}
 
-	if req.Msg.Width > 0 && req.Msg.Height > 0 {
+	if req.Width > 0 && req.Height > 0 {
 		var method string
-		switch req.Msg.Method {
+		switch req.Method {
 		case filesv1.ThumbnailMethod_SCALE:
 			method = types.Scale
 		case filesv1.ThumbnailMethod_CROP:
@@ -390,63 +408,63 @@ func (s *FileServer) GetContentThumbnail(ctx context.Context, req *connect.Reque
 		}
 
 		businessReq.ThumbnailSize = &types.ThumbnailSize{
-			Width:        int(req.Msg.Width),
-			Height:       int(req.Msg.Height),
+			Width:        int(req.Width),
+			Height:       int(req.Height),
 			ResizeMethod: method,
 		}
 	}
 
 	result, err := s.mediaService.DownloadFile(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
 	// Check file size before reading to prevent OOM
 	// Thumbnails should be small, so use a strict limit
 	if result.MediaMetadata != nil && result.MediaMetadata.FileSizeBytes > types.FileSizeBytes(maxThumbnailBytes) {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("thumbnail size %d exceeds maximum allowed %d bytes", result.MediaMetadata.FileSizeBytes, maxThumbnailBytes))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition,
+			"thumbnail size %d exceeds maximum allowed %d bytes", result.MediaMetadata.FileSizeBytes, maxThumbnailBytes)
 	}
 
 	// Use a size-limited reader to prevent memory issues
 	limitedReader := &io.LimitedReader{R: result.FileData, N: maxThumbnailBytes + 1}
 	data, err := io.ReadAll(limitedReader)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	// Check if we hit the limit
 	if limitedReader.N <= 0 {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("thumbnail size exceeds maximum allowed %d bytes", maxThumbnailBytes))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition,
+			"thumbnail size exceeds maximum allowed %d bytes", maxThumbnailBytes)
 	}
 
-	return connect.NewResponse(&filesv1.GetContentThumbnailResponse{
+	return &filesv1.GetContentThumbnailResponse{
 		Content:  data,
 		Metadata: toMediaMetadata(result.MediaMetadata),
-	}), nil
+	}, nil
 }
 
 // GetUrlPreview gets OpenGraph preview information for a URL
-func (s *FileServer) GetUrlPreview(ctx context.Context, req *connect.Request[filesv1.GetUrlPreviewRequest]) (*connect.Response[filesv1.GetUrlPreviewResponse], error) {
+func (s *FileServer) GetUrlPreview(ctx context.Context, req *filesv1.GetUrlPreviewRequest) (*filesv1.GetUrlPreviewResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	urlStr := strings.TrimSpace(req.Msg.Url)
+	urlStr := strings.TrimSpace(req.Url)
 	if urlStr == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("url is required"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "url is required")
 	}
 
 	parsed, err := url.Parse(urlStr)
 	if err != nil || !parsed.IsAbs() {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid url"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid url")
 	}
 
 	if !isAllowedPreviewURL(parsed) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("url not allowed"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "url not allowed")
 	}
 
 	ctx, cancel := applyRequestTimeout(ctx, 0)
@@ -456,18 +474,18 @@ func (s *FileServer) GetUrlPreview(ctx context.Context, req *connect.Request[fil
 	client := s.Service.HTTPClientManager().Client(ctx)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	}
 
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnavailable, err)
+		return nil, connect.NewError(connect.CodeUnavailable, err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, resp.Body)
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxPreviewBodyBytes))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnavailable, err)
+		return nil, connect.NewError(connect.CodeUnavailable, err.Error()).WithCause(err)
 	}
 
 	ogData, title := extractOpenGraph(bytes.NewReader(body))
@@ -483,7 +501,7 @@ func (s *FileServer) GetUrlPreview(ctx context.Context, req *connect.Request[fil
 	}
 	ogStruct, err := structpb.NewStruct(structMap)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	response := &filesv1.GetUrlPreviewResponse{
@@ -507,11 +525,11 @@ func (s *FileServer) GetUrlPreview(ctx context.Context, req *connect.Request[fil
 		}
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // GetConfig retrieves the content repository configuration
-func (s *FileServer) GetConfig(ctx context.Context, _ *connect.Request[filesv1.GetConfigRequest]) (*connect.Response[filesv1.GetConfigResponse], error) {
+func (s *FileServer) GetConfig(ctx context.Context, _ *filesv1.GetConfigRequest) (*filesv1.GetConfigResponse, error) {
 	_, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
@@ -523,10 +541,10 @@ func (s *FileServer) GetConfig(ctx context.Context, _ *connect.Request[filesv1.G
 		Fields: make(map[string]*structpb.Value),
 	}
 
-	return connect.NewResponse(&filesv1.GetConfigResponse{
+	return &filesv1.GetConfigResponse{
 		MaxUploadBytes: int64(cfg.MaxFileSizeBytes),
 		Extra:          extra,
-	}), nil
+	}, nil
 }
 
 type userUsageStore interface {
@@ -727,45 +745,45 @@ func (r fileRetentionRequest) GetPolicyID() string      { return r.policyID }
 func (r fileRetentionRequest) GetExpiresAt() *time.Time { return r.expiresAt }
 func (r fileRetentionRequest) GetIsLocked() bool        { return r.isLocked }
 
-func (s *FileServer) GetUserUsage(ctx context.Context, req *connect.Request[filesv1.GetUserUsageRequest]) (*connect.Response[filesv1.GetUserUsageResponse], error) {
+func (s *FileServer) GetUserUsage(ctx context.Context, req *filesv1.GetUserUsageRequest) (*filesv1.GetUserUsageResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	targetUser := sub
-	if requested := strings.TrimSpace(req.Msg.GetUserId()); requested != "" {
+	if requested := strings.TrimSpace(req.GetUserId()); requested != "" {
 		if requested != sub {
-			return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("user_id must match authenticated user"))
+			return nil, connect.Errorf(connect.CodePermissionDenied, "user_id must match authenticated user")
 		}
 		targetUser = requested
 	}
 
 	usageRepo, ok := s.db.(userUsageStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("user usage is not available"))
+		return nil, connect.Errorf(connect.CodeUnimplemented, "user usage is not available")
 	}
 
 	totalBytes, totalFiles, err := usageRepo.GetUserUsage(ctx, types.OwnerID(targetUser))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	now := time.Now().UTC()
 	periodStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := periodStart.AddDate(0, 1, 0)
 
-	return connect.NewResponse(&filesv1.GetUserUsageResponse{
+	return &filesv1.GetUserUsageResponse{
 		Usage: &filesv1.UsageStats{
 			TotalFiles: int64(totalFiles),
 			TotalBytes: totalBytes,
 		},
 		PeriodStart: timestamppb.New(periodStart),
 		PeriodEnd:   timestamppb.New(periodEnd),
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[filesv1.GetStorageStatsRequest]) (*connect.Response[filesv1.GetStorageStatsResponse], error) {
+func (s *FileServer) GetStorageStats(ctx context.Context, _ *filesv1.GetStorageStatsRequest) (*filesv1.GetStorageStatsResponse, error) {
 	if _, err := authenticatedSubject(ctx); err != nil {
 		return nil, err
 	}
@@ -781,7 +799,7 @@ func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[fil
 		}
 	}
 	if !isAdmin {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin access required"))
+		return nil, connect.NewError(connect.CodePermissionDenied, "admin access required")
 	}
 
 	var totalBytes int64
@@ -792,7 +810,7 @@ func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[fil
 	if ok {
 		stats, err := statsRepo.GetLatestStats(ctx)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
+			return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 		}
 		if stats != nil {
 			totalBytes = stats.TotalBytes()
@@ -801,91 +819,91 @@ func (s *FileServer) GetStorageStats(ctx context.Context, _ *connect.Request[fil
 		}
 	}
 
-	return connect.NewResponse(&filesv1.GetStorageStatsResponse{
+	return &filesv1.GetStorageStatsResponse{
 		TotalBytes: totalBytes,
 		TotalFiles: totalFiles,
 		TotalUsers: totalUsers,
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) GetSignedUploadUrl(ctx context.Context, req *connect.Request[filesv1.GetSignedUploadUrlRequest]) (*connect.Response[filesv1.GetSignedUploadUrlResponse], error) {
+func (s *FileServer) GetSignedUploadUrl(ctx context.Context, req *filesv1.GetSignedUploadUrlRequest) (*filesv1.GetSignedUploadUrlResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if !isValidMediaID(req.Msg.GetMediaId()) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+	if !isValidMediaID(req.GetMediaId()) {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	expiresAt, err := resolveURLExpiry(req.Msg.GetExpiresSeconds())
+	expiresAt, err := resolveURLExpiry(req.GetExpiresSeconds())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	}
-	uploadURL, err := s.signedFileURL(ctx, "upload", req.Msg.GetMediaId(), sub, expiresAt)
+	uploadURL, err := s.signedFileURL(ctx, "upload", req.GetMediaId(), sub, expiresAt)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.GetSignedUploadUrlResponse{UploadUrl: uploadURL}), nil
+	return &filesv1.GetSignedUploadUrlResponse{UploadUrl: uploadURL}, nil
 }
 
-func (s *FileServer) GetSignedDownloadUrl(ctx context.Context, req *connect.Request[filesv1.GetSignedDownloadUrlRequest]) (*connect.Response[filesv1.GetSignedDownloadUrlResponse], error) {
+func (s *FileServer) GetSignedDownloadUrl(ctx context.Context, req *filesv1.GetSignedDownloadUrlRequest) (*filesv1.GetSignedDownloadUrlResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	expiresAt, err := resolveURLExpiry(req.Msg.GetExpiresSeconds())
+	expiresAt, err := resolveURLExpiry(req.GetExpiresSeconds())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	}
 	downloadURL, err := s.signedFileURL(ctx, "download", mediaID, sub, expiresAt)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.GetSignedDownloadUrlResponse{DownloadUrl: downloadURL}), nil
+	return &filesv1.GetSignedDownloadUrlResponse{DownloadUrl: downloadURL}, nil
 }
 
-func (s *FileServer) CreateMultipartUpload(ctx context.Context, req *connect.Request[filesv1.CreateMultipartUploadRequest]) (*connect.Response[filesv1.CreateMultipartUploadResponse], error) {
+func (s *FileServer) CreateMultipartUpload(ctx context.Context, req *filesv1.CreateMultipartUploadRequest) (*filesv1.CreateMultipartUploadResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if err = s.authz.CanUploadFile(ctx, sub); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	if req.Msg.GetTotalSize() <= 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("total_size must be greater than zero"))
+	if req.GetTotalSize() <= 0 {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "total_size must be greater than zero")
 	}
 	cfg := s.Service.Config().(*config.FilesConfig)
-	if cfg.MaxFileSizeBytes > 0 && req.Msg.GetTotalSize() > int64(cfg.MaxFileSizeBytes) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("total_size exceeds configured max upload size"))
+	if cfg.MaxFileSizeBytes > 0 && req.GetTotalSize() > int64(cfg.MaxFileSizeBytes) {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "total_size exceeds configured max upload size")
 	}
-	if strings.TrimSpace(req.Msg.GetFilename()) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("filename is required"))
+	if strings.TrimSpace(req.GetFilename()) == "" {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "filename is required")
 	}
 	ownerID := sub
 	store, ok := s.db.(multipartStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("multipart storage is unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "multipart storage is unavailable")
 	}
 	now := time.Now().UTC()
 	expiresAt := now.Add(24 * time.Hour)
-	if req.Msg.GetExpiresAt() != nil {
-		exp := req.Msg.GetExpiresAt().AsTime().UTC()
+	if req.GetExpiresAt() != nil {
+		exp := req.GetExpiresAt().AsTime().UTC()
 		if !exp.After(now) {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("expires_at must be in the future"))
+			return nil, connect.Errorf(connect.CodeInvalidArgument, "expires_at must be in the future")
 		}
 		expiresAt = exp
 	}
-	partCount := int(math.Ceil(float64(req.Msg.GetTotalSize()) / float64(maxMultipartPartBytes)))
+	partCount := int(math.Ceil(float64(req.GetTotalSize()) / float64(maxMultipartPartBytes)))
 	if partCount <= 0 {
 		partCount = 1
 	}
@@ -895,62 +913,62 @@ func (s *FileServer) CreateMultipartUpload(ctx context.Context, req *connect.Req
 		id:          uploadID,
 		ownerID:     ownerID,
 		mediaID:     mediaID,
-		uploadName:  req.Msg.GetFilename(),
-		contentType: req.Msg.GetContentType(),
-		totalSize:   req.Msg.GetTotalSize(),
+		uploadName:  req.GetFilename(),
+		contentType: req.GetContentType(),
+		totalSize:   req.GetTotalSize(),
 		partSize:    maxMultipartPartBytes,
 		partCount:   partCount,
 		uploadState: "pending",
 		expiresAt:   &expiresAt,
 	}
 	if err = store.StoreUpload(ctx, upload); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.CreateMultipartUploadResponse{UploadId: uploadID}), nil
+	return &filesv1.CreateMultipartUploadResponse{UploadId: uploadID}, nil
 }
 
-func (s *FileServer) UploadMultipartPart(ctx context.Context, req *connect.Request[filesv1.UploadMultipartPartRequest]) (*connect.Response[filesv1.UploadMultipartPartResponse], error) {
+func (s *FileServer) UploadMultipartPart(ctx context.Context, req *filesv1.UploadMultipartPartRequest) (*filesv1.UploadMultipartPartResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	store, upload, err := s.getOwnedUpload(ctx, req.GetUploadId(), sub)
 	if err != nil {
 		return nil, err
 	}
 	if upload.UploadState() != "pending" {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("upload is not pending"))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition, "upload is not pending")
 	}
-	partNumber := int(req.Msg.GetPartNumber())
+	partNumber := int(req.GetPartNumber())
 	if partNumber <= 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("part_number must be greater than zero"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "part_number must be greater than zero")
 	}
-	partContent := req.Msg.GetContent()
+	partContent := req.GetContent()
 	if len(partContent) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("content is required"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "content is required")
 	}
 	if int64(len(partContent)) > maxMultipartPartBytes {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("part size exceeds %d bytes in-memory limit", maxMultipartPartBytes))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition, "part size exceeds %d bytes in-memory limit", maxMultipartPartBytes)
 	}
 	existingPart, getErr := store.GetPart(ctx, upload.ID(), partNumber)
 	if getErr == nil && existingPart != nil {
-		return connect.NewResponse(&filesv1.UploadMultipartPartResponse{
+		return &filesv1.UploadMultipartPartResponse{
 			Etag:       existingPart.Etag(),
 			PartNumber: int32(existingPart.PartNumber()),
 			Size:       existingPart.Size(),
-		}), nil
+		}, nil
 	}
 
 	tmpFile, err := os.CreateTemp("", "multipart-part-*")
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	defer func() {
 		_ = os.Remove(tmpFile.Name())
 	}()
 	if _, err = tmpFile.Write(partContent); err != nil {
 		_ = tmpFile.Close()
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	_ = tmpFile.Close()
 
@@ -960,7 +978,7 @@ func (s *FileServer) UploadMultipartPart(ctx context.Context, req *connect.Reque
 	bucket := s.provider.GetBucket(false)
 	_, err = s.provider.UploadFile(ctx, bucket, types.Path(tmpFile.Name()), types.Path(storagePath))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	part := multipartPartRequest{
@@ -973,34 +991,34 @@ func (s *FileServer) UploadMultipartPart(ctx context.Context, req *connect.Reque
 		storagePath: storagePath,
 	}
 	if err = store.StorePart(ctx, part); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.UploadMultipartPartResponse{
+	return &filesv1.UploadMultipartPartResponse{
 		Etag:       etag,
 		PartNumber: int32(partNumber),
 		Size:       int64(len(partContent)),
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) CompleteMultipartUpload(ctx context.Context, req *connect.Request[filesv1.CompleteMultipartUploadRequest]) (*connect.Response[filesv1.CompleteMultipartUploadResponse], error) {
+func (s *FileServer) CompleteMultipartUpload(ctx context.Context, req *filesv1.CompleteMultipartUploadRequest) (*filesv1.CompleteMultipartUploadResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	store, upload, err := s.getOwnedUpload(ctx, req.GetUploadId(), sub)
 	if err != nil {
 		return nil, err
 	}
 	if upload.UploadState() != "pending" {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("upload is not pending"))
+		return nil, connect.Errorf(connect.CodeFailedPrecondition, "upload is not pending")
 	}
-	if len(req.Msg.GetParts()) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parts are required"))
+	if len(req.GetParts()) == 0 {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "parts are required")
 	}
 
 	parts, err := store.GetParts(ctx, upload.ID())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	partByNumber := make(map[int]struct {
 		etag string
@@ -1012,44 +1030,44 @@ func (s *FileServer) CompleteMultipartUpload(ctx context.Context, req *connect.R
 			path string
 		}{etag: p.Etag(), path: p.StoragePath()}
 	}
-	sort.Slice(req.Msg.Parts, func(i, j int) bool {
-		return req.Msg.Parts[i].GetPartNumber() < req.Msg.Parts[j].GetPartNumber()
+	sort.Slice(req.Parts, func(i, j int) bool {
+		return req.Parts[i].GetPartNumber() < req.Parts[j].GetPartNumber()
 	})
 
 	assembled, err := os.CreateTemp("", "multipart-assembled-*")
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	defer func() {
 		_ = os.Remove(assembled.Name())
 	}()
 	totalWritten := int64(0)
-	for _, reqPart := range req.Msg.GetParts() {
+	for _, reqPart := range req.GetParts() {
 		entry, ok := partByNumber[int(reqPart.GetPartNumber())]
 		if !ok {
 			_ = assembled.Close()
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("missing part %d", reqPart.GetPartNumber()))
+			return nil, connect.Errorf(connect.CodeInvalidArgument, "missing part %d", reqPart.GetPartNumber())
 		}
 		if entry.etag != reqPart.GetEtag() {
 			_ = assembled.Close()
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("etag mismatch for part %d", reqPart.GetPartNumber()))
+			return nil, connect.Errorf(connect.CodeInvalidArgument, "etag mismatch for part %d", reqPart.GetPartNumber())
 		}
 		reader, cleanup, dlErr := s.provider.DownloadFile(ctx, s.provider.GetBucket(false), types.Path(entry.path))
 		if dlErr != nil {
 			_ = assembled.Close()
-			return nil, connect.NewError(connect.CodeInternal, dlErr)
+			return nil, connect.NewError(connect.CodeInternal, dlErr.Error()).WithCause(dlErr)
 		}
 		n, copyErr := io.CopyBuffer(assembled, reader, make([]byte, contentReadBufferSize))
 		cleanup()
 		if copyErr != nil {
 			_ = assembled.Close()
-			return nil, connect.NewError(connect.CodeInternal, copyErr)
+			return nil, connect.NewError(connect.CodeInternal, copyErr.Error()).WithCause(copyErr)
 		}
 		totalWritten += n
 	}
 	if _, err = assembled.Seek(0, io.SeekStart); err != nil {
 		_ = assembled.Close()
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, assembled)
 
@@ -1065,50 +1083,50 @@ func (s *FileServer) CompleteMultipartUpload(ctx context.Context, req *connect.R
 		IsPublic:      false,
 	})
 	if err != nil {
-		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 	if err = store.UpdateUploadState(ctx, upload.ID(), "completed"); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	metadata, err := s.db.GetMediaMetadata(ctx, result.MediaID)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.CompleteMultipartUploadResponse{
+	return &filesv1.CompleteMultipartUploadResponse{
 		Metadata: toMediaMetadata(metadata),
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) AbortMultipartUpload(ctx context.Context, req *connect.Request[filesv1.AbortMultipartUploadRequest]) (*connect.Response[filesv1.AbortMultipartUploadResponse], error) {
+func (s *FileServer) AbortMultipartUpload(ctx context.Context, req *filesv1.AbortMultipartUploadRequest) (*filesv1.AbortMultipartUploadResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	store, upload, err := s.getOwnedUpload(ctx, req.GetUploadId(), sub)
 	if err != nil {
 		return nil, err
 	}
 	if err = store.UpdateUploadState(ctx, upload.ID(), "aborted"); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	if err = store.DeleteUpload(ctx, upload.ID()); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.AbortMultipartUploadResponse{Aborted: true}), nil
+	return &filesv1.AbortMultipartUploadResponse{Aborted: true}, nil
 }
 
-func (s *FileServer) ListMultipartParts(ctx context.Context, req *connect.Request[filesv1.ListMultipartPartsRequest]) (*connect.Response[filesv1.ListMultipartPartsResponse], error) {
+func (s *FileServer) ListMultipartParts(ctx context.Context, req *filesv1.ListMultipartPartsRequest) (*filesv1.ListMultipartPartsResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	store, _, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	store, _, err := s.getOwnedUpload(ctx, req.GetUploadId(), sub)
 	if err != nil {
 		return nil, err
 	}
-	parts, err := store.GetParts(ctx, req.Msg.GetUploadId())
+	parts, err := store.GetParts(ctx, req.GetUploadId())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	respParts := make([]*filesv1.ListMultipartPartsResponse_Part, 0, len(parts))
 	for _, part := range parts {
@@ -1118,47 +1136,47 @@ func (s *FileServer) ListMultipartParts(ctx context.Context, req *connect.Reques
 			Size:       part.Size(),
 		})
 	}
-	return connect.NewResponse(&filesv1.ListMultipartPartsResponse{
+	return &filesv1.ListMultipartPartsResponse{
 		Parts: respParts,
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) DeleteContent(ctx context.Context, req *connect.Request[filesv1.DeleteContentRequest]) (*connect.Response[filesv1.DeleteContentResponse], error) {
+func (s *FileServer) DeleteContent(ctx context.Context, req *filesv1.DeleteContentRequest) (*filesv1.DeleteContentResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanDeleteFile(ctx, sub, mediaID); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 	deleter, ok := s.db.(deleteStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete operation unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "delete operation unavailable")
 	}
 	if err = deleter.DeleteMedia(ctx, types.MediaID(mediaID)); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.DeleteContentResponse{Success: true}), nil
+	return &filesv1.DeleteContentResponse{Success: true}, nil
 }
 
-func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[filesv1.BatchGetContentRequest]) (*connect.Response[filesv1.BatchGetContentResponse], error) {
+func (s *FileServer) BatchGetContent(ctx context.Context, req *filesv1.BatchGetContentRequest) (*filesv1.BatchGetContentResponse, error) {
 	if _, err := authenticatedSubject(ctx); err != nil {
 		return nil, err
 	}
-	if len(req.Msg.GetMediaIds()) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not be empty"))
+	if len(req.GetMediaIds()) == 0 {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "media_ids must not be empty")
 	}
-	if len(req.Msg.GetMediaIds()) > maxBatchGetItems {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not exceed %d", maxBatchGetItems))
+	if len(req.GetMediaIds()) > maxBatchGetItems {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "media_ids must not exceed %d", maxBatchGetItems)
 	}
-	results := make([]*filesv1.BatchGetContentResponse_ContentResult, 0, len(req.Msg.GetMediaIds()))
+	results := make([]*filesv1.BatchGetContentResponse_ContentResult, 0, len(req.GetMediaIds()))
 	totalBytes := int64(0)
 	budgetExceeded := false
-	for _, mediaID := range req.Msg.GetMediaIds() {
+	for _, mediaID := range req.GetMediaIds() {
 		if budgetExceeded {
 			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
 				MediaId: mediaID,
@@ -1168,7 +1186,7 @@ func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[f
 			})
 			continue
 		}
-		contentResp, err := s.GetContent(ctx, connect.NewRequest(&filesv1.GetContentRequest{MediaId: mediaID}))
+		contentResp, err := s.GetContent(ctx, &filesv1.GetContentRequest{MediaId: mediaID})
 		if err != nil {
 			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
 				MediaId: mediaID,
@@ -1178,7 +1196,7 @@ func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[f
 			})
 			continue
 		}
-		contentBytes := int64(len(contentResp.Msg.GetContent()))
+		contentBytes := int64(len(contentResp.GetContent()))
 		if totalBytes+contentBytes > maxBatchResponseBytes {
 			budgetExceeded = true
 			results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
@@ -1193,29 +1211,29 @@ func (s *FileServer) BatchGetContent(ctx context.Context, req *connect.Request[f
 		results = append(results, &filesv1.BatchGetContentResponse_ContentResult{
 			MediaId: mediaID,
 			Result: &filesv1.BatchGetContentResponse_ContentResult_Content{
-				Content: contentResp.Msg,
+				Content: contentResp,
 			},
 		})
 	}
-	return connect.NewResponse(&filesv1.BatchGetContentResponse{Results: results}), nil
+	return &filesv1.BatchGetContentResponse{Results: results}, nil
 }
 
-func (s *FileServer) BatchDeleteContent(ctx context.Context, req *connect.Request[filesv1.BatchDeleteContentRequest]) (*connect.Response[filesv1.BatchDeleteContentResponse], error) {
+func (s *FileServer) BatchDeleteContent(ctx context.Context, req *filesv1.BatchDeleteContentRequest) (*filesv1.BatchDeleteContentResponse, error) {
 	if _, err := authenticatedSubject(ctx); err != nil {
 		return nil, err
 	}
-	if len(req.Msg.GetMediaIds()) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not be empty"))
+	if len(req.GetMediaIds()) == 0 {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "media_ids must not be empty")
 	}
-	if len(req.Msg.GetMediaIds()) > maxBatchDeleteItems {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("media_ids must not exceed %d", maxBatchDeleteItems))
+	if len(req.GetMediaIds()) > maxBatchDeleteItems {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "media_ids must not exceed %d", maxBatchDeleteItems)
 	}
-	results := make([]*filesv1.BatchDeleteContentResponse_DeleteResult, 0, len(req.Msg.GetMediaIds()))
-	for _, mediaID := range req.Msg.GetMediaIds() {
-		_, err := s.DeleteContent(ctx, connect.NewRequest(&filesv1.DeleteContentRequest{
+	results := make([]*filesv1.BatchDeleteContentResponse_DeleteResult, 0, len(req.GetMediaIds()))
+	for _, mediaID := range req.GetMediaIds() {
+		_, err := s.DeleteContent(ctx, &filesv1.DeleteContentRequest{
 			MediaId:    mediaID,
-			HardDelete: req.Msg.GetHardDelete(),
-		}))
+			HardDelete: req.GetHardDelete(),
+		})
 		if err != nil {
 			results = append(results, &filesv1.BatchDeleteContentResponse_DeleteResult{
 				MediaId: mediaID,
@@ -1229,24 +1247,24 @@ func (s *FileServer) BatchDeleteContent(ctx context.Context, req *connect.Reques
 			Success: true,
 		})
 	}
-	return connect.NewResponse(&filesv1.BatchDeleteContentResponse{Results: results}), nil
+	return &filesv1.BatchDeleteContentResponse{Results: results}, nil
 }
 
-func (s *FileServer) GetVersions(ctx context.Context, req *connect.Request[filesv1.GetVersionsRequest]) (*connect.Response[filesv1.GetVersionsResponse], error) {
+func (s *FileServer) GetVersions(ctx context.Context, req *filesv1.GetVersionsRequest) (*filesv1.GetVersionsResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err = s.authz.CanViewFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.CanViewFile(ctx, sub, req.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 	versionsDB, ok := s.db.(versionStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("version storage is unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "version storage is unavailable")
 	}
 	limit := 20
 	offset := 0
-	if cursor := req.Msg.GetCursor(); cursor != nil {
+	if cursor := req.GetCursor(); cursor != nil {
 		if cursor.GetLimit() > 0 {
 			limit = int(cursor.GetLimit())
 		}
@@ -1257,9 +1275,9 @@ func (s *FileServer) GetVersions(ctx context.Context, req *connect.Request[files
 	if limit > 100 {
 		limit = 100
 	}
-	versions, _, err := versionsDB.GetVersionsPaginated(ctx, req.Msg.GetMediaId(), limit, offset)
+	versions, _, err := versionsDB.GetVersionsPaginated(ctx, req.GetMediaId(), limit, offset)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	respVersions := make([]*filesv1.FileVersion, 0, len(versions))
 	latest := int64(0)
@@ -1280,93 +1298,93 @@ func (s *FileServer) GetVersions(ctx context.Context, req *connect.Request[files
 	if len(versions) == limit {
 		nextCursor = &commonv1.PageCursor{Limit: int32(limit), Page: strconv.Itoa(offset + limit)}
 	}
-	return connect.NewResponse(&filesv1.GetVersionsResponse{
+	return &filesv1.GetVersionsResponse{
 		Versions:      respVersions,
 		LatestVersion: latest,
 		NextCursor:    nextCursor,
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) RestoreVersion(ctx context.Context, req *connect.Request[filesv1.RestoreVersionRequest]) (*connect.Response[filesv1.RestoreVersionResponse], error) {
+func (s *FileServer) RestoreVersion(ctx context.Context, req *filesv1.RestoreVersionRequest) (*filesv1.RestoreVersionResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err = s.authz.CanEditFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.CanEditFile(ctx, sub, req.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	if req.Msg.GetVersion() <= 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("version must be greater than zero"))
+	if req.GetVersion() <= 0 {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "version must be greater than zero")
 	}
 	versionsDB, ok := s.db.(versionStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("version storage is unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "version storage is unavailable")
 	}
-	metadata, err := versionsDB.RestoreMediaToVersion(ctx, req.Msg.GetMediaId(), int(req.Msg.GetVersion()), sub)
+	metadata, err := versionsDB.RestoreMediaToVersion(ctx, req.GetMediaId(), int(req.GetVersion()), sub)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.RestoreVersionResponse{Metadata: toMediaMetadata(metadata)}), nil
+	return &filesv1.RestoreVersionResponse{Metadata: toMediaMetadata(metadata)}, nil
 }
 
-func (s *FileServer) SetRetentionPolicy(ctx context.Context, req *connect.Request[filesv1.SetRetentionPolicyRequest]) (*connect.Response[filesv1.SetRetentionPolicyResponse], error) {
+func (s *FileServer) SetRetentionPolicy(ctx context.Context, req *filesv1.SetRetentionPolicyRequest) (*filesv1.SetRetentionPolicyResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err = s.authz.CanEditFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.CanEditFile(ctx, sub, req.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	if strings.TrimSpace(req.Msg.GetPolicyId()) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("policy_id is required"))
+	if strings.TrimSpace(req.GetPolicyId()) == "" {
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "policy_id is required")
 	}
 	retStore, ok := s.db.(retentionStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retention store is unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "retention store is unavailable")
 	}
-	policy, err := retStore.GetPolicy(ctx, req.Msg.GetPolicyId())
+	policy, err := retStore.GetPolicy(ctx, req.GetPolicyId())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	if !policy.IsSystem() && policy.OwnerID() != sub {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("policy is not owned by caller"))
+		return nil, connect.Errorf(connect.CodePermissionDenied, "policy is not owned by caller")
 	}
 	var expiresAt *time.Time
 	if policy.RetentionDays() >= 0 {
 		exp := time.Now().UTC().AddDate(0, 0, policy.RetentionDays())
 		expiresAt = &exp
 	}
-	_ = retStore.RemoveRetention(ctx, req.Msg.GetMediaId())
+	_ = retStore.RemoveRetention(ctx, req.GetMediaId())
 	if err = retStore.ApplyRetention(ctx, fileRetentionRequest{
-		mediaID:   req.Msg.GetMediaId(),
+		mediaID:   req.GetMediaId(),
 		policyID:  policy.ID(),
 		expiresAt: expiresAt,
 		isLocked:  false,
 	}); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.SetRetentionPolicyResponse{Success: true}), nil
+	return &filesv1.SetRetentionPolicyResponse{Success: true}, nil
 }
 
-func (s *FileServer) GetRetentionPolicy(ctx context.Context, req *connect.Request[filesv1.GetRetentionPolicyRequest]) (*connect.Response[filesv1.GetRetentionPolicyResponse], error) {
+func (s *FileServer) GetRetentionPolicy(ctx context.Context, req *filesv1.GetRetentionPolicyRequest) (*filesv1.GetRetentionPolicyResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err = s.authz.CanViewFile(ctx, sub, req.Msg.GetMediaId()); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.CanViewFile(ctx, sub, req.GetMediaId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 	retStore, ok := s.db.(retentionStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retention store is unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "retention store is unavailable")
 	}
-	retention, err := retStore.GetRetention(ctx, req.Msg.GetMediaId())
+	retention, err := retStore.GetRetention(ctx, req.GetMediaId())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("retention policy not found"))
+		return nil, connect.Errorf(connect.CodeNotFound, "retention policy not found")
 	}
 	policy, err := retStore.GetPolicy(ctx, retention.PolicyID())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	mode := filesv1.RetentionPolicy_MODE_DELETE
 	if policy.RetentionDays() < 0 {
@@ -1376,7 +1394,7 @@ func (s *FileServer) GetRetentionPolicy(ctx context.Context, req *connect.Reques
 	if retention.ExpiresAt() != nil {
 		expires = timestamppb.New(*retention.ExpiresAt())
 	}
-	return connect.NewResponse(&filesv1.GetRetentionPolicyResponse{
+	return &filesv1.GetRetentionPolicyResponse{
 		Policy: &filesv1.RetentionPolicy{
 			PolicyId:      policy.ID(),
 			Name:          policy.Name(),
@@ -1384,21 +1402,21 @@ func (s *FileServer) GetRetentionPolicy(ctx context.Context, req *connect.Reques
 			Mode:          mode,
 		},
 		ExpiresAt: expires,
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) ListRetentionPolicies(ctx context.Context, _ *connect.Request[filesv1.ListRetentionPoliciesRequest]) (*connect.Response[filesv1.ListRetentionPoliciesResponse], error) {
+func (s *FileServer) ListRetentionPolicies(ctx context.Context, _ *filesv1.ListRetentionPoliciesRequest) (*filesv1.ListRetentionPoliciesResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 	retStore, ok := s.db.(retentionStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retention store is unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "retention store is unavailable")
 	}
 	policies, _, err := retStore.ListPolicies(ctx, sub, 200, 0)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	items := make([]*filesv1.RetentionPolicy, 0, len(policies))
 	for _, policy := range policies {
@@ -1413,50 +1431,50 @@ func (s *FileServer) ListRetentionPolicies(ctx context.Context, _ *connect.Reque
 			Mode:          mode,
 		})
 	}
-	return connect.NewResponse(&filesv1.ListRetentionPoliciesResponse{Policies: items}), nil
+	return &filesv1.ListRetentionPoliciesResponse{Policies: items}, nil
 }
 
 // SearchMedia searches for media files matching specified criteria
-func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[filesv1.SearchMediaRequest]) (*connect.Response[filesv1.SearchMediaResponse], error) {
+func (s *FileServer) SearchMedia(ctx context.Context, req *filesv1.SearchMediaRequest) (*filesv1.SearchMediaResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	ownerID := sub
-	if req.Msg.GetOwnerId() != "" && req.Msg.GetOwnerId() != sub {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("owner_id must match authenticated user"))
+	if req.GetOwnerId() != "" && req.GetOwnerId() != sub {
+		return nil, connect.Errorf(connect.CodePermissionDenied, "owner_id must match authenticated user")
 	}
 
 	var limit int32 = 20
 	var afterCursor string
-	if cursor := req.Msg.GetCursor(); cursor != nil {
+	if cursor := req.GetCursor(); cursor != nil {
 		if cursor.GetLimit() > 0 {
 			limit = cursor.GetLimit()
 		}
 		afterCursor = cursor.GetPage()
 	}
 	if limit <= 0 || limit > 100 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("limit must be between 1 and 100"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "limit must be between 1 and 100")
 	}
 
 	offset, err := decodeSearchCursor(afterCursor, int(limit))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	}
 
-	startDate, endDate, err := parseSearchDates(req.Msg.CreatedAfter, req.Msg.CreatedBefore)
+	startDate, endDate, err := parseSearchDates(req.CreatedAfter, req.CreatedBefore)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	}
 
 	fetchLimit := offset + int(limit) + 1
 	if fetchLimit > maxSearchWindow {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("pagination window too large"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "pagination window too large")
 	}
 
 	var visibility *bool
-	switch req.Msg.Visibility {
+	switch req.Visibility {
 	case filesv1.MediaMetadata_VISIBILITY_PUBLIC:
 		isPublic := true
 		visibility = &isPublic
@@ -1467,26 +1485,26 @@ func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[files
 
 	businessReq := &business.SearchRequest{
 		OwnerID:           types.OwnerID(ownerID),
-		Query:             req.Msg.Query,
+		Query:             req.Query,
 		Page:              0,
 		Limit:             int32(fetchLimit),
 		StartDate:         startDate,
 		EndDate:           endDate,
-		ContentTypePrefix: req.Msg.ContentType,
+		ContentTypePrefix: req.ContentType,
 		Visibility:        visibility,
 	}
 
 	result, err := s.mediaService.SearchMedia(ctx, businessReq)
 	if err != nil {
-		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return nil, connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 
 	sharedIDs, err := s.authz.ListUserShares(ctx, ownerID)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
-	merged := mergeSearchResults(ctx, result.Results, sharedIDs, s.db, req.Msg, startDate, endDate)
+	merged := mergeSearchResults(ctx, result.Results, sharedIDs, s.db, req, startDate, endDate)
 	totalAvailable := len(merged)
 	merged = applySearchOffset(merged, offset, int(limit))
 
@@ -1504,10 +1522,10 @@ func (s *FileServer) SearchMedia(ctx context.Context, req *connect.Request[files
 		}
 	}
 
-	return connect.NewResponse(&filesv1.SearchMediaResponse{
+	return &filesv1.SearchMediaResponse{
 		Results:    results,
 		NextCursor: nextCursor,
-	}), nil
+	}, nil
 }
 
 func resolveURLExpiry(expiresSeconds int64) (time.Time, error) {
@@ -1572,27 +1590,27 @@ func (s *FileServer) getOwnedUpload(ctx context.Context, uploadID, subject strin
 }, error) {
 	store, ok := s.db.(multipartStore)
 	if !ok {
-		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("multipart storage is unavailable"))
+		return nil, nil, connect.Errorf(connect.CodeInternal, "multipart storage is unavailable")
 	}
 	upload, err := store.GetUpload(ctx, uploadID)
 	if err != nil {
-		return nil, nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("upload not found"))
+		return nil, nil, connect.Errorf(connect.CodeNotFound, "upload not found")
 	}
 	if upload.OwnerID() != subject {
-		return nil, nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("upload does not belong to caller"))
+		return nil, nil, connect.Errorf(connect.CodePermissionDenied, "upload does not belong to caller")
 	}
 	if expiresAt := upload.ExpiresAt(); expiresAt != nil && !expiresAt.After(time.Now().UTC()) {
-		return nil, nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("upload has expired"))
+		return nil, nil, connect.Errorf(connect.CodeFailedPrecondition, "upload has expired")
 	}
 	return store, upload, nil
 }
 
-func (s *FileServer) GetMultipartUpload(ctx context.Context, req *connect.Request[filesv1.GetMultipartUploadRequest]) (*connect.Response[filesv1.GetMultipartUploadResponse], error) {
+func (s *FileServer) GetMultipartUpload(ctx context.Context, req *filesv1.GetMultipartUploadRequest) (*filesv1.GetMultipartUploadResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	store, upload, err := s.getOwnedUpload(ctx, req.Msg.GetUploadId(), sub)
+	store, upload, err := s.getOwnedUpload(ctx, req.GetUploadId(), sub)
 	if err != nil {
 		return nil, err
 	}
@@ -1603,146 +1621,146 @@ func (s *FileServer) GetMultipartUpload(ctx context.Context, req *connect.Reques
 			uploadedSize += p.Size()
 		}
 	}
-	return connect.NewResponse(&filesv1.GetMultipartUploadResponse{
+	return &filesv1.GetMultipartUploadResponse{
 		MediaId:       upload.MediaID(),
 		Filename:      upload.UploadName(),
 		TotalSize:     upload.TotalSize(),
 		UploadedSize:  uploadedSize,
 		PartsUploaded: int32(upload.UploadedParts()),
 		UploadState:   uploadStateToProto(upload.UploadState()),
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) PatchContent(ctx context.Context, req *connect.Request[filesv1.PatchContentRequest]) (*connect.Response[filesv1.PatchContentResponse], error) {
+func (s *FileServer) PatchContent(ctx context.Context, req *filesv1.PatchContentRequest) (*filesv1.PatchContentResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanEditFile(ctx, sub, mediaID); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 	pStore, ok := s.db.(patchStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("patch operation unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "patch operation unavailable")
 	}
 
 	updates := make(map[string]any)
-	if filename := req.Msg.GetFilename(); filename != "" {
+	if filename := req.GetFilename(); filename != "" {
 		updates["name"] = filename
 	}
-	if vis := req.Msg.GetVisibility(); vis != filesv1.MediaMetadata_VISIBILITY_UNSPECIFIED {
+	if vis := req.GetVisibility(); vis != filesv1.MediaMetadata_VISIBILITY_UNSPECIFIED {
 		updates["public"] = vis == filesv1.MediaMetadata_VISIBILITY_PUBLIC
 	}
 
 	updated, err := pStore.UpdateMediaMetadata(ctx, types.MediaID(mediaID), updates)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.PatchContentResponse{
+	return &filesv1.PatchContentResponse{
 		Metadata: toMediaMetadata(updated),
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) FinalizeSignedUpload(ctx context.Context, req *connect.Request[filesv1.FinalizeSignedUploadRequest]) (*connect.Response[filesv1.FinalizeSignedUploadResponse], error) {
+func (s *FileServer) FinalizeSignedUpload(ctx context.Context, req *filesv1.FinalizeSignedUploadRequest) (*filesv1.FinalizeSignedUploadResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanEditFile(ctx, sub, mediaID); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 	metadata, err := s.db.GetMediaMetadata(ctx, types.MediaID(mediaID))
 	if err != nil || metadata == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("media not found"))
+		return nil, connect.Errorf(connect.CodeNotFound, "media not found")
 	}
 
 	pStore, ok := s.db.(patchStore)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("patch operation unavailable"))
+		return nil, connect.Errorf(connect.CodeInternal, "patch operation unavailable")
 	}
 
 	updates := make(map[string]any)
-	if checksum := req.Msg.GetChecksumSha256(); checksum != "" {
+	if checksum := req.GetChecksumSha256(); checksum != "" {
 		updates["hash"] = checksum
 	}
-	if sizeBytes := req.Msg.GetSizeBytes(); sizeBytes > 0 {
+	if sizeBytes := req.GetSizeBytes(); sizeBytes > 0 {
 		updates["size"] = sizeBytes
 	}
 	updated, err := pStore.UpdateMediaMetadata(ctx, types.MediaID(mediaID), updates)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.FinalizeSignedUploadResponse{
+	return &filesv1.FinalizeSignedUploadResponse{
 		Metadata: toMediaMetadata(updated),
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) GrantAccess(ctx context.Context, req *connect.Request[filesv1.GrantAccessRequest]) (*connect.Response[filesv1.GrantAccessResponse], error) {
+func (s *FileServer) GrantAccess(ctx context.Context, req *filesv1.GrantAccessRequest) (*filesv1.GrantAccessResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
-	grant := req.Msg.GetGrant()
+	grant := req.GetGrant()
 	if grant == nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("grant is required"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "grant is required")
 	}
 	role := accessRoleToString(grant.GetRole())
 	if role == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid access role"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid access role")
 	}
 	if err = s.authz.GrantFileAccess(ctx, sub, mediaID, grant.GetPrincipalId(), role); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.GrantAccessResponse{Success: true}), nil
+	return &filesv1.GrantAccessResponse{Success: true}, nil
 }
 
-func (s *FileServer) RevokeAccess(ctx context.Context, req *connect.Request[filesv1.RevokeAccessRequest]) (*connect.Response[filesv1.RevokeAccessResponse], error) {
+func (s *FileServer) RevokeAccess(ctx context.Context, req *filesv1.RevokeAccessRequest) (*filesv1.RevokeAccessResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
-	if err = s.authz.RevokeFileAccess(ctx, sub, mediaID, req.Msg.GetPrincipalId()); err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	if err = s.authz.RevokeFileAccess(ctx, sub, mediaID, req.GetPrincipalId()); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(&filesv1.RevokeAccessResponse{Success: true}), nil
+	return &filesv1.RevokeAccessResponse{Success: true}, nil
 }
 
-func (s *FileServer) ListAccess(ctx context.Context, req *connect.Request[filesv1.ListAccessRequest]) (*connect.Response[filesv1.ListAccessResponse], error) {
+func (s *FileServer) ListAccess(ctx context.Context, req *filesv1.ListAccessRequest) (*filesv1.ListAccessResponse, error) {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	grants, err := s.authz.ListFileAccessGrants(ctx, sub, mediaID)
 	if err != nil {
 		if errors.Is(err, authz.ErrNotOwner) {
-			return nil, connect.NewError(connect.CodePermissionDenied, err)
+			return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
 	limit := 20
 	offset := 0
-	if cursor := req.Msg.GetCursor(); cursor != nil {
+	if cursor := req.GetCursor(); cursor != nil {
 		if cursor.GetLimit() > 0 {
 			limit = int(cursor.GetLimit())
 		}
@@ -1774,23 +1792,23 @@ func (s *FileServer) ListAccess(ctx context.Context, req *connect.Request[filesv
 		nextCursor = &commonv1.PageCursor{Limit: int32(limit), Page: strconv.Itoa(end)}
 	}
 
-	return connect.NewResponse(&filesv1.ListAccessResponse{
+	return &filesv1.ListAccessResponse{
 		Grants:     pageGrants,
 		NextCursor: nextCursor,
-	}), nil
+	}, nil
 }
 
-func (s *FileServer) DownloadContent(ctx context.Context, req *connect.Request[filesv1.DownloadContentRequest], stream *connect.ServerStream[filesv1.DownloadContentResponse]) error {
+func (s *FileServer) DownloadContent(ctx context.Context, req *filesv1.DownloadContentRequest, stream filesv1connect.FilesServiceDownloadContentServerStream) error {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
-		return connect.NewError(connect.CodePermissionDenied, err)
+		return connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	cfg := s.Service.Config().(*config.FilesConfig)
@@ -1799,7 +1817,7 @@ func (s *FileServer) DownloadContent(ctx context.Context, req *connect.Request[f
 		Config:  cfg,
 	})
 	if err != nil {
-		return connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
@@ -1808,39 +1826,39 @@ func (s *FileServer) DownloadContent(ctx context.Context, req *connect.Request[f
 		n, readErr := result.FileData.Read(buf)
 		if n > 0 {
 			if sendErr := stream.Send(&filesv1.DownloadContentResponse{Data: buf[:n]}); sendErr != nil {
-				return connect.NewError(connect.CodeInternal, sendErr)
+				return connect.NewError(connect.CodeInternal, sendErr.Error()).WithCause(sendErr)
 			}
 		}
 		if readErr != nil {
 			if errors.Is(readErr, io.EOF) {
 				return nil
 			}
-			return connect.NewError(connect.CodeInternal, readErr)
+			return connect.NewError(connect.CodeInternal, readErr.Error()).WithCause(readErr)
 		}
 	}
 }
 
-func (s *FileServer) DownloadContentRange(ctx context.Context, req *connect.Request[filesv1.DownloadContentRangeRequest], stream *connect.ServerStream[filesv1.DownloadContentRangeResponse]) error {
+func (s *FileServer) DownloadContentRange(ctx context.Context, req *filesv1.DownloadContentRangeRequest, stream filesv1connect.FilesServiceDownloadContentRangeServerStream) error {
 	sub, err := authenticatedSubject(ctx)
 	if err != nil {
 		return err
 	}
-	mediaID := req.Msg.GetMediaId()
+	mediaID := req.GetMediaId()
 	if !isValidMediaID(mediaID) {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid media id"))
+		return connect.Errorf(connect.CodeInvalidArgument, "invalid media id")
 	}
 
-	start := req.Msg.GetStart()
-	end := req.Msg.GetEnd()
+	start := req.GetStart()
+	end := req.GetEnd()
 	if start < 0 {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("start must be >= 0"))
+		return connect.Errorf(connect.CodeInvalidArgument, "start must be >= 0")
 	}
 	if end > 0 && end < start {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("end must be >= start"))
+		return connect.Errorf(connect.CodeInvalidArgument, "end must be >= start")
 	}
 
 	if err = s.authz.CanViewFile(ctx, sub, mediaID); err != nil {
-		return connect.NewError(connect.CodePermissionDenied, err)
+		return connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
 
 	cfg := s.Service.Config().(*config.FilesConfig)
@@ -1849,16 +1867,16 @@ func (s *FileServer) DownloadContentRange(ctx context.Context, req *connect.Requ
 		Config:  cfg,
 	})
 	if err != nil {
-		return connect.NewError(mapBusinessErrorToConnectCode(err), err)
+		return connect.NewError(mapBusinessErrorToConnectCode(err), err.Error()).WithCause(err)
 	}
 	defer util.CloseAndLogOnError(ctx, result.FileData)
 
 	if start > 0 {
 		if _, err = io.CopyN(io.Discard, result.FileData, start); err != nil {
 			if errors.Is(err, io.EOF) {
-				return connect.NewError(connect.CodeOutOfRange, fmt.Errorf("start offset beyond file size"))
+				return connect.Errorf(connect.CodeOutOfRange, "start offset beyond file size")
 			}
-			return connect.NewError(connect.CodeInternal, err)
+			return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 		}
 	}
 
@@ -1879,14 +1897,14 @@ func (s *FileServer) DownloadContentRange(ctx context.Context, req *connect.Requ
 		if n > 0 {
 			remaining -= int64(n)
 			if sendErr := stream.Send(&filesv1.DownloadContentRangeResponse{Data: buf[:n]}); sendErr != nil {
-				return connect.NewError(connect.CodeInternal, sendErr)
+				return connect.NewError(connect.CodeInternal, sendErr.Error()).WithCause(sendErr)
 			}
 		}
 		if readErr != nil {
 			if errors.Is(readErr, io.EOF) {
 				return nil
 			}
-			return connect.NewError(connect.CodeInternal, readErr)
+			return connect.NewError(connect.CodeInternal, readErr.Error()).WithCause(readErr)
 		}
 	}
 	return nil
@@ -1895,12 +1913,12 @@ func (s *FileServer) DownloadContentRange(ctx context.Context, req *connect.Requ
 func authenticatedSubject(ctx context.Context) (string, error) {
 	authClaims := security.ClaimsFromContext(ctx)
 	if authClaims == nil {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("missing authentication"))
+		return "", connect.NewError(connect.CodeUnauthenticated, "missing authentication")
 	}
 
 	sub, err := authClaims.GetSubject()
 	if err != nil || strings.TrimSpace(sub) == "" {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("missing subject"))
+		return "", connect.NewError(connect.CodeUnauthenticated, "missing subject")
 	}
 
 	return sub, nil
