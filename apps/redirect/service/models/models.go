@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/pitabwire/frame/v2/data"
+	"github.com/pitabwire/frame/v3/data"
 	"gorm.io/datatypes"
 )
 

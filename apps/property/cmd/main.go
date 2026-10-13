@@ -3,16 +3,20 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
-	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/v1/propertyv1connect"
-	"connectrpc.com/connect"
+	"github.com/antinvestor/service-files/internal/apierror"
+
+	propertyv1connect "buf.build/gen/go/antinvestor/property/connectrpc/go/v2/v1/propertyv1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/antinvestor/service-files/apps/property/config"
 	"github.com/antinvestor/service-files/apps/property/service/handlers"
 	"github.com/antinvestor/service-files/apps/property/service/models"
-	"github.com/pitabwire/frame/v2"
-	fconfig "github.com/pitabwire/frame/v2/config"
-	"github.com/pitabwire/frame/v2/datastore"
-	connectinterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
+	"github.com/pitabwire/frame/v3"
+	fconfig "github.com/pitabwire/frame/v3/config"
+	"github.com/pitabwire/frame/v3/datastore"
+	connectinterceptors "github.com/pitabwire/frame/v3/security/interceptors/connect"
 )
 
 func main() {
@@ -62,16 +66,19 @@ func main() {
 		DBPool: dbPool,
 	}
 
-	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), apierror.ServerInterceptor())
 	if err != nil {
 		slog.Error("could not create default interceptors", "error", err)
 		return
 	}
 
-	_, serverHandler := propertyv1connect.NewPropertyServiceHandler(
-		implementation, connect.WithInterceptors(defaultInterceptorList...))
+	server := connect.NewServer(defaultInterceptorList...)
+	propertyv1connect.RegisterPropertyServiceHandler(server, implementation)
 
-	svc.Init(ctx, frame.WithHTTPHandler(serverHandler))
+	mux := http.NewServeMux()
+	connecthttp.Mount(mux, server)
+
+	svc.Init(ctx, frame.WithHTTPHandler(mux))
 
 	err = svc.Run(ctx, "")
 	if err != nil {

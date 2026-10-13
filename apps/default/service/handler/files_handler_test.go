@@ -18,9 +18,10 @@ import (
 	"time"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
-	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
+	"buf.build/gen/go/antinvestor/files/connectrpc/go/v2/files/v1/filesv1connect"
 	filesv1 "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
@@ -29,9 +30,9 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pitabwire/frame/v2"
-	"github.com/pitabwire/frame/v2/frametests/definition"
-	"github.com/pitabwire/frame/v2/security"
+	"github.com/pitabwire/frame/v3"
+	"github.com/pitabwire/frame/v3/frametests/definition"
+	"github.com/pitabwire/frame/v3/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -117,13 +118,13 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContent() {
 				}
 				ctx = authClaims.ClaimsToContext(ctx)
 
-				req := connect.NewRequest(&filesv1.CreateContentRequest{})
+				req := &filesv1.CreateContentRequest{}
 
 				resp, err := handler.CreateContent(ctx, req)
 
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.NotEmpty(t, resp.Msg.MediaId)
+				assert.NotEmpty(t, resp.MediaId)
 			})
 		}
 	})
@@ -158,7 +159,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentValidation() {
 					caseCtx = claimsCtx(caseCtx, tc.userID)
 				}
 
-				_, err := handler.GetContent(caseCtx, connect.NewRequest(tc.request))
+				_, err := handler.GetContent(caseCtx, tc.request)
 				require.Error(t, err)
 				assert.Equal(t, tc.expectErr, connect.CodeOf(err))
 			})
@@ -202,15 +203,15 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentSuccess() {
 				require.NotNil(t, uploadRes)
 
 				caseCtx := claimsCtx(ctx, tc.userID)
-				resp, err := handler.GetContent(caseCtx, connect.NewRequest(&filesv1.GetContentRequest{
+				resp, err := handler.GetContent(caseCtx, &filesv1.GetContentRequest{
 					MediaId: string(uploadRes.MediaID),
-				}))
+				})
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				require.NotNil(t, resp.Msg.Metadata)
-				assert.Equal(t, tc.mimeType, resp.Msg.Metadata.ContentType)
-				assert.Equal(t, tc.filename, resp.Msg.Metadata.Filename)
-				assert.Equal(t, tc.content, string(resp.Msg.Content))
+				require.NotNil(t, resp.Metadata)
+				assert.Equal(t, tc.mimeType, resp.Metadata.ContentType)
+				assert.Equal(t, tc.filename, resp.Metadata.Filename)
+				assert.Equal(t, tc.content, string(resp.Content))
 			})
 		}
 	})
@@ -248,9 +249,9 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentRejectsOversizedPayl
 				})
 				require.NoError(t, err)
 
-				_, err = handler.GetContent(claimsCtx(ctx, "@owner:example.com"), connect.NewRequest(&filesv1.GetContentRequest{
+				_, err = handler.GetContent(claimsCtx(ctx, "@owner:example.com"), &filesv1.GetContentRequest{
 					MediaId: mediaID,
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
 			})
@@ -295,7 +296,7 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaValidation() {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := claimsCtx(ctx, tc.userID)
 
-				_, err := handler.SearchMedia(caseCtx, connect.NewRequest(tc.request))
+				_, err := handler.SearchMedia(caseCtx, tc.request)
 				require.Error(t, err)
 				assert.Equal(t, tc.expectErr, connect.CodeOf(err))
 			})
@@ -343,7 +344,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewValidation() {
 				if tc.userID != "" {
 					caseCtx = claimsCtx(caseCtx, tc.userID)
 				}
-				_, err := handler.GetUrlPreview(caseCtx, connect.NewRequest(&filesv1.GetUrlPreviewRequest{Url: tc.url}))
+				_, err := handler.GetUrlPreview(caseCtx, &filesv1.GetUrlPreviewRequest{Url: tc.url})
 				require.Error(t, err)
 				assert.Equal(t, tc.expectErr, connect.CodeOf(err))
 			})
@@ -412,14 +413,14 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewSuccess() {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				caseCtx := claimsCtx(ctx, tc.userID)
-				resp, err := handler.GetUrlPreview(caseCtx, connect.NewRequest(&filesv1.GetUrlPreviewRequest{
+				resp, err := handler.GetUrlPreview(caseCtx, &filesv1.GetUrlPreviewRequest{
 					Url: "http://8.8.8.8/page",
-				}))
+				})
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.NotEmpty(t, resp.Msg.OgImageMediaId)
-				require.NotNil(t, resp.Msg.OgData)
-				assert.Equal(t, "Preview Title", resp.Msg.OgData.AsMap()["og:title"])
+				assert.NotEmpty(t, resp.OgImageMediaId)
+				require.NotNil(t, resp.OgData)
+				assert.Equal(t, "Preview Title", resp.OgData.AsMap()["og:title"])
 			})
 		}
 	})
@@ -523,9 +524,9 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewAdditionalCases()
 			t.Run(tc.name, func(t *testing.T) {
 				targetURL := tc.setupClient(t, ctx, svc)
 				caseCtx := claimsCtx(ctx, "@owner:example.com")
-				resp, err := handler.GetUrlPreview(caseCtx, connect.NewRequest(&filesv1.GetUrlPreviewRequest{
+				resp, err := handler.GetUrlPreview(caseCtx, &filesv1.GetUrlPreviewRequest{
 					Url: targetURL,
-				}))
+				})
 				if tc.expectErr != 0 {
 					require.Error(t, err)
 					assert.Equal(t, tc.expectErr, connect.CodeOf(err))
@@ -533,7 +534,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUrlPreviewAdditionalCases()
 				}
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Equal(t, tc.expectOgImageMediaID, resp.Msg.OgImageMediaId)
+				assert.Equal(t, tc.expectOgImageMediaID, resp.OgImageMediaId)
 			})
 		}
 	})
@@ -557,7 +558,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 				if tc.userID != "" {
 					caseCtx = claimsCtx(caseCtx, tc.userID)
 				}
-				resp, err := handler.GetConfig(caseCtx, connect.NewRequest(&filesv1.GetConfigRequest{}))
+				resp, err := handler.GetConfig(caseCtx, &filesv1.GetConfigRequest{})
 				if tc.expectErr != 0 {
 					require.Error(t, err)
 					assert.Equal(t, tc.expectErr, connect.CodeOf(err))
@@ -565,8 +566,8 @@ func (suite *FileServerTestSuite) Test_FileServer_GetConfig() {
 				}
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Equal(t, int64(cfg.MaxFileSizeBytes), resp.Msg.MaxUploadBytes)
-				require.NotNil(t, resp.Msg.Extra)
+				assert.Equal(t, int64(cfg.MaxFileSizeBytes), resp.MaxUploadBytes)
+				require.NotNil(t, resp.Extra)
 			})
 		}
 	})
@@ -590,7 +591,7 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContentValidation() {
 				if tc.userID != "" {
 					caseCtx = claimsCtx(caseCtx, tc.userID)
 				}
-				resp, err := handler.CreateContent(caseCtx, connect.NewRequest(&filesv1.CreateContentRequest{}))
+				resp, err := handler.CreateContent(caseCtx, &filesv1.CreateContentRequest{})
 				if tc.expectErr != 0 {
 					require.Error(t, err)
 					assert.Equal(t, tc.expectErr, connect.CodeOf(err))
@@ -598,7 +599,7 @@ func (suite *FileServerTestSuite) Test_FileServer_CreateContentValidation() {
 				}
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.NotEmpty(t, resp.Msg.MediaId)
+				assert.NotEmpty(t, resp.MediaId)
 			})
 		}
 	})
@@ -633,14 +634,14 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentOverrideName() {
 				require.NoError(t, err)
 
 				caseCtx := claimsCtx(ctx, "@owner:example.com")
-				resp, err := handler.GetContentOverrideName(caseCtx, connect.NewRequest(&filesv1.GetContentOverrideNameRequest{
+				resp, err := handler.GetContentOverrideName(caseCtx, &filesv1.GetContentOverrideNameRequest{
 					MediaId:  mediaID,
 					FileName: tc.overrideName,
-				}))
+				})
 				require.NoError(t, err)
-				require.NotNil(t, resp.Msg.Metadata)
-				assert.Equal(t, tc.expectedName, resp.Msg.Metadata.Filename)
-				assert.Equal(t, "text/plain", resp.Msg.Metadata.ContentType)
+				require.NotNil(t, resp.Metadata)
+				assert.Equal(t, tc.expectedName, resp.Metadata.Filename)
+				assert.Equal(t, "text/plain", resp.Metadata.ContentType)
 			})
 		}
 	})
@@ -674,7 +675,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailValidation(
 				if tc.userID != "" {
 					caseCtx = claimsCtx(caseCtx, tc.userID)
 				}
-				_, err := handler.GetContentThumbnail(caseCtx, connect.NewRequest(tc.request))
+				_, err := handler.GetContentThumbnail(caseCtx, tc.request)
 				require.Error(t, err)
 				assert.Equal(t, tc.expectErr, connect.CodeOf(err))
 			})
@@ -729,7 +730,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailBusinessVal
 				req := protoCloneGetContentThumbnailRequest(tc.request)
 				req.MediaId = mediaID
 				caseCtx := claimsCtx(ctx, tc.userID)
-				_, err = handler.GetContentThumbnail(caseCtx, connect.NewRequest(req))
+				_, err = handler.GetContentThumbnail(caseCtx, req)
 				require.Error(t, err)
 				assert.Equal(t, tc.expectErr, connect.CodeOf(err))
 			})
@@ -1069,7 +1070,8 @@ func (suite *FileServerTestSuite) Test_FileServer_UploadContentStream() {
 
 	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
 		ctx, _, _, fileHandler := suite.setupFileServer(t, dep)
-		_, connectHandler := filesv1connect.NewFilesServiceHandler(fileHandler)
+		connectHandler := http.NewServeMux()
+		Mount(connectHandler, fileHandler)
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -1084,9 +1086,11 @@ func (suite *FileServerTestSuite) Test_FileServer_UploadContentStream() {
 				server := httptest.NewServer(authWrapped)
 				defer server.Close()
 
-				client := filesv1connect.NewFilesServiceClient(server.Client(), server.URL)
-				stream := client.UploadContent(ctx)
-				var err error
+				client := filesv1connect.NewFilesServiceClient(connect.NewClient(connecthttp.NewTransport(server.Client(), server.URL)))
+				stream, err := client.UploadContent(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
 
 				if tc.metadata != nil {
 					meta := proto.Clone(tc.metadata).(*filesv1.UploadMetadata)
@@ -1127,7 +1131,7 @@ func (suite *FileServerTestSuite) Test_FileServer_UploadContentStream() {
 					return
 				}
 				require.NotNil(t, resp)
-				assert.NotEmpty(t, resp.Msg.MediaId)
+				assert.NotEmpty(t, resp.MediaId)
 			})
 		}
 	})
@@ -1163,14 +1167,14 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaSuccess() {
 				require.NoError(t, err)
 
 				caseCtx := claimsCtx(ctx, tc.userID)
-				resp, err := handler.SearchMedia(caseCtx, connect.NewRequest(&filesv1.SearchMediaRequest{
+				resp, err := handler.SearchMedia(caseCtx, &filesv1.SearchMediaRequest{
 					Query:   tc.query,
 					Cursor:  &commonv1.PageCursor{Limit: 10},
 					OwnerId: tc.userID,
-				}))
+				})
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.NotEmpty(t, resp.Msg.Results)
+				assert.NotEmpty(t, resp.Results)
 			})
 		}
 	})
@@ -1227,15 +1231,15 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaResultBounds() {
 				require.NoError(t, handler.authz.GrantFileAccess(ctx, tc.otherOwner, "sharedMedia", tc.sharedUser, "viewer"))
 
 				caseCtx := claimsCtx(ctx, tc.ownerID)
-				resp, err := handler.SearchMedia(caseCtx, connect.NewRequest(&filesv1.SearchMediaRequest{
+				resp, err := handler.SearchMedia(caseCtx, &filesv1.SearchMediaRequest{
 					OwnerId: tc.ownerID,
 					Query:   "invoice",
 					Cursor:  &commonv1.PageCursor{Limit: tc.limit},
-				}))
+				})
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.Len(t, resp.Msg.Results, tc.expectLen)
-				assert.LessOrEqual(t, len(resp.Msg.Results), int(tc.limit))
+				assert.Len(t, resp.Results, tc.expectLen)
+				assert.LessOrEqual(t, len(resp.Results), int(tc.limit))
 			})
 		}
 	})
@@ -1294,12 +1298,12 @@ func (suite *FileServerTestSuite) Test_FileServer_SearchMediaSharedEdgeCases() {
 				require.NoError(t, handler.authz.GrantFileAccess(ctx, "@other:example.com", "sharedHit001", "@owner:example.com", "viewer"))
 				require.NoError(t, handler.authz.GrantFileAccess(ctx, "@other:example.com", "sharedNoMatch001", "@owner:example.com", "viewer"))
 
-				resp, err := handler.SearchMedia(claimsCtx(ctx, "@owner:example.com"), connect.NewRequest(&filesv1.SearchMediaRequest{
+				resp, err := handler.SearchMedia(claimsCtx(ctx, "@owner:example.com"), &filesv1.SearchMediaRequest{
 					Query: tc.query,
-				}))
+				})
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.GreaterOrEqual(t, len(resp.Msg.Results), tc.expectMin)
+				assert.GreaterOrEqual(t, len(resp.Results), tc.expectMin)
 			})
 		}
 	})
@@ -1352,17 +1356,17 @@ func (suite *FileServerTestSuite) Test_FileServer_GetContentThumbnailSuccess() {
 				})
 				require.NoError(t, err)
 
-				resp, err := handler.GetContentThumbnail(claimsCtx(ctx, "@owner:example.com"), connect.NewRequest(&filesv1.GetContentThumbnailRequest{
+				resp, err := handler.GetContentThumbnail(claimsCtx(ctx, "@owner:example.com"), &filesv1.GetContentThumbnailRequest{
 					MediaId: mediaID,
 					Width:   tc.width,
 					Height:  tc.height,
 					Method:  tc.method,
-				}))
+				})
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.NotEmpty(t, resp.Msg.Content)
-				require.NotNil(t, resp.Msg.Metadata)
-				assert.Equal(t, "image/jpeg", resp.Msg.Metadata.ContentType)
+				assert.NotEmpty(t, resp.Content)
+				require.NotNil(t, resp.Metadata)
+				assert.Equal(t, "image/jpeg", resp.Metadata.ContentType)
 			})
 		}
 	})
@@ -1497,7 +1501,7 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUserUsage() {
 			ctx, _, _, handler := suite.setupFileServer(t, dep)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.GetUserUsage(t.Context(), connect.NewRequest(&filesv1.GetUserUsageRequest{}))
+				_, err := handler.GetUserUsage(t.Context(), &filesv1.GetUserUsageRequest{})
 				require.Error(t, err)
 				require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
@@ -1506,16 +1510,16 @@ func (suite *FileServerTestSuite) Test_FileServer_GetUserUsage() {
 				userID := "@test-user-usage:example.com"
 				authCtx := claimsCtx(ctx, userID)
 
-				resp, err := handler.GetUserUsage(authCtx, connect.NewRequest(&filesv1.GetUserUsageRequest{}))
+				resp, err := handler.GetUserUsage(authCtx, &filesv1.GetUserUsageRequest{})
 				require.NoError(t, err)
-				require.NotNil(t, resp.Msg.Usage)
+				require.NotNil(t, resp.Usage)
 			})
 
 			t.Run("other_user_forbidden", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@test-user:example.com")
-				_, err := handler.GetUserUsage(authCtx, connect.NewRequest(&filesv1.GetUserUsageRequest{
+				_, err := handler.GetUserUsage(authCtx, &filesv1.GetUserUsageRequest{
 					UserId: "@other-user:example.com",
-				}))
+				})
 				require.Error(t, err)
 				require.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 			})
@@ -1538,25 +1542,25 @@ func (suite *FileServerTestSuite) Test_FileServer_GetStorageStats() {
 			ctx, _, _, handler := suite.setupFileServer(t, dep)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.GetStorageStats(t.Context(), connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				_, err := handler.GetStorageStats(t.Context(), &filesv1.GetStorageStatsRequest{})
 				require.Error(t, err)
 				require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("regular_user_denied", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@test-user:example.com")
-				_, err := handler.GetStorageStats(authCtx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				_, err := handler.GetStorageStats(authCtx, &filesv1.GetStorageStatsRequest{})
 				require.Error(t, err)
 				require.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 			})
 
 			t.Run("internal_service_returns_stats", func(t *testing.T) {
 				svcCtx := internalServiceClaimsCtx(ctx, "service_ocr")
-				resp, err := handler.GetStorageStats(svcCtx, connect.NewRequest(&filesv1.GetStorageStatsRequest{}))
+				resp, err := handler.GetStorageStats(svcCtx, &filesv1.GetStorageStatsRequest{})
 				require.NoError(t, err)
-				require.Equal(t, int64(0), resp.Msg.TotalBytes)
-				require.Equal(t, int64(0), resp.Msg.TotalFiles)
-				require.Equal(t, int64(0), resp.Msg.TotalUsers)
+				require.Equal(t, int64(0), resp.TotalBytes)
+				require.Equal(t, int64(0), resp.TotalFiles)
+				require.Equal(t, int64(0), resp.TotalUsers)
 			})
 		})
 	})
@@ -1594,9 +1598,9 @@ func (suite *FileServerTestSuite) Test_FileServer_DeleteContent() {
 						caseCtx = claimsCtx(ctx, tc.userID)
 					}
 
-					_, err := handler.HeadContent(caseCtx, connect.NewRequest(&filesv1.HeadContentRequest{
+					_, err := handler.HeadContent(caseCtx, &filesv1.HeadContentRequest{
 						MediaId: tc.mediaID,
-					}))
+					})
 					require.Error(t, err)
 					require.Equal(t, tc.expectErr, connect.CodeOf(err))
 				})
@@ -1637,9 +1641,9 @@ func (suite *FileServerTestSuite) Test_FileServer_GetSignedUploadUrl() {
 						caseCtx = claimsCtx(ctx, tc.userID)
 					}
 
-					_, err := handler.GetSignedUploadUrl(caseCtx, connect.NewRequest(&filesv1.GetSignedUploadUrlRequest{
+					_, err := handler.GetSignedUploadUrl(caseCtx, &filesv1.GetSignedUploadUrlRequest{
 						MediaId: tc.mediaID,
-					}))
+					})
 					require.Error(t, err)
 					require.Equal(t, tc.expectErr, connect.CodeOf(err))
 				})
@@ -1686,9 +1690,9 @@ func (suite *FileServerTestSuite) Test_FileServer_GetSignedDownloadUrl() {
 						caseCtx = claimsCtx(ctx, tc.userID)
 					}
 
-					_, err := handler.GetSignedDownloadUrl(caseCtx, connect.NewRequest(&filesv1.GetSignedDownloadUrlRequest{
+					_, err := handler.GetSignedDownloadUrl(caseCtx, &filesv1.GetSignedDownloadUrlRequest{
 						MediaId: tc.mediaID,
-					}))
+					})
 					require.Error(t, err)
 					require.Equal(t, tc.expectErr, connect.CodeOf(err))
 				})
@@ -1735,9 +1739,9 @@ func (suite *FileServerTestSuite) Test_FileServer_BatchGetContent() {
 						caseCtx = claimsCtx(ctx, tc.userID)
 					}
 
-					_, err := handler.BatchGetContent(caseCtx, connect.NewRequest(&filesv1.BatchGetContentRequest{
+					_, err := handler.BatchGetContent(caseCtx, &filesv1.BatchGetContentRequest{
 						MediaIds: tc.mediaIDs,
-					}))
+					})
 					require.Error(t, err)
 					require.Equal(t, tc.expectErr, connect.CodeOf(err))
 				})
@@ -1784,9 +1788,9 @@ func (suite *FileServerTestSuite) Test_FileServer_BatchDeleteContent() {
 						caseCtx = claimsCtx(ctx, tc.userID)
 					}
 
-					_, err := handler.BatchDeleteContent(caseCtx, connect.NewRequest(&filesv1.BatchDeleteContentRequest{
+					_, err := handler.BatchDeleteContent(caseCtx, &filesv1.BatchDeleteContentRequest{
 						MediaIds: tc.mediaIDs,
-					}))
+					})
 					require.Error(t, err)
 					require.Equal(t, tc.expectErr, connect.CodeOf(err))
 				})
@@ -1836,22 +1840,22 @@ func (suite *FileServerTestSuite) Test_FileServer_MultipartUploads() {
 
 					switch tc.name {
 					case "create_unauthenticated":
-						_, err := handler.CreateMultipartUpload(caseCtx, connect.NewRequest(&filesv1.CreateMultipartUploadRequest{}))
+						_, err := handler.CreateMultipartUpload(caseCtx, &filesv1.CreateMultipartUploadRequest{})
 						require.Error(t, err)
 						require.Equal(t, tc.expectErr, connect.CodeOf(err))
 
 					case "complete_unauthenticated":
-						_, err := handler.CompleteMultipartUpload(caseCtx, connect.NewRequest(&filesv1.CompleteMultipartUploadRequest{}))
+						_, err := handler.CompleteMultipartUpload(caseCtx, &filesv1.CompleteMultipartUploadRequest{})
 						require.Error(t, err)
 						require.Equal(t, tc.expectErr, connect.CodeOf(err))
 
 					case "abort_unauthenticated":
-						_, err := handler.AbortMultipartUpload(caseCtx, connect.NewRequest(&filesv1.AbortMultipartUploadRequest{}))
+						_, err := handler.AbortMultipartUpload(caseCtx, &filesv1.AbortMultipartUploadRequest{})
 						require.Error(t, err)
 						require.Equal(t, tc.expectErr, connect.CodeOf(err))
 
 					case "list_parts_unauthenticated":
-						_, err := handler.ListMultipartParts(caseCtx, connect.NewRequest(&filesv1.ListMultipartPartsRequest{}))
+						_, err := handler.ListMultipartParts(caseCtx, &filesv1.ListMultipartPartsRequest{})
 						require.Error(t, err)
 						require.Equal(t, tc.expectErr, connect.CodeOf(err))
 					}
@@ -1907,16 +1911,16 @@ func (suite *FileServerTestSuite) Test_FileServer_Versioning() {
 
 					switch {
 					case strings.HasPrefix(tc.name, "get_versions"):
-						_, err := handler.GetVersions(caseCtx, connect.NewRequest(&filesv1.GetVersionsRequest{
+						_, err := handler.GetVersions(caseCtx, &filesv1.GetVersionsRequest{
 							MediaId: tc.mediaID,
-						}))
+						})
 						require.Error(t, err)
 						require.Equal(t, tc.expectErr, connect.CodeOf(err))
 
 					case strings.HasPrefix(tc.name, "restore_version"):
-						_, err := handler.RestoreVersion(caseCtx, connect.NewRequest(&filesv1.RestoreVersionRequest{
+						_, err := handler.RestoreVersion(caseCtx, &filesv1.RestoreVersionRequest{
 							MediaId: tc.mediaID,
-						}))
+						})
 						require.Error(t, err)
 						require.Equal(t, tc.expectErr, connect.CodeOf(err))
 					}
@@ -1947,10 +1951,10 @@ func (suite *FileServerTestSuite) Test_FileServer_GrantAccess() {
 				grant := &filesv1.AccessGrant{}
 				grant.SetPrincipalId("@other:example.com")
 				grant.SetRole(filesv1.AccessRole_ACCESS_ROLE_READER)
-				_, err := handler.GrantAccess(t.Context(), connect.NewRequest(&filesv1.GrantAccessRequest{
+				_, err := handler.GrantAccess(t.Context(), &filesv1.GrantAccessRequest{
 					MediaId: "grantfile01",
 					Grant:   grant,
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
@@ -1960,19 +1964,19 @@ func (suite *FileServerTestSuite) Test_FileServer_GrantAccess() {
 				grant := &filesv1.AccessGrant{}
 				grant.SetPrincipalId("@other:example.com")
 				grant.SetRole(filesv1.AccessRole_ACCESS_ROLE_READER)
-				_, err := handler.GrantAccess(authCtx, connect.NewRequest(&filesv1.GrantAccessRequest{
+				_, err := handler.GrantAccess(authCtx, &filesv1.GrantAccessRequest{
 					MediaId: "bad id",
 					Grant:   grant,
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
 
 			t.Run("missing_grant", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				_, err := handler.GrantAccess(authCtx, connect.NewRequest(&filesv1.GrantAccessRequest{
+				_, err := handler.GrantAccess(authCtx, &filesv1.GrantAccessRequest{
 					MediaId: "grantfile01",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
@@ -1982,12 +1986,12 @@ func (suite *FileServerTestSuite) Test_FileServer_GrantAccess() {
 				grant := &filesv1.AccessGrant{}
 				grant.SetPrincipalId("@reader:example.com")
 				grant.SetRole(filesv1.AccessRole_ACCESS_ROLE_READER)
-				resp, err := handler.GrantAccess(authCtx, connect.NewRequest(&filesv1.GrantAccessRequest{
+				resp, err := handler.GrantAccess(authCtx, &filesv1.GrantAccessRequest{
 					MediaId: "grantfile01",
 					Grant:   grant,
-				}))
+				})
 				require.NoError(t, err)
-				assert.True(t, resp.Msg.GetSuccess())
+				assert.True(t, resp.GetSuccess())
 			})
 		})
 	})
@@ -2011,32 +2015,32 @@ func (suite *FileServerTestSuite) Test_FileServer_RevokeAccess() {
 			require.NoError(t, err)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.RevokeAccess(t.Context(), connect.NewRequest(&filesv1.RevokeAccessRequest{
+				_, err := handler.RevokeAccess(t.Context(), &filesv1.RevokeAccessRequest{
 					MediaId:     "revokefile01",
 					PrincipalId: "@other:example.com",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("invalid_media_id", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				_, err := handler.RevokeAccess(authCtx, connect.NewRequest(&filesv1.RevokeAccessRequest{
+				_, err := handler.RevokeAccess(authCtx, &filesv1.RevokeAccessRequest{
 					MediaId:     "bad id",
 					PrincipalId: "@other:example.com",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
 
 			t.Run("success", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				resp, err := handler.RevokeAccess(authCtx, connect.NewRequest(&filesv1.RevokeAccessRequest{
+				resp, err := handler.RevokeAccess(authCtx, &filesv1.RevokeAccessRequest{
 					MediaId:     "revokefile01",
 					PrincipalId: "@other:example.com",
-				}))
+				})
 				require.NoError(t, err)
-				assert.True(t, resp.Msg.GetSuccess())
+				assert.True(t, resp.GetSuccess())
 			})
 		})
 	})
@@ -2060,38 +2064,38 @@ func (suite *FileServerTestSuite) Test_FileServer_ListAccess() {
 			require.NoError(t, err)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.ListAccess(t.Context(), connect.NewRequest(&filesv1.ListAccessRequest{
+				_, err := handler.ListAccess(t.Context(), &filesv1.ListAccessRequest{
 					MediaId: "listfile01",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("invalid_media_id", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				_, err := handler.ListAccess(authCtx, connect.NewRequest(&filesv1.ListAccessRequest{
+				_, err := handler.ListAccess(authCtx, &filesv1.ListAccessRequest{
 					MediaId: "bad id",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
 
 			t.Run("non_owner_denied", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@not-owner:example.com")
-				_, err := handler.ListAccess(authCtx, connect.NewRequest(&filesv1.ListAccessRequest{
+				_, err := handler.ListAccess(authCtx, &filesv1.ListAccessRequest{
 					MediaId: "listfile01",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 			})
 
 			t.Run("success", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				resp, err := handler.ListAccess(authCtx, connect.NewRequest(&filesv1.ListAccessRequest{
+				resp, err := handler.ListAccess(authCtx, &filesv1.ListAccessRequest{
 					MediaId: "listfile01",
-				}))
+				})
 				require.NoError(t, err)
-				require.NotNil(t, resp.Msg)
+				require.NotNil(t, resp)
 			})
 		})
 	})
@@ -2115,44 +2119,44 @@ func (suite *FileServerTestSuite) Test_FileServer_PatchContent() {
 			require.NoError(t, err)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.PatchContent(t.Context(), connect.NewRequest(&filesv1.PatchContentRequest{
+				_, err := handler.PatchContent(t.Context(), &filesv1.PatchContentRequest{
 					MediaId:  "patchfile01",
 					Filename: "renamed.txt",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("invalid_media_id", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				_, err := handler.PatchContent(authCtx, connect.NewRequest(&filesv1.PatchContentRequest{
+				_, err := handler.PatchContent(authCtx, &filesv1.PatchContentRequest{
 					MediaId:  "bad id",
 					Filename: "renamed.txt",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
 
 			t.Run("rename_success", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				resp, err := handler.PatchContent(authCtx, connect.NewRequest(&filesv1.PatchContentRequest{
+				resp, err := handler.PatchContent(authCtx, &filesv1.PatchContentRequest{
 					MediaId:  "patchfile01",
 					Filename: "renamed.txt",
-				}))
+				})
 				require.NoError(t, err)
-				require.NotNil(t, resp.Msg.GetMetadata())
-				assert.Equal(t, "renamed.txt", resp.Msg.GetMetadata().GetFilename())
+				require.NotNil(t, resp.GetMetadata())
+				assert.Equal(t, "renamed.txt", resp.GetMetadata().GetFilename())
 			})
 
 			t.Run("change_visibility", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				resp, err := handler.PatchContent(authCtx, connect.NewRequest(&filesv1.PatchContentRequest{
+				resp, err := handler.PatchContent(authCtx, &filesv1.PatchContentRequest{
 					MediaId:    "patchfile01",
 					Visibility: filesv1.MediaMetadata_VISIBILITY_PUBLIC,
-				}))
+				})
 				require.NoError(t, err)
-				require.NotNil(t, resp.Msg.GetMetadata())
-				assert.Equal(t, filesv1.MediaMetadata_VISIBILITY_PUBLIC, resp.Msg.GetMetadata().GetVisibility())
+				require.NotNil(t, resp.GetMetadata())
+				assert.Equal(t, filesv1.MediaMetadata_VISIBILITY_PUBLIC, resp.GetMetadata().GetVisibility())
 			})
 		})
 	})
@@ -2176,31 +2180,31 @@ func (suite *FileServerTestSuite) Test_FileServer_FinalizeSignedUpload() {
 			require.NoError(t, err)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.FinalizeSignedUpload(t.Context(), connect.NewRequest(&filesv1.FinalizeSignedUploadRequest{
+				_, err := handler.FinalizeSignedUpload(t.Context(), &filesv1.FinalizeSignedUploadRequest{
 					MediaId: "finalfile01",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("invalid_media_id", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				_, err := handler.FinalizeSignedUpload(authCtx, connect.NewRequest(&filesv1.FinalizeSignedUploadRequest{
+				_, err := handler.FinalizeSignedUpload(authCtx, &filesv1.FinalizeSignedUploadRequest{
 					MediaId: "bad id",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
 
 			t.Run("success", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, ownerID)
-				resp, err := handler.FinalizeSignedUpload(authCtx, connect.NewRequest(&filesv1.FinalizeSignedUploadRequest{
+				resp, err := handler.FinalizeSignedUpload(authCtx, &filesv1.FinalizeSignedUploadRequest{
 					MediaId:        "finalfile01",
 					ChecksumSha256: "abc123checksum",
 					SizeBytes:      5,
-				}))
+				})
 				require.NoError(t, err)
-				require.NotNil(t, resp.Msg.GetMetadata())
+				require.NotNil(t, resp.GetMetadata())
 			})
 		})
 	})
@@ -2212,18 +2216,18 @@ func (suite *FileServerTestSuite) Test_FileServer_DownloadContent_Validation() {
 			ctx, _, _, handler := suite.setupFileServer(t, dep)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				err := handler.DownloadContent(t.Context(), connect.NewRequest(&filesv1.DownloadContentRequest{
+				err := handler.DownloadContent(t.Context(), &filesv1.DownloadContentRequest{
 					MediaId: "dlfile01",
-				}), nil)
+				}, filesv1connect.FilesServiceDownloadContentServerStream{})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("invalid_media_id", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@dl-owner:example.com")
-				err := handler.DownloadContent(authCtx, connect.NewRequest(&filesv1.DownloadContentRequest{
+				err := handler.DownloadContent(authCtx, &filesv1.DownloadContentRequest{
 					MediaId: "bad id",
-				}), nil)
+				}, filesv1connect.FilesServiceDownloadContentServerStream{})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
@@ -2237,33 +2241,33 @@ func (suite *FileServerTestSuite) Test_FileServer_DownloadContentRange_Validatio
 			ctx, _, _, handler := suite.setupFileServer(t, dep)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				err := handler.DownloadContentRange(t.Context(), connect.NewRequest(&filesv1.DownloadContentRangeRequest{
+				err := handler.DownloadContentRange(t.Context(), &filesv1.DownloadContentRangeRequest{
 					MediaId: "dlrangefile01",
 					Start:   0,
 					End:     5,
-				}), nil)
+				}, filesv1connect.FilesServiceDownloadContentRangeServerStream{})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("negative_start", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@dlrange-owner:example.com")
-				err := handler.DownloadContentRange(authCtx, connect.NewRequest(&filesv1.DownloadContentRangeRequest{
+				err := handler.DownloadContentRange(authCtx, &filesv1.DownloadContentRangeRequest{
 					MediaId: "dlrangefile01",
 					Start:   -1,
 					End:     5,
-				}), nil)
+				}, filesv1connect.FilesServiceDownloadContentRangeServerStream{})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
 
 			t.Run("end_before_start", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@dlrange-owner:example.com")
-				err := handler.DownloadContentRange(authCtx, connect.NewRequest(&filesv1.DownloadContentRangeRequest{
+				err := handler.DownloadContentRange(authCtx, &filesv1.DownloadContentRangeRequest{
 					MediaId: "dlrangefile01",
 					Start:   10,
 					End:     5,
-				}), nil)
+				}, filesv1connect.FilesServiceDownloadContentRangeServerStream{})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 			})
@@ -2277,18 +2281,18 @@ func (suite *FileServerTestSuite) Test_FileServer_GetMultipartUpload() {
 			ctx, _, _, handler := suite.setupFileServer(t, dep)
 
 			t.Run("unauthenticated", func(t *testing.T) {
-				_, err := handler.GetMultipartUpload(t.Context(), connect.NewRequest(&filesv1.GetMultipartUploadRequest{
+				_, err := handler.GetMultipartUpload(t.Context(), &filesv1.GetMultipartUploadRequest{
 					UploadId: "nonexistent",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 			})
 
 			t.Run("not_found", func(t *testing.T) {
 				authCtx := claimsCtx(ctx, "@test:example.com")
-				_, err := handler.GetMultipartUpload(authCtx, connect.NewRequest(&filesv1.GetMultipartUploadRequest{
+				_, err := handler.GetMultipartUpload(authCtx, &filesv1.GetMultipartUploadRequest{
 					UploadId: "nonexistent",
-				}))
+				})
 				require.Error(t, err)
 				assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 			})

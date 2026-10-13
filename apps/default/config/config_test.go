@@ -5,7 +5,7 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
-	frameconfig "github.com/pitabwire/frame/v2/config"
+	frameconfig "github.com/pitabwire/frame/v3/config"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

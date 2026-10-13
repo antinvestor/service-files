@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pitabwire/frame/v2/telemetry"
+	"github.com/pitabwire/frame/v3/telemetry"
 	"github.com/pitabwire/util"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"

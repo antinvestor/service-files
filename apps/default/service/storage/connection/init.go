@@ -3,7 +3,7 @@ package connection
 import (
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/pitabwire/frame/v2/workerpool"
+	"github.com/pitabwire/frame/v3/workerpool"
 )
 
 func NewMediaDatabase(

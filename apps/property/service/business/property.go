@@ -4,11 +4,11 @@ import (
 	"context"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
+	"buf.build/gen/go/antinvestor/property/connectrpc/go/v2/v1/propertyv1connect"
 	propertyv1 "buf.build/gen/go/antinvestor/property/protocolbuffers/go/v1"
-	"connectrpc.com/connect"
 	"github.com/antinvestor/service-files/apps/property/service/models"
 	"github.com/antinvestor/service-files/apps/property/service/repository"
-	"github.com/pitabwire/frame/v2/datastore/pool"
+	"github.com/pitabwire/frame/v3/datastore/pool"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -178,7 +178,7 @@ func (pb *propertyBusiness) StateOfProperty(ctx context.Context, id string) (*pr
 	return propertyState.ToApi(), nil
 }
 
-func (pb *propertyBusiness) HistoryOfProperty(ctx context.Context, id string, stream *connect.ServerStream[propertyv1.HistoryOfPropertyResponse]) error {
+func (pb *propertyBusiness) HistoryOfProperty(ctx context.Context, id string, stream propertyv1connect.PropertyServiceHistoryOfPropertyServerStream) error {
 
 	propertyRepo := repository.NewPropertyRepository(pb.dbPool)
 	property, err := propertyRepo.GetByID(ctx, id)
@@ -210,7 +210,7 @@ func (pb *propertyBusiness) HistoryOfProperty(ctx context.Context, id string, st
 	return nil
 }
 
-func (pb *propertyBusiness) SearchProperty(ctx context.Context, request *propertyv1.SearchPropertyRequest, stream *connect.ServerStream[propertyv1.SearchPropertyResponse]) error {
+func (pb *propertyBusiness) SearchProperty(ctx context.Context, request *propertyv1.SearchPropertyRequest, stream propertyv1connect.PropertyServiceSearchPropertyServerStream) error {
 
 	propertyRepo := repository.NewPropertyRepository(pb.dbPool)
 

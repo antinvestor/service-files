@@ -18,8 +18,8 @@ import (
 	"context"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame/v2/data"
-	"github.com/pitabwire/frame/v2/workerpool"
+	"github.com/pitabwire/frame/v3/data"
+	"github.com/pitabwire/frame/v3/workerpool"
 )
 
 type Database interface {

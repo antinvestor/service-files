@@ -1,7 +1,7 @@
 package config
 
 import (
-	fconfig "github.com/pitabwire/frame/v2/config"
+	fconfig "github.com/pitabwire/frame/v3/config"
 )
 
 type RedirectConfig struct {

@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/antinvestor/service-files/internal/apierror"
+
 	_ "embed"
 
-	"buf.build/gen/go/antinvestor/files/connectrpc/go/files/v1/filesv1connect"
 	filespb "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
-	"connectrpc.com/connect"
-	"github.com/antinvestor/common/v2"
-	"github.com/antinvestor/common/v2/permissions"
+	"github.com/antinvestor/common/v3"
+	"github.com/antinvestor/common/v3/permissions"
 	aconfig "github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/authz"
 	"github.com/antinvestor/service-files/apps/default/service/business"
@@ -22,13 +22,13 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider"
 	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
-	"github.com/pitabwire/frame/v2"
-	"github.com/pitabwire/frame/v2/config"
-	"github.com/pitabwire/frame/v2/datastore"
-	"github.com/pitabwire/frame/v2/security/authorizer"
-	connectInterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
-	framehttp "github.com/pitabwire/frame/v2/security/interceptors/httptor"
-	"github.com/pitabwire/frame/v2/setup"
+	"github.com/pitabwire/frame/v3"
+	"github.com/pitabwire/frame/v3/config"
+	"github.com/pitabwire/frame/v3/datastore"
+	"github.com/pitabwire/frame/v3/security/authorizer"
+	connectInterceptors "github.com/pitabwire/frame/v3/security/interceptors/connect"
+	framehttp "github.com/pitabwire/frame/v3/security/interceptors/httptor"
+	"github.com/pitabwire/frame/v3/setup"
 	"github.com/pitabwire/util"
 )
 
@@ -126,19 +126,16 @@ func main() {
 	functionAccessInterceptor := connectInterceptors.NewFunctionAccessInterceptor(functionChecker, procMap)
 
 	defaultInterceptorList, err := connectInterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx),
-		tenancyAccessInterceptor, functionAccessInterceptor)
+		tenancyAccessInterceptor, functionAccessInterceptor, apierror.ServerInterceptor())
 	if err != nil {
 		log.WithError(err).Fatal("could not create default interceptors")
 	}
-
-	connectPath, connectHandler := filesv1connect.NewFilesServiceHandler(
-		fileServer, connect.WithInterceptors(defaultInterceptorList...))
 
 	mediaRouter := routing.SetupMediaRoutes(svc, metadataStore, storageProvider, mediaService, authzMiddleware)
 	publicMediaRouter := routing.SetupPublicMediaRoutes(svc, metadataStore, storageProvider, mediaService)
 
 	mux := http.NewServeMux()
-	mux.Handle(connectPath, connectHandler)
+	handler.Mount(mux, fileServer, defaultInterceptorList...)
 	mux.Handle("/openapi.yaml", common.NewOpenAPIHandler(apiSpecFile, nil))
 	mux.Handle(routing.PublicMediaPathPrefix, framehttp.AuthenticationMiddleware(
 		framehttp.TenancyAccessMiddleware(mediaRouter, tenancyAccessChecker),

@@ -4,7 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"github.com/antinvestor/service-files/internal/apierror"
+
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/antinvestor/service-files/apps/redirect/config"
 	redirectpb "github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1"
 	"github.com/antinvestor/service-files/apps/redirect/gen/redirect/v1/redirectv1connect"
@@ -12,11 +15,11 @@ import (
 	"github.com/antinvestor/service-files/apps/redirect/service/business"
 	"github.com/antinvestor/service-files/apps/redirect/service/handler"
 	"github.com/antinvestor/service-files/apps/redirect/service/models"
-	"github.com/pitabwire/frame/v2"
-	fconfig "github.com/pitabwire/frame/v2/config"
-	"github.com/pitabwire/frame/v2/datastore"
-	connectinterceptors "github.com/pitabwire/frame/v2/security/interceptors/connect"
-	"github.com/pitabwire/frame/v2/setup"
+	"github.com/pitabwire/frame/v3"
+	fconfig "github.com/pitabwire/frame/v3/config"
+	"github.com/pitabwire/frame/v3/datastore"
+	connectinterceptors "github.com/pitabwire/frame/v3/security/interceptors/connect"
+	"github.com/pitabwire/frame/v3/setup"
 	"github.com/pitabwire/util"
 )
 
@@ -105,7 +108,7 @@ func main() {
 	// Connect RPC handler for link management — AUTHENTICATED via OIDC interceptors.
 	sm := svc.SecurityManager()
 
-	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx))
+	defaultInterceptorList, err := connectinterceptors.DefaultList(ctx, sm.GetAuthenticator(ctx), apierror.ServerInterceptor())
 	if err != nil {
 		log.WithError(err).Fatal("could not create default interceptors")
 		return
@@ -116,10 +119,8 @@ func main() {
 		RedirectHd: redirectHandler,
 	}
 
-	_, connectHandler := redirectv1connect.NewRedirectServiceHandler(
-		implementation,
-		connect.WithInterceptors(defaultInterceptorList...),
-	)
+	server := connect.NewServer(defaultInterceptorList...)
+	redirectv1connect.RegisterRedirectServiceHandler(server, implementation)
 
 	// Build the HTTP mux.
 	mux := http.NewServeMux()
@@ -128,7 +129,7 @@ func main() {
 	mux.Handle("/r/", redirectHandler)
 
 	// Connect RPC management API — protected by OIDC auth interceptors.
-	mux.Handle("/redirect.v1.RedirectService/", connectHandler)
+	connecthttp.Mount(mux, server)
 
 	// Runtime: HTTP only — permission manifests publish on the setup Job path.
 	svc.Init(ctx, frame.WithHTTPHandler(mux))

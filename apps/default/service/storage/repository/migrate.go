@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
-	"github.com/pitabwire/frame/v2/datastore"
+	"github.com/pitabwire/frame/v3/datastore"
 )
 
 func Migrate(ctx context.Context, dbManager datastore.Manager, migrationPath string) error {

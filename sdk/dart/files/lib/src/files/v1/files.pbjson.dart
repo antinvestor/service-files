@@ -1,21 +1,26 @@
+// This is a generated file - do not edit.
 //
-//  Generated code. Do not modify.
-//  source: files/v1/files.proto
-//
-// @dart = 2.12
+// Generated from files/v1/files.proto.
+
+// @dart = 3.3
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_final_fields
-// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
+// ignore_for_file: constant_identifier_names
+// ignore_for_file: curly_braces_in_flow_control_structures
+// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
+// ignore_for_file: unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 
-import '../../common/v1/common.pbjson.dart' as $7;
-import '../../google/protobuf/struct.pbjson.dart' as $6;
-import '../../google/protobuf/timestamp.pbjson.dart' as $2;
+import 'package:protobuf/well_known_types/google/protobuf/struct.pbjson.dart'
+    as $1;
+import 'package:protobuf/well_known_types/google/protobuf/timestamp.pbjson.dart'
+    as $0;
+
+import '../../common/v1/common.pbjson.dart' as $2;
 
 @$core.Deprecated('Use thumbnailMethodDescriptor instead')
 const ThumbnailMethod$json = {
@@ -27,8 +32,8 @@ const ThumbnailMethod$json = {
 };
 
 /// Descriptor for `ThumbnailMethod`. Decode as a `google.protobuf.EnumDescriptorProto`.
-final $typed_data.Uint8List thumbnailMethodDescriptor = $convert.base64Decode(
-    'Cg9UaHVtYm5haWxNZXRob2QSCQoFU0NBTEUQABIICgRDUk9QEAE=');
+final $typed_data.Uint8List thumbnailMethodDescriptor = $convert
+    .base64Decode('Cg9UaHVtYm5haWxNZXRob2QSCQoFU0NBTEUQABIICgRDUk9QEAE=');
 
 @$core.Deprecated('Use mediaStateDescriptor instead')
 const MediaState$json = {
@@ -148,21 +153,91 @@ const MediaMetadata$json = {
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '8': {}, '10': 'mediaId'},
     {'1': 'content_type', '3': 2, '4': 1, '5': 9, '10': 'contentType'},
     {'1': 'file_size_bytes', '3': 3, '4': 1, '5': 3, '10': 'fileSizeBytes'},
-    {'1': 'created_at', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdAt'},
-    {'1': 'updated_at', '3': 5, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'updatedAt'},
+    {
+      '1': 'created_at',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
+    {
+      '1': 'updated_at',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'updatedAt'
+    },
     {'1': 'filename', '3': 6, '4': 1, '5': 9, '10': 'filename'},
     {'1': 'checksum_sha256', '3': 7, '4': 1, '5': 9, '10': 'checksumSha256'},
-    {'1': 'visibility', '3': 9, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
-    {'1': 'extra', '3': 10, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'extra'},
-    {'1': 'expires_at', '3': 11, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
+    {
+      '1': 'visibility',
+      '3': 9,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
+    {
+      '1': 'extra',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'extra'
+    },
+    {
+      '1': 'expires_at',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
     {'1': 'version', '3': 12, '4': 1, '5': 3, '10': 'version'},
     {'1': 'is_latest', '3': 13, '4': 1, '5': 8, '10': 'isLatest'},
-    {'1': 'state', '3': 14, '4': 1, '5': 14, '6': '.files.v1.MediaState', '10': 'state'},
+    {
+      '1': 'state',
+      '3': 14,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaState',
+      '10': 'state'
+    },
     {'1': 'etag', '3': 15, '4': 1, '5': 9, '10': 'etag'},
-    {'1': 'scan_status', '3': 30, '4': 1, '5': 14, '6': '.files.v1.ScanStatus', '10': 'scanStatus'},
-    {'1': 'archived_at', '3': 31, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'archivedAt'},
-    {'1': 'deleted_at', '3': 32, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'deletedAt'},
-    {'1': 'labels', '3': 20, '4': 3, '5': 11, '6': '.files.v1.MediaMetadata.LabelsEntry', '10': 'labels'},
+    {
+      '1': 'scan_status',
+      '3': 30,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.ScanStatus',
+      '10': 'scanStatus'
+    },
+    {
+      '1': 'archived_at',
+      '3': 31,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'archivedAt'
+    },
+    {
+      '1': 'deleted_at',
+      '3': 32,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'deletedAt'
+    },
+    {
+      '1': 'labels',
+      '3': 20,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata.LabelsEntry',
+      '10': 'labels'
+    },
     {'1': 'content_uri', '3': 21, '4': 1, '5': 9, '10': 'contentUri'},
     {'1': 'organization_id', '3': 22, '4': 1, '5': 9, '10': 'organizationId'},
   ],
@@ -218,11 +293,39 @@ const AccessGrant$json = {
   '1': 'AccessGrant',
   '2': [
     {'1': 'principal_id', '3': 1, '4': 1, '5': 9, '10': 'principalId'},
-    {'1': 'principal_type', '3': 6, '4': 1, '5': 14, '6': '.files.v1.PrincipalType', '10': 'principalType'},
-    {'1': 'role', '3': 2, '4': 1, '5': 14, '6': '.files.v1.AccessRole', '10': 'role'},
-    {'1': 'granted_at', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'grantedAt'},
+    {
+      '1': 'principal_type',
+      '3': 6,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.PrincipalType',
+      '10': 'principalType'
+    },
+    {
+      '1': 'role',
+      '3': 2,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.AccessRole',
+      '10': 'role'
+    },
+    {
+      '1': 'granted_at',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'grantedAt'
+    },
     {'1': 'granted_by', '3': 4, '4': 1, '5': 9, '10': 'grantedBy'},
-    {'1': 'expires_at', '3': 5, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
+    {
+      '1': 'expires_at',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
   ],
 };
 
@@ -242,15 +345,43 @@ const UploadMetadata$json = {
     {'1': 'content_type', '3': 1, '4': 1, '5': 9, '10': 'contentType'},
     {'1': 'filename', '3': 2, '4': 1, '5': 9, '10': 'filename'},
     {'1': 'total_size', '3': 3, '4': 1, '5': 3, '10': 'totalSize'},
-    {'1': 'properties', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'properties'},
-    {'1': 'visibility', '3': 6, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
+    {
+      '1': 'properties',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'properties'
+    },
+    {
+      '1': 'visibility',
+      '3': 6,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
     {'1': 'organization_id', '3': 23, '4': 1, '5': 9, '10': 'organizationId'},
-    {'1': 'expires_at', '3': 7, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
+    {
+      '1': 'expires_at',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
     {'1': 'server_name', '3': 8, '4': 1, '5': 9, '10': 'serverName'},
     {'1': 'media_id', '3': 9, '4': 1, '5': 9, '8': {}, '10': 'mediaId'},
     {'1': 'checksum_sha256', '3': 16, '4': 1, '5': 9, '10': 'checksumSha256'},
     {'1': 'base_version', '3': 17, '4': 1, '5': 3, '10': 'baseVersion'},
-    {'1': 'labels', '3': 20, '4': 3, '5': 11, '6': '.files.v1.UploadMetadata.LabelsEntry', '10': 'labels'},
+    {
+      '1': 'labels',
+      '3': 20,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.UploadMetadata.LabelsEntry',
+      '10': 'labels'
+    },
     {'1': 'accessor_id', '3': 15, '4': 3, '5': 9, '8': {}, '10': 'accessorId'},
   ],
   '3': [UploadMetadata_LabelsEntry$json],
@@ -286,7 +417,15 @@ final $typed_data.Uint8List uploadMetadataDescriptor = $convert.base64Decode(
 const UploadContentRequest$json = {
   '1': 'UploadContentRequest',
   '2': [
-    {'1': 'metadata', '3': 1, '4': 1, '5': 11, '6': '.files.v1.UploadMetadata', '9': 0, '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.UploadMetadata',
+      '9': 0,
+      '10': 'metadata'
+    },
     {'1': 'chunk', '3': 2, '4': 1, '5': 12, '9': 0, '10': 'chunk'},
     {'1': 'idempotency_key', '3': 100, '4': 1, '5': 9, '10': 'idempotencyKey'},
   ],
@@ -308,7 +447,14 @@ const UploadContentResponse$json = {
     {'1': 'content_uri', '3': 1, '4': 1, '5': 9, '10': 'contentUri'},
     {'1': 'media_id', '3': 2, '4': 1, '5': 9, '10': 'mediaId'},
     {'1': 'server_name', '3': 3, '4': 1, '5': 9, '10': 'serverName'},
-    {'1': 'metadata', '3': 4, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
@@ -325,9 +471,30 @@ const CreateContentRequest$json = {
   '2': [
     {'1': 'content_type', '3': 1, '4': 1, '5': 9, '10': 'contentType'},
     {'1': 'filename', '3': 2, '4': 1, '5': 9, '10': 'filename'},
-    {'1': 'visibility', '3': 3, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
-    {'1': 'expires_at', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
-    {'1': 'labels', '3': 5, '4': 3, '5': 11, '6': '.files.v1.CreateContentRequest.LabelsEntry', '10': 'labels'},
+    {
+      '1': 'visibility',
+      '3': 3,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
+    {
+      '1': 'expires_at',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
+    {
+      '1': 'labels',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.CreateContentRequest.LabelsEntry',
+      '10': 'labels'
+    },
     {'1': 'accessor_id', '3': 6, '4': 3, '5': 9, '10': 'accessorId'},
     {'1': 'organization_id', '3': 7, '4': 1, '5': 9, '10': 'organizationId'},
     {'1': 'idempotency_key', '3': 100, '4': 1, '5': 9, '10': 'idempotencyKey'},
@@ -362,7 +529,14 @@ const CreateContentResponse$json = {
   '1': 'CreateContentResponse',
   '2': [
     {'1': 'content_uri', '3': 1, '4': 1, '5': 9, '10': 'contentUri'},
-    {'1': 'expires_at', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
+    {
+      '1': 'expires_at',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
     {'1': 'media_id', '3': 3, '4': 1, '5': 9, '10': 'mediaId'},
     {'1': 'server_name', '3': 4, '4': 1, '5': 9, '10': 'serverName'},
   ],
@@ -382,9 +556,30 @@ const CreateMultipartUploadRequest$json = {
     {'1': 'filename', '3': 1, '4': 1, '5': 9, '10': 'filename'},
     {'1': 'content_type', '3': 2, '4': 1, '5': 9, '10': 'contentType'},
     {'1': 'total_size', '3': 3, '4': 1, '5': 3, '10': 'totalSize'},
-    {'1': 'visibility', '3': 4, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
-    {'1': 'expires_at', '3': 5, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
-    {'1': 'labels', '3': 6, '4': 3, '5': 11, '6': '.files.v1.CreateMultipartUploadRequest.LabelsEntry', '10': 'labels'},
+    {
+      '1': 'visibility',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
+    {
+      '1': 'expires_at',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
+    {
+      '1': 'labels',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.CreateMultipartUploadRequest.LabelsEntry',
+      '10': 'labels'
+    },
     {'1': 'accessor_id', '3': 7, '4': 3, '5': 9, '10': 'accessorId'},
     {'1': 'organization_id', '3': 8, '4': 1, '5': 9, '10': 'organizationId'},
     {'1': 'idempotency_key', '3': 100, '4': 1, '5': 9, '10': 'idempotencyKey'},
@@ -424,9 +619,10 @@ const CreateMultipartUploadResponse$json = {
 };
 
 /// Descriptor for `CreateMultipartUploadResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List createMultipartUploadResponseDescriptor = $convert.base64Decode(
-    'Ch1DcmVhdGVNdWx0aXBhcnRVcGxvYWRSZXNwb25zZRIbCgl1cGxvYWRfaWQYASABKAlSCHVwbG'
-    '9hZElk');
+final $typed_data.Uint8List createMultipartUploadResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1DcmVhdGVNdWx0aXBhcnRVcGxvYWRSZXNwb25zZRIbCgl1cGxvYWRfaWQYASABKAlSCHVwbG'
+        '9hZElk');
 
 @$core.Deprecated('Use uploadMultipartPartRequestDescriptor instead')
 const UploadMultipartPartRequest$json = {
@@ -439,10 +635,11 @@ const UploadMultipartPartRequest$json = {
 };
 
 /// Descriptor for `UploadMultipartPartRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List uploadMultipartPartRequestDescriptor = $convert.base64Decode(
-    'ChpVcGxvYWRNdWx0aXBhcnRQYXJ0UmVxdWVzdBIbCgl1cGxvYWRfaWQYASABKAlSCHVwbG9hZE'
-    'lkEh8KC3BhcnRfbnVtYmVyGAIgASgFUgpwYXJ0TnVtYmVyEhgKB2NvbnRlbnQYAyABKAxSB2Nv'
-    'bnRlbnQ=');
+final $typed_data.Uint8List uploadMultipartPartRequestDescriptor =
+    $convert.base64Decode(
+        'ChpVcGxvYWRNdWx0aXBhcnRQYXJ0UmVxdWVzdBIbCgl1cGxvYWRfaWQYASABKAlSCHVwbG9hZE'
+        'lkEh8KC3BhcnRfbnVtYmVyGAIgASgFUgpwYXJ0TnVtYmVyEhgKB2NvbnRlbnQYAyABKAxSB2Nv'
+        'bnRlbnQ=');
 
 @$core.Deprecated('Use uploadMultipartPartResponseDescriptor instead')
 const UploadMultipartPartResponse$json = {
@@ -455,9 +652,10 @@ const UploadMultipartPartResponse$json = {
 };
 
 /// Descriptor for `UploadMultipartPartResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List uploadMultipartPartResponseDescriptor = $convert.base64Decode(
-    'ChtVcGxvYWRNdWx0aXBhcnRQYXJ0UmVzcG9uc2USEgoEZXRhZxgBIAEoCVIEZXRhZxIfCgtwYX'
-    'J0X251bWJlchgCIAEoBVIKcGFydE51bWJlchISCgRzaXplGAMgASgDUgRzaXpl');
+final $typed_data.Uint8List uploadMultipartPartResponseDescriptor =
+    $convert.base64Decode(
+        'ChtVcGxvYWRNdWx0aXBhcnRQYXJ0UmVzcG9uc2USEgoEZXRhZxgBIAEoCVIEZXRhZxIfCgtwYX'
+        'J0X251bWJlchgCIAEoBVIKcGFydE51bWJlchISCgRzaXplGAMgASgDUgRzaXpl');
 
 @$core.Deprecated('Use completeMultipartUploadRequestDescriptor instead')
 const CompleteMultipartUploadRequest$json = {
@@ -465,7 +663,14 @@ const CompleteMultipartUploadRequest$json = {
   '2': [
     {'1': 'upload_id', '3': 1, '4': 1, '5': 9, '10': 'uploadId'},
     {'1': 'checksum_sha256', '3': 2, '4': 1, '5': 9, '10': 'checksumSha256'},
-    {'1': 'parts', '3': 3, '4': 3, '5': 11, '6': '.files.v1.CompleteMultipartUploadRequest.Part', '10': 'parts'},
+    {
+      '1': 'parts',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.CompleteMultipartUploadRequest.Part',
+      '10': 'parts'
+    },
     {'1': 'idempotency_key', '3': 100, '4': 1, '5': 9, '10': 'idempotencyKey'},
   ],
   '3': [CompleteMultipartUploadRequest_Part$json],
@@ -492,14 +697,22 @@ final $typed_data.Uint8List completeMultipartUploadRequestDescriptor = $convert.
 const CompleteMultipartUploadResponse$json = {
   '1': 'CompleteMultipartUploadResponse',
   '2': [
-    {'1': 'metadata', '3': 1, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
 /// Descriptor for `CompleteMultipartUploadResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List completeMultipartUploadResponseDescriptor = $convert.base64Decode(
-    'Ch9Db21wbGV0ZU11bHRpcGFydFVwbG9hZFJlc3BvbnNlEjMKCG1ldGFkYXRhGAEgASgLMhcuZm'
-    'lsZXMudjEuTWVkaWFNZXRhZGF0YVIIbWV0YWRhdGE=');
+final $typed_data.Uint8List completeMultipartUploadResponseDescriptor =
+    $convert.base64Decode(
+        'Ch9Db21wbGV0ZU11bHRpcGFydFVwbG9hZFJlc3BvbnNlEjMKCG1ldGFkYXRhGAEgASgLMhcuZm'
+        'lsZXMudjEuTWVkaWFNZXRhZGF0YVIIbWV0YWRhdGE=');
 
 @$core.Deprecated('Use abortMultipartUploadRequestDescriptor instead')
 const AbortMultipartUploadRequest$json = {
@@ -511,9 +724,10 @@ const AbortMultipartUploadRequest$json = {
 };
 
 /// Descriptor for `AbortMultipartUploadRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List abortMultipartUploadRequestDescriptor = $convert.base64Decode(
-    'ChtBYm9ydE11bHRpcGFydFVwbG9hZFJlcXVlc3QSGwoJdXBsb2FkX2lkGAEgASgJUgh1cGxvYW'
-    'RJZBInCg9pZGVtcG90ZW5jeV9rZXkYZCABKAlSDmlkZW1wb3RlbmN5S2V5');
+final $typed_data.Uint8List abortMultipartUploadRequestDescriptor =
+    $convert.base64Decode(
+        'ChtBYm9ydE11bHRpcGFydFVwbG9hZFJlcXVlc3QSGwoJdXBsb2FkX2lkGAEgASgJUgh1cGxvYW'
+        'RJZBInCg9pZGVtcG90ZW5jeV9rZXkYZCABKAlSDmlkZW1wb3RlbmN5S2V5');
 
 @$core.Deprecated('Use abortMultipartUploadResponseDescriptor instead')
 const AbortMultipartUploadResponse$json = {
@@ -524,30 +738,53 @@ const AbortMultipartUploadResponse$json = {
 };
 
 /// Descriptor for `AbortMultipartUploadResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List abortMultipartUploadResponseDescriptor = $convert.base64Decode(
-    'ChxBYm9ydE11bHRpcGFydFVwbG9hZFJlc3BvbnNlEhgKB2Fib3J0ZWQYASABKAhSB2Fib3J0ZW'
-    'Q=');
+final $typed_data.Uint8List abortMultipartUploadResponseDescriptor =
+    $convert.base64Decode(
+        'ChxBYm9ydE11bHRpcGFydFVwbG9hZFJlc3BvbnNlEhgKB2Fib3J0ZWQYASABKAhSB2Fib3J0ZW'
+        'Q=');
 
 @$core.Deprecated('Use listMultipartPartsRequestDescriptor instead')
 const ListMultipartPartsRequest$json = {
   '1': 'ListMultipartPartsRequest',
   '2': [
     {'1': 'upload_id', '3': 1, '4': 1, '5': 9, '10': 'uploadId'},
-    {'1': 'cursor', '3': 2, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'cursor'},
+    {
+      '1': 'cursor',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'cursor'
+    },
   ],
 };
 
 /// Descriptor for `ListMultipartPartsRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List listMultipartPartsRequestDescriptor = $convert.base64Decode(
-    'ChlMaXN0TXVsdGlwYXJ0UGFydHNSZXF1ZXN0EhsKCXVwbG9hZF9pZBgBIAEoCVIIdXBsb2FkSW'
-    'QSLQoGY3Vyc29yGAIgASgLMhUuY29tbW9uLnYxLlBhZ2VDdXJzb3JSBmN1cnNvcg==');
+final $typed_data.Uint8List listMultipartPartsRequestDescriptor =
+    $convert.base64Decode(
+        'ChlMaXN0TXVsdGlwYXJ0UGFydHNSZXF1ZXN0EhsKCXVwbG9hZF9pZBgBIAEoCVIIdXBsb2FkSW'
+        'QSLQoGY3Vyc29yGAIgASgLMhUuY29tbW9uLnYxLlBhZ2VDdXJzb3JSBmN1cnNvcg==');
 
 @$core.Deprecated('Use listMultipartPartsResponseDescriptor instead')
 const ListMultipartPartsResponse$json = {
   '1': 'ListMultipartPartsResponse',
   '2': [
-    {'1': 'parts', '3': 1, '4': 3, '5': 11, '6': '.files.v1.ListMultipartPartsResponse.Part', '10': 'parts'},
-    {'1': 'next_cursor', '3': 2, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'nextCursor'},
+    {
+      '1': 'parts',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.ListMultipartPartsResponse.Part',
+      '10': 'parts'
+    },
+    {
+      '1': 'next_cursor',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'nextCursor'
+    },
   ],
   '3': [ListMultipartPartsResponse_Part$json],
 };
@@ -559,7 +796,14 @@ const ListMultipartPartsResponse_Part$json = {
     {'1': 'part_number', '3': 1, '4': 1, '5': 5, '10': 'partNumber'},
     {'1': 'etag', '3': 2, '4': 1, '5': 9, '10': 'etag'},
     {'1': 'size', '3': 3, '4': 1, '5': 3, '10': 'size'},
-    {'1': 'uploaded_at', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'uploadedAt'},
+    {
+      '1': 'uploaded_at',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'uploadedAt'
+    },
   ],
 };
 
@@ -581,9 +825,10 @@ const GetMultipartUploadRequest$json = {
 };
 
 /// Descriptor for `GetMultipartUploadRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getMultipartUploadRequestDescriptor = $convert.base64Decode(
-    'ChlHZXRNdWx0aXBhcnRVcGxvYWRSZXF1ZXN0EhsKCXVwbG9hZF9pZBgBIAEoCVIIdXBsb2FkSW'
-    'Q=');
+final $typed_data.Uint8List getMultipartUploadRequestDescriptor =
+    $convert.base64Decode(
+        'ChlHZXRNdWx0aXBhcnRVcGxvYWRSZXF1ZXN0EhsKCXVwbG9hZF9pZBgBIAEoCVIIdXBsb2FkSW'
+        'Q=');
 
 @$core.Deprecated('Use getMultipartUploadResponseDescriptor instead')
 const GetMultipartUploadResponse$json = {
@@ -593,11 +838,39 @@ const GetMultipartUploadResponse$json = {
     {'1': 'filename', '3': 2, '4': 1, '5': 9, '10': 'filename'},
     {'1': 'total_size', '3': 3, '4': 1, '5': 3, '10': 'totalSize'},
     {'1': 'uploaded_size', '3': 4, '4': 1, '5': 3, '10': 'uploadedSize'},
-    {'1': 'visibility', '3': 5, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
-    {'1': 'created_at', '3': 6, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdAt'},
-    {'1': 'labels', '3': 7, '4': 3, '5': 11, '6': '.files.v1.GetMultipartUploadResponse.LabelsEntry', '10': 'labels'},
+    {
+      '1': 'visibility',
+      '3': 5,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
+    {
+      '1': 'created_at',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
+    {
+      '1': 'labels',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.GetMultipartUploadResponse.LabelsEntry',
+      '10': 'labels'
+    },
     {'1': 'parts_uploaded', '3': 8, '4': 1, '5': 5, '10': 'partsUploaded'},
-    {'1': 'upload_state', '3': 9, '4': 1, '5': 14, '6': '.files.v1.MultipartUploadState', '10': 'uploadState'},
+    {
+      '1': 'upload_state',
+      '3': 9,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MultipartUploadState',
+      '10': 'uploadState'
+    },
   ],
   '3': [GetMultipartUploadResponse_LabelsEntry$json],
 };
@@ -635,9 +908,10 @@ const GetSignedUploadUrlRequest$json = {
 };
 
 /// Descriptor for `GetSignedUploadUrlRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getSignedUploadUrlRequestDescriptor = $convert.base64Decode(
-    'ChlHZXRTaWduZWRVcGxvYWRVcmxSZXF1ZXN0EhkKCG1lZGlhX2lkGAEgASgJUgdtZWRpYUlkEi'
-    'cKD2V4cGlyZXNfc2Vjb25kcxgCIAEoA1IOZXhwaXJlc1NlY29uZHM=');
+final $typed_data.Uint8List getSignedUploadUrlRequestDescriptor =
+    $convert.base64Decode(
+        'ChlHZXRTaWduZWRVcGxvYWRVcmxSZXF1ZXN0EhkKCG1lZGlhX2lkGAEgASgJUgdtZWRpYUlkEi'
+        'cKD2V4cGlyZXNfc2Vjb25kcxgCIAEoA1IOZXhwaXJlc1NlY29uZHM=');
 
 @$core.Deprecated('Use getSignedUploadUrlResponseDescriptor instead')
 const GetSignedUploadUrlResponse$json = {
@@ -648,9 +922,10 @@ const GetSignedUploadUrlResponse$json = {
 };
 
 /// Descriptor for `GetSignedUploadUrlResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getSignedUploadUrlResponseDescriptor = $convert.base64Decode(
-    'ChpHZXRTaWduZWRVcGxvYWRVcmxSZXNwb25zZRIdCgp1cGxvYWRfdXJsGAEgASgJUgl1cGxvYW'
-    'RVcmw=');
+final $typed_data.Uint8List getSignedUploadUrlResponseDescriptor =
+    $convert.base64Decode(
+        'ChpHZXRTaWduZWRVcGxvYWRVcmxSZXNwb25zZRIdCgp1cGxvYWRfdXJsGAEgASgJUgl1cGxvYW'
+        'RVcmw=');
 
 @$core.Deprecated('Use finalizeSignedUploadRequestDescriptor instead')
 const FinalizeSignedUploadRequest$json = {
@@ -674,14 +949,22 @@ final $typed_data.Uint8List finalizeSignedUploadRequestDescriptor = $convert.bas
 const FinalizeSignedUploadResponse$json = {
   '1': 'FinalizeSignedUploadResponse',
   '2': [
-    {'1': 'metadata', '3': 1, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
 /// Descriptor for `FinalizeSignedUploadResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List finalizeSignedUploadResponseDescriptor = $convert.base64Decode(
-    'ChxGaW5hbGl6ZVNpZ25lZFVwbG9hZFJlc3BvbnNlEjMKCG1ldGFkYXRhGAEgASgLMhcuZmlsZX'
-    'MudjEuTWVkaWFNZXRhZGF0YVIIbWV0YWRhdGE=');
+final $typed_data.Uint8List finalizeSignedUploadResponseDescriptor =
+    $convert.base64Decode(
+        'ChxGaW5hbGl6ZVNpZ25lZFVwbG9hZFJlc3BvbnNlEjMKCG1ldGFkYXRhGAEgASgLMhcuZmlsZX'
+        'MudjEuTWVkaWFNZXRhZGF0YVIIbWV0YWRhdGE=');
 
 @$core.Deprecated('Use getSignedDownloadUrlRequestDescriptor instead')
 const GetSignedDownloadUrlRequest$json = {
@@ -695,10 +978,11 @@ const GetSignedDownloadUrlRequest$json = {
 };
 
 /// Descriptor for `GetSignedDownloadUrlRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getSignedDownloadUrlRequestDescriptor = $convert.base64Decode(
-    'ChtHZXRTaWduZWREb3dubG9hZFVybFJlcXVlc3QSGQoIbWVkaWFfaWQYASABKAlSB21lZGlhSW'
-    'QSJwoPZXhwaXJlc19zZWNvbmRzGAIgASgDUg5leHBpcmVzU2Vjb25kcxIaCghkb3dubG9hZBgD'
-    'IAEoCFIIZG93bmxvYWQSGgoIZmlsZW5hbWUYBCABKAlSCGZpbGVuYW1l');
+final $typed_data.Uint8List getSignedDownloadUrlRequestDescriptor =
+    $convert.base64Decode(
+        'ChtHZXRTaWduZWREb3dubG9hZFVybFJlcXVlc3QSGQoIbWVkaWFfaWQYASABKAlSB21lZGlhSW'
+        'QSJwoPZXhwaXJlc19zZWNvbmRzGAIgASgDUg5leHBpcmVzU2Vjb25kcxIaCghkb3dubG9hZBgD'
+        'IAEoCFIIZG93bmxvYWQSGgoIZmlsZW5hbWUYBCABKAlSCGZpbGVuYW1l');
 
 @$core.Deprecated('Use getSignedDownloadUrlResponseDescriptor instead')
 const GetSignedDownloadUrlResponse$json = {
@@ -709,9 +993,10 @@ const GetSignedDownloadUrlResponse$json = {
 };
 
 /// Descriptor for `GetSignedDownloadUrlResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getSignedDownloadUrlResponseDescriptor = $convert.base64Decode(
-    'ChxHZXRTaWduZWREb3dubG9hZFVybFJlc3BvbnNlEiEKDGRvd25sb2FkX3VybBgBIAEoCVILZG'
-    '93bmxvYWRVcmw=');
+final $typed_data.Uint8List getSignedDownloadUrlResponseDescriptor =
+    $convert.base64Decode(
+        'ChxHZXRTaWduZWREb3dubG9hZFVybFJlc3BvbnNlEiEKDGRvd25sb2FkX3VybBgBIAEoCVILZG'
+        '93bmxvYWRVcmw=');
 
 @$core.Deprecated('Use getContentRequestDescriptor instead')
 const GetContentRequest$json = {
@@ -732,7 +1017,14 @@ const GetContentResponse$json = {
   '1': 'GetContentResponse',
   '2': [
     {'1': 'content', '3': 1, '4': 1, '5': 12, '10': 'content'},
-    {'1': 'metadata', '3': 2, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
@@ -752,24 +1044,33 @@ const GetContentOverrideNameRequest$json = {
 };
 
 /// Descriptor for `GetContentOverrideNameRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getContentOverrideNameRequestDescriptor = $convert.base64Decode(
-    'Ch1HZXRDb250ZW50T3ZlcnJpZGVOYW1lUmVxdWVzdBI2CghtZWRpYV9pZBgBIAEoCUIbukgYch'
-    'YQARgoMhBbMC05YS16Xy1dezMsNDB9UgdtZWRpYUlkEiQKCWZpbGVfbmFtZRgCIAEoCUIHukgE'
-    'cgIQAVIIZmlsZU5hbWUSHQoKdGltZW91dF9tcxgDIAEoA1IJdGltZW91dE1z');
+final $typed_data.Uint8List getContentOverrideNameRequestDescriptor =
+    $convert.base64Decode(
+        'Ch1HZXRDb250ZW50T3ZlcnJpZGVOYW1lUmVxdWVzdBI2CghtZWRpYV9pZBgBIAEoCUIbukgYch'
+        'YQARgoMhBbMC05YS16Xy1dezMsNDB9UgdtZWRpYUlkEiQKCWZpbGVfbmFtZRgCIAEoCUIHukgE'
+        'cgIQAVIIZmlsZU5hbWUSHQoKdGltZW91dF9tcxgDIAEoA1IJdGltZW91dE1z');
 
 @$core.Deprecated('Use getContentOverrideNameResponseDescriptor instead')
 const GetContentOverrideNameResponse$json = {
   '1': 'GetContentOverrideNameResponse',
   '2': [
     {'1': 'content', '3': 1, '4': 1, '5': 12, '10': 'content'},
-    {'1': 'metadata', '3': 2, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
 /// Descriptor for `GetContentOverrideNameResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getContentOverrideNameResponseDescriptor = $convert.base64Decode(
-    'Ch5HZXRDb250ZW50T3ZlcnJpZGVOYW1lUmVzcG9uc2USGAoHY29udGVudBgBIAEoDFIHY29udG'
-    'VudBIzCghtZXRhZGF0YRgCIAEoCzIXLmZpbGVzLnYxLk1lZGlhTWV0YWRhdGFSCG1ldGFkYXRh');
+final $typed_data.Uint8List getContentOverrideNameResponseDescriptor =
+    $convert.base64Decode(
+        'Ch5HZXRDb250ZW50T3ZlcnJpZGVOYW1lUmVzcG9uc2USGAoHY29udGVudBgBIAEoDFIHY29udG'
+        'VudBIzCghtZXRhZGF0YRgCIAEoCzIXLmZpbGVzLnYxLk1lZGlhTWV0YWRhdGFSCG1ldGFkYXRh');
 
 @$core.Deprecated('Use downloadContentResponseDescriptor instead')
 const DownloadContentResponse$json = {
@@ -780,8 +1081,9 @@ const DownloadContentResponse$json = {
 };
 
 /// Descriptor for `DownloadContentResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List downloadContentResponseDescriptor = $convert.base64Decode(
-    'ChdEb3dubG9hZENvbnRlbnRSZXNwb25zZRISCgRkYXRhGAEgASgMUgRkYXRh');
+final $typed_data.Uint8List downloadContentResponseDescriptor =
+    $convert.base64Decode(
+        'ChdEb3dubG9hZENvbnRlbnRSZXNwb25zZRISCgRkYXRhGAEgASgMUgRkYXRh');
 
 @$core.Deprecated('Use downloadContentRequestDescriptor instead')
 const DownloadContentRequest$json = {
@@ -792,9 +1094,10 @@ const DownloadContentRequest$json = {
 };
 
 /// Descriptor for `DownloadContentRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List downloadContentRequestDescriptor = $convert.base64Decode(
-    'ChZEb3dubG9hZENvbnRlbnRSZXF1ZXN0EjYKCG1lZGlhX2lkGAEgASgJQhu6SBhyFhABGCgyEF'
-    'swLTlhLXpfLV17Myw0MH1SB21lZGlhSWQ=');
+final $typed_data.Uint8List downloadContentRequestDescriptor =
+    $convert.base64Decode(
+        'ChZEb3dubG9hZENvbnRlbnRSZXF1ZXN0EjYKCG1lZGlhX2lkGAEgASgJQhu6SBhyFhABGCgyEF'
+        'swLTlhLXpfLV17Myw0MH1SB21lZGlhSWQ=');
 
 @$core.Deprecated('Use downloadContentRangeResponseDescriptor instead')
 const DownloadContentRangeResponse$json = {
@@ -805,8 +1108,9 @@ const DownloadContentRangeResponse$json = {
 };
 
 /// Descriptor for `DownloadContentRangeResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List downloadContentRangeResponseDescriptor = $convert.base64Decode(
-    'ChxEb3dubG9hZENvbnRlbnRSYW5nZVJlc3BvbnNlEhIKBGRhdGEYASABKAxSBGRhdGE=');
+final $typed_data.Uint8List downloadContentRangeResponseDescriptor =
+    $convert.base64Decode(
+        'ChxEb3dubG9hZENvbnRlbnRSYW5nZVJlc3BvbnNlEhIKBGRhdGEYASABKAxSBGRhdGE=');
 
 @$core.Deprecated('Use downloadContentRangeRequestDescriptor instead')
 const DownloadContentRangeRequest$json = {
@@ -819,10 +1123,11 @@ const DownloadContentRangeRequest$json = {
 };
 
 /// Descriptor for `DownloadContentRangeRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List downloadContentRangeRequestDescriptor = $convert.base64Decode(
-    'ChtEb3dubG9hZENvbnRlbnRSYW5nZVJlcXVlc3QSNgoIbWVkaWFfaWQYASABKAlCG7pIGHIWEA'
-    'EYKDIQWzAtOWEtel8tXXszLDQwfVIHbWVkaWFJZBIUCgVzdGFydBgCIAEoA1IFc3RhcnQSEAoD'
-    'ZW5kGAMgASgDUgNlbmQ=');
+final $typed_data.Uint8List downloadContentRangeRequestDescriptor =
+    $convert.base64Decode(
+        'ChtEb3dubG9hZENvbnRlbnRSYW5nZVJlcXVlc3QSNgoIbWVkaWFfaWQYASABKAlCG7pIGHIWEA'
+        'EYKDIQWzAtOWEtel8tXXszLDQwfVIHbWVkaWFJZBIUCgVzdGFydBgCIAEoA1IFc3RhcnQSEAoD'
+        'ZW5kGAMgASgDUgNlbmQ=');
 
 @$core.Deprecated('Use headContentRequestDescriptor instead')
 const HeadContentRequest$json = {
@@ -841,7 +1146,14 @@ final $typed_data.Uint8List headContentRequestDescriptor = $convert.base64Decode
 const HeadContentResponse$json = {
   '1': 'HeadContentResponse',
   '2': [
-    {'1': 'metadata', '3': 1, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
@@ -871,7 +1183,14 @@ const DeleteContentResponse$json = {
   '1': 'DeleteContentResponse',
   '2': [
     {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
-    {'1': 'outcome', '3': 2, '4': 1, '5': 14, '6': '.files.v1.DeleteOutcome', '10': 'outcome'},
+    {
+      '1': 'outcome',
+      '3': 2,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.DeleteOutcome',
+      '10': 'outcome'
+    },
   ],
 };
 
@@ -885,12 +1204,40 @@ const PatchContentRequest$json = {
   '1': 'PatchContentRequest',
   '2': [
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '10': 'mediaId'},
-    {'1': 'set_extra', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'setExtra'},
-    {'1': 'set_labels', '3': 3, '4': 3, '5': 11, '6': '.files.v1.PatchContentRequest.SetLabelsEntry', '10': 'setLabels'},
+    {
+      '1': 'set_extra',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'setExtra'
+    },
+    {
+      '1': 'set_labels',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.PatchContentRequest.SetLabelsEntry',
+      '10': 'setLabels'
+    },
     {'1': 'remove_labels', '3': 4, '4': 3, '5': 9, '10': 'removeLabels'},
     {'1': 'filename', '3': 5, '4': 1, '5': 9, '10': 'filename'},
-    {'1': 'visibility', '3': 6, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
-    {'1': 'expires_at', '3': 7, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
+    {
+      '1': 'visibility',
+      '3': 6,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
+    {
+      '1': 'expires_at',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
     {'1': 'idempotency_key', '3': 100, '4': 1, '5': 9, '10': 'idempotencyKey'},
   ],
   '3': [PatchContentRequest_SetLabelsEntry$json],
@@ -922,7 +1269,14 @@ final $typed_data.Uint8List patchContentRequestDescriptor = $convert.base64Decod
 const PatchContentResponse$json = {
   '1': 'PatchContentResponse',
   '2': [
-    {'1': 'metadata', '3': 1, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
@@ -936,7 +1290,14 @@ const GrantAccessRequest$json = {
   '1': 'GrantAccessRequest',
   '2': [
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '10': 'mediaId'},
-    {'1': 'grant', '3': 2, '4': 1, '5': 11, '6': '.files.v1.AccessGrant', '10': 'grant'},
+    {
+      '1': 'grant',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.AccessGrant',
+      '10': 'grant'
+    },
     {'1': 'idempotency_key', '3': 100, '4': 1, '5': 9, '10': 'idempotencyKey'},
   ],
 };
@@ -956,8 +1317,9 @@ const GrantAccessResponse$json = {
 };
 
 /// Descriptor for `GrantAccessResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List grantAccessResponseDescriptor = $convert.base64Decode(
-    'ChNHcmFudEFjY2Vzc1Jlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2Nlc3M=');
+final $typed_data.Uint8List grantAccessResponseDescriptor =
+    $convert.base64Decode(
+        'ChNHcmFudEFjY2Vzc1Jlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2Nlc3M=');
 
 @$core.Deprecated('Use revokeAccessRequestDescriptor instead')
 const RevokeAccessRequest$json = {
@@ -984,16 +1346,31 @@ const RevokeAccessResponse$json = {
 };
 
 /// Descriptor for `RevokeAccessResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List revokeAccessResponseDescriptor = $convert.base64Decode(
-    'ChRSZXZva2VBY2Nlc3NSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZXNz');
+final $typed_data.Uint8List revokeAccessResponseDescriptor =
+    $convert.base64Decode(
+        'ChRSZXZva2VBY2Nlc3NSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZXNz');
 
 @$core.Deprecated('Use listAccessRequestDescriptor instead')
 const ListAccessRequest$json = {
   '1': 'ListAccessRequest',
   '2': [
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '10': 'mediaId'},
-    {'1': 'filter_role', '3': 2, '4': 1, '5': 14, '6': '.files.v1.AccessRole', '10': 'filterRole'},
-    {'1': 'cursor', '3': 3, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'cursor'},
+    {
+      '1': 'filter_role',
+      '3': 2,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.AccessRole',
+      '10': 'filterRole'
+    },
+    {
+      '1': 'cursor',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'cursor'
+    },
   ],
 };
 
@@ -1007,8 +1384,22 @@ final $typed_data.Uint8List listAccessRequestDescriptor = $convert.base64Decode(
 const ListAccessResponse$json = {
   '1': 'ListAccessResponse',
   '2': [
-    {'1': 'grants', '3': 1, '4': 3, '5': 11, '6': '.files.v1.AccessGrant', '10': 'grants'},
-    {'1': 'next_cursor', '3': 2, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'nextCursor'},
+    {
+      '1': 'grants',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.AccessGrant',
+      '10': 'grants'
+    },
+    {
+      '1': 'next_cursor',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'nextCursor'
+    },
   ],
 };
 
@@ -1025,7 +1416,14 @@ const GetContentThumbnailRequest$json = {
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '8': {}, '10': 'mediaId'},
     {'1': 'width', '3': 2, '4': 1, '5': 5, '8': {}, '10': 'width'},
     {'1': 'height', '3': 3, '4': 1, '5': 5, '8': {}, '10': 'height'},
-    {'1': 'method', '3': 4, '4': 1, '5': 14, '6': '.files.v1.ThumbnailMethod', '10': 'method'},
+    {
+      '1': 'method',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.ThumbnailMethod',
+      '10': 'method'
+    },
     {'1': 'timeout_ms', '3': 5, '4': 1, '5': 3, '10': 'timeoutMs'},
     {'1': 'animated', '3': 6, '4': 1, '5': 8, '10': 'animated'},
   ],
@@ -1044,14 +1442,22 @@ const GetContentThumbnailResponse$json = {
   '1': 'GetContentThumbnailResponse',
   '2': [
     {'1': 'content', '3': 1, '4': 1, '5': 12, '10': 'content'},
-    {'1': 'metadata', '3': 2, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
 /// Descriptor for `GetContentThumbnailResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getContentThumbnailResponseDescriptor = $convert.base64Decode(
-    'ChtHZXRDb250ZW50VGh1bWJuYWlsUmVzcG9uc2USGAoHY29udGVudBgBIAEoDFIHY29udGVudB'
-    'IzCghtZXRhZGF0YRgCIAEoCzIXLmZpbGVzLnYxLk1lZGlhTWV0YWRhdGFSCG1ldGFkYXRh');
+final $typed_data.Uint8List getContentThumbnailResponseDescriptor =
+    $convert.base64Decode(
+        'ChtHZXRDb250ZW50VGh1bWJuYWlsUmVzcG9uc2USGAoHY29udGVudBgBIAEoDFIHY29udGVudB'
+        'IzCghtZXRhZGF0YRgCIAEoCzIXLmZpbGVzLnYxLk1lZGlhTWV0YWRhdGFSCG1ldGFkYXRh');
 
 @$core.Deprecated('Use getUrlPreviewRequestDescriptor instead')
 const GetUrlPreviewRequest$json = {
@@ -1062,14 +1468,22 @@ const GetUrlPreviewRequest$json = {
 };
 
 /// Descriptor for `GetUrlPreviewRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getUrlPreviewRequestDescriptor = $convert.base64Decode(
-    'ChRHZXRVcmxQcmV2aWV3UmVxdWVzdBIaCgN1cmwYASABKAlCCLpIBXIDiAEBUgN1cmw=');
+final $typed_data.Uint8List getUrlPreviewRequestDescriptor =
+    $convert.base64Decode(
+        'ChRHZXRVcmxQcmV2aWV3UmVxdWVzdBIaCgN1cmwYASABKAlCCLpIBXIDiAEBUgN1cmw=');
 
 @$core.Deprecated('Use getUrlPreviewResponseDescriptor instead')
 const GetUrlPreviewResponse$json = {
   '1': 'GetUrlPreviewResponse',
   '2': [
-    {'1': 'og_data', '3': 1, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'ogData'},
+    {
+      '1': 'og_data',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'ogData'
+    },
     {'1': 'og_image_media_id', '3': 2, '4': 1, '5': 9, '10': 'ogImageMediaId'},
   ],
 };
@@ -1086,24 +1500,86 @@ const GetConfigRequest$json = {
 };
 
 /// Descriptor for `GetConfigRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getConfigRequestDescriptor = $convert.base64Decode(
-    'ChBHZXRDb25maWdSZXF1ZXN0');
+final $typed_data.Uint8List getConfigRequestDescriptor =
+    $convert.base64Decode('ChBHZXRDb25maWdSZXF1ZXN0');
 
 @$core.Deprecated('Use getConfigResponseDescriptor instead')
 const GetConfigResponse$json = {
   '1': 'GetConfigResponse',
   '2': [
     {'1': 'max_upload_bytes', '3': 1, '4': 1, '5': 3, '10': 'maxUploadBytes'},
-    {'1': 'direct_client_upload_enabled', '3': 2, '4': 1, '5': 8, '10': 'directClientUploadEnabled'},
-    {'1': 'max_signed_url_expire_seconds', '3': 3, '4': 1, '5': 3, '10': 'maxSignedUrlExpireSeconds'},
-    {'1': 'min_signed_url_expire_seconds', '3': 4, '4': 1, '5': 3, '10': 'minSignedUrlExpireSeconds'},
-    {'1': 'supported_thumbnail_methods', '3': 5, '4': 3, '5': 14, '6': '.files.v1.ThumbnailMethod', '10': 'supportedThumbnailMethods'},
-    {'1': 'max_thumbnail_width', '3': 6, '4': 1, '5': 5, '10': 'maxThumbnailWidth'},
-    {'1': 'max_thumbnail_height', '3': 7, '4': 1, '5': 5, '10': 'maxThumbnailHeight'},
-    {'1': 'max_labels_per_media', '3': 8, '4': 1, '5': 5, '10': 'maxLabelsPerMedia'},
-    {'1': 'max_label_key_length', '3': 9, '4': 1, '5': 5, '10': 'maxLabelKeyLength'},
-    {'1': 'max_label_value_length', '3': 10, '4': 1, '5': 5, '10': 'maxLabelValueLength'},
-    {'1': 'extra', '3': 11, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'extra'},
+    {
+      '1': 'direct_client_upload_enabled',
+      '3': 2,
+      '4': 1,
+      '5': 8,
+      '10': 'directClientUploadEnabled'
+    },
+    {
+      '1': 'max_signed_url_expire_seconds',
+      '3': 3,
+      '4': 1,
+      '5': 3,
+      '10': 'maxSignedUrlExpireSeconds'
+    },
+    {
+      '1': 'min_signed_url_expire_seconds',
+      '3': 4,
+      '4': 1,
+      '5': 3,
+      '10': 'minSignedUrlExpireSeconds'
+    },
+    {
+      '1': 'supported_thumbnail_methods',
+      '3': 5,
+      '4': 3,
+      '5': 14,
+      '6': '.files.v1.ThumbnailMethod',
+      '10': 'supportedThumbnailMethods'
+    },
+    {
+      '1': 'max_thumbnail_width',
+      '3': 6,
+      '4': 1,
+      '5': 5,
+      '10': 'maxThumbnailWidth'
+    },
+    {
+      '1': 'max_thumbnail_height',
+      '3': 7,
+      '4': 1,
+      '5': 5,
+      '10': 'maxThumbnailHeight'
+    },
+    {
+      '1': 'max_labels_per_media',
+      '3': 8,
+      '4': 1,
+      '5': 5,
+      '10': 'maxLabelsPerMedia'
+    },
+    {
+      '1': 'max_label_key_length',
+      '3': 9,
+      '4': 1,
+      '5': 5,
+      '10': 'maxLabelKeyLength'
+    },
+    {
+      '1': 'max_label_value_length',
+      '3': 10,
+      '4': 1,
+      '5': 5,
+      '10': 'maxLabelValueLength'
+    },
+    {
+      '1': 'extra',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'extra'
+    },
   ],
 };
 
@@ -1126,24 +1602,94 @@ final $typed_data.Uint8List getConfigResponseDescriptor = $convert.base64Decode(
 const SearchMediaRequest$json = {
   '1': 'SearchMediaRequest',
   '2': [
-    {'1': 'cursor', '3': 1, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'cursor'},
+    {
+      '1': 'cursor',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'cursor'
+    },
     {'1': 'query', '3': 2, '4': 1, '5': 9, '10': 'query'},
     {'1': 'id_query', '3': 3, '4': 1, '5': 9, '10': 'idQuery'},
     {'1': 'owner_id', '3': 4, '4': 1, '5': 9, '10': 'ownerId'},
-    {'1': 'created_after', '3': 5, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdAfter'},
-    {'1': 'created_before', '3': 6, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdBefore'},
-    {'1': 'visibility', '3': 7, '4': 1, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibility'},
+    {
+      '1': 'created_after',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAfter'
+    },
+    {
+      '1': 'created_before',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdBefore'
+    },
+    {
+      '1': 'visibility',
+      '3': 7,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibility'
+    },
     {'1': 'content_type', '3': 8, '4': 1, '5': 9, '10': 'contentType'},
-    {'1': 'labels', '3': 9, '4': 3, '5': 11, '6': '.files.v1.SearchMediaRequest.LabelsEntry', '10': 'labels'},
+    {
+      '1': 'labels',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.SearchMediaRequest.LabelsEntry',
+      '10': 'labels'
+    },
     {'1': 'size_gte', '3': 10, '4': 1, '5': 3, '10': 'sizeGte'},
     {'1': 'size_lte', '3': 11, '4': 1, '5': 3, '10': 'sizeLte'},
-    {'1': 'state', '3': 12, '4': 1, '5': 14, '6': '.files.v1.MediaState', '10': 'state'},
-    {'1': 'scan_status', '3': 13, '4': 1, '5': 14, '6': '.files.v1.ScanStatus', '10': 'scanStatus'},
-    {'1': 'visibilities', '3': 14, '4': 3, '5': 14, '6': '.files.v1.MediaMetadata.Visibility', '10': 'visibilities'},
-    {'1': 'accessible_via_role', '3': 15, '4': 1, '5': 14, '6': '.files.v1.AccessRole', '10': 'accessibleViaRole'},
+    {
+      '1': 'state',
+      '3': 12,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.MediaState',
+      '10': 'state'
+    },
+    {
+      '1': 'scan_status',
+      '3': 13,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.ScanStatus',
+      '10': 'scanStatus'
+    },
+    {
+      '1': 'visibilities',
+      '3': 14,
+      '4': 3,
+      '5': 14,
+      '6': '.files.v1.MediaMetadata.Visibility',
+      '10': 'visibilities'
+    },
+    {
+      '1': 'accessible_via_role',
+      '3': 15,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.AccessRole',
+      '10': 'accessibleViaRole'
+    },
     {'1': 'timeout_ms', '3': 16, '4': 1, '5': 3, '10': 'timeoutMs'},
     {'1': 'organization_id', '3': 17, '4': 1, '5': 9, '10': 'organizationId'},
-    {'1': 'sort_by', '3': 20, '4': 1, '5': 14, '6': '.files.v1.SearchMediaRequest.SortBy', '10': 'sortBy'},
+    {
+      '1': 'sort_by',
+      '3': 20,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.SearchMediaRequest.SortBy',
+      '10': 'sortBy'
+    },
     {'1': 'sort_desc', '3': 21, '4': 1, '5': 8, '10': 'sortDesc'},
   ],
   '3': [SearchMediaRequest_LabelsEntry$json],
@@ -1199,8 +1745,22 @@ final $typed_data.Uint8List searchMediaRequestDescriptor = $convert.base64Decode
 const SearchMediaResponse$json = {
   '1': 'SearchMediaResponse',
   '2': [
-    {'1': 'results', '3': 1, '4': 3, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'results'},
-    {'1': 'next_cursor', '3': 2, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'nextCursor'},
+    {
+      '1': 'results',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'results'
+    },
+    {
+      '1': 'next_cursor',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'nextCursor'
+    },
   ],
 };
 
@@ -1219,15 +1779,23 @@ const BatchGetContentRequest$json = {
 };
 
 /// Descriptor for `BatchGetContentRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List batchGetContentRequestDescriptor = $convert.base64Decode(
-    'ChZCYXRjaEdldENvbnRlbnRSZXF1ZXN0EicKCW1lZGlhX2lkcxgBIAMoCUIKukgHkgEECAEQZF'
-    'IIbWVkaWFJZHM=');
+final $typed_data.Uint8List batchGetContentRequestDescriptor =
+    $convert.base64Decode(
+        'ChZCYXRjaEdldENvbnRlbnRSZXF1ZXN0EicKCW1lZGlhX2lkcxgBIAMoCUIKukgHkgEECAEQZF'
+        'IIbWVkaWFJZHM=');
 
 @$core.Deprecated('Use batchGetContentResponseDescriptor instead')
 const BatchGetContentResponse$json = {
   '1': 'BatchGetContentResponse',
   '2': [
-    {'1': 'results', '3': 1, '4': 3, '5': 11, '6': '.files.v1.BatchGetContentResponse.ContentResult', '10': 'results'},
+    {
+      '1': 'results',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.BatchGetContentResponse.ContentResult',
+      '10': 'results'
+    },
   ],
   '3': [BatchGetContentResponse_ContentResult$json],
 };
@@ -1237,7 +1805,15 @@ const BatchGetContentResponse_ContentResult$json = {
   '1': 'ContentResult',
   '2': [
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '10': 'mediaId'},
-    {'1': 'content', '3': 2, '4': 1, '5': 11, '6': '.files.v1.GetContentResponse', '9': 0, '10': 'content'},
+    {
+      '1': 'content',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.GetContentResponse',
+      '9': 0,
+      '10': 'content'
+    },
     {'1': 'error', '3': 3, '4': 1, '5': 9, '9': 0, '10': 'error'},
   ],
   '8': [
@@ -1273,7 +1849,14 @@ final $typed_data.Uint8List batchDeleteContentRequestDescriptor = $convert.base6
 const BatchDeleteContentResponse$json = {
   '1': 'BatchDeleteContentResponse',
   '2': [
-    {'1': 'results', '3': 1, '4': 3, '5': 11, '6': '.files.v1.BatchDeleteContentResponse.DeleteResult', '10': 'results'},
+    {
+      '1': 'results',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.BatchDeleteContentResponse.DeleteResult',
+      '10': 'results'
+    },
   ],
   '3': [BatchDeleteContentResponse_DeleteResult$json],
 };
@@ -1301,7 +1884,14 @@ const FileVersion$json = {
   '2': [
     {'1': 'version', '3': 1, '4': 1, '5': 3, '10': 'version'},
     {'1': 'media_id', '3': 2, '4': 1, '5': 9, '10': 'mediaId'},
-    {'1': 'created_at', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdAt'},
+    {
+      '1': 'created_at',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
     {'1': 'created_by', '3': 4, '4': 1, '5': 9, '10': 'createdBy'},
     {'1': 'size_bytes', '3': 5, '4': 1, '5': 3, '10': 'sizeBytes'},
     {'1': 'checksum_sha256', '3': 6, '4': 1, '5': 9, '10': 'checksumSha256'},
@@ -1321,7 +1911,14 @@ const GetVersionsRequest$json = {
   '1': 'GetVersionsRequest',
   '2': [
     {'1': 'media_id', '3': 1, '4': 1, '5': 9, '10': 'mediaId'},
-    {'1': 'cursor', '3': 2, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'cursor'},
+    {
+      '1': 'cursor',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'cursor'
+    },
     {'1': 'timeout_ms', '3': 3, '4': 1, '5': 3, '10': 'timeoutMs'},
   ],
 };
@@ -1336,9 +1933,23 @@ final $typed_data.Uint8List getVersionsRequestDescriptor = $convert.base64Decode
 const GetVersionsResponse$json = {
   '1': 'GetVersionsResponse',
   '2': [
-    {'1': 'versions', '3': 1, '4': 3, '5': 11, '6': '.files.v1.FileVersion', '10': 'versions'},
+    {
+      '1': 'versions',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.FileVersion',
+      '10': 'versions'
+    },
     {'1': 'latest_version', '3': 2, '4': 1, '5': 3, '10': 'latestVersion'},
-    {'1': 'next_cursor', '3': 3, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'nextCursor'},
+    {
+      '1': 'next_cursor',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'nextCursor'
+    },
   ],
 };
 
@@ -1369,14 +1980,22 @@ final $typed_data.Uint8List restoreVersionRequestDescriptor = $convert.base64Dec
 const RestoreVersionResponse$json = {
   '1': 'RestoreVersionResponse',
   '2': [
-    {'1': 'metadata', '3': 1, '4': 1, '5': 11, '6': '.files.v1.MediaMetadata', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.MediaMetadata',
+      '10': 'metadata'
+    },
   ],
 };
 
 /// Descriptor for `RestoreVersionResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List restoreVersionResponseDescriptor = $convert.base64Decode(
-    'ChZSZXN0b3JlVmVyc2lvblJlc3BvbnNlEjMKCG1ldGFkYXRhGAEgASgLMhcuZmlsZXMudjEuTW'
-    'VkaWFNZXRhZGF0YVIIbWV0YWRhdGE=');
+final $typed_data.Uint8List restoreVersionResponseDescriptor =
+    $convert.base64Decode(
+        'ChZSZXN0b3JlVmVyc2lvblJlc3BvbnNlEjMKCG1ldGFkYXRhGAEgASgLMhcuZmlsZXMudjEuTW'
+        'VkaWFNZXRhZGF0YVIIbWV0YWRhdGE=');
 
 @$core.Deprecated('Use retentionPolicyDescriptor instead')
 const RetentionPolicy$json = {
@@ -1386,7 +2005,14 @@ const RetentionPolicy$json = {
     {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
     {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
     {'1': 'retention_days', '3': 4, '4': 1, '5': 3, '10': 'retentionDays'},
-    {'1': 'mode', '3': 5, '4': 1, '5': 14, '6': '.files.v1.RetentionPolicy.Mode', '10': 'mode'},
+    {
+      '1': 'mode',
+      '3': 5,
+      '4': 1,
+      '5': 14,
+      '6': '.files.v1.RetentionPolicy.Mode',
+      '10': 'mode'
+    },
   ],
   '4': [RetentionPolicy_Mode$json],
 };
@@ -1434,8 +2060,9 @@ const SetRetentionPolicyResponse$json = {
 };
 
 /// Descriptor for `SetRetentionPolicyResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List setRetentionPolicyResponseDescriptor = $convert.base64Decode(
-    'ChpTZXRSZXRlbnRpb25Qb2xpY3lSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZXNz');
+final $typed_data.Uint8List setRetentionPolicyResponseDescriptor =
+    $convert.base64Decode(
+        'ChpTZXRSZXRlbnRpb25Qb2xpY3lSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZXNz');
 
 @$core.Deprecated('Use getRetentionPolicyRequestDescriptor instead')
 const GetRetentionPolicyRequest$json = {
@@ -1446,51 +2073,90 @@ const GetRetentionPolicyRequest$json = {
 };
 
 /// Descriptor for `GetRetentionPolicyRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getRetentionPolicyRequestDescriptor = $convert.base64Decode(
-    'ChlHZXRSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0EhkKCG1lZGlhX2lkGAEgASgJUgdtZWRpYUlk');
+final $typed_data.Uint8List getRetentionPolicyRequestDescriptor =
+    $convert.base64Decode(
+        'ChlHZXRSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0EhkKCG1lZGlhX2lkGAEgASgJUgdtZWRpYUlk');
 
 @$core.Deprecated('Use getRetentionPolicyResponseDescriptor instead')
 const GetRetentionPolicyResponse$json = {
   '1': 'GetRetentionPolicyResponse',
   '2': [
-    {'1': 'policy', '3': 1, '4': 1, '5': 11, '6': '.files.v1.RetentionPolicy', '10': 'policy'},
-    {'1': 'expires_at', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'expiresAt'},
+    {
+      '1': 'policy',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.RetentionPolicy',
+      '10': 'policy'
+    },
+    {
+      '1': 'expires_at',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'expiresAt'
+    },
   ],
 };
 
 /// Descriptor for `GetRetentionPolicyResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getRetentionPolicyResponseDescriptor = $convert.base64Decode(
-    'ChpHZXRSZXRlbnRpb25Qb2xpY3lSZXNwb25zZRIxCgZwb2xpY3kYASABKAsyGS5maWxlcy52MS'
-    '5SZXRlbnRpb25Qb2xpY3lSBnBvbGljeRI5CgpleHBpcmVzX2F0GAIgASgLMhouZ29vZ2xlLnBy'
-    'b3RvYnVmLlRpbWVzdGFtcFIJZXhwaXJlc0F0');
+final $typed_data.Uint8List getRetentionPolicyResponseDescriptor =
+    $convert.base64Decode(
+        'ChpHZXRSZXRlbnRpb25Qb2xpY3lSZXNwb25zZRIxCgZwb2xpY3kYASABKAsyGS5maWxlcy52MS'
+        '5SZXRlbnRpb25Qb2xpY3lSBnBvbGljeRI5CgpleHBpcmVzX2F0GAIgASgLMhouZ29vZ2xlLnBy'
+        'b3RvYnVmLlRpbWVzdGFtcFIJZXhwaXJlc0F0');
 
 @$core.Deprecated('Use listRetentionPoliciesRequestDescriptor instead')
 const ListRetentionPoliciesRequest$json = {
   '1': 'ListRetentionPoliciesRequest',
   '2': [
-    {'1': 'cursor', '3': 1, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'cursor'},
+    {
+      '1': 'cursor',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'cursor'
+    },
   ],
 };
 
 /// Descriptor for `ListRetentionPoliciesRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List listRetentionPoliciesRequestDescriptor = $convert.base64Decode(
-    'ChxMaXN0UmV0ZW50aW9uUG9saWNpZXNSZXF1ZXN0Ei0KBmN1cnNvchgBIAEoCzIVLmNvbW1vbi'
-    '52MS5QYWdlQ3Vyc29yUgZjdXJzb3I=');
+final $typed_data.Uint8List listRetentionPoliciesRequestDescriptor =
+    $convert.base64Decode(
+        'ChxMaXN0UmV0ZW50aW9uUG9saWNpZXNSZXF1ZXN0Ei0KBmN1cnNvchgBIAEoCzIVLmNvbW1vbi'
+        '52MS5QYWdlQ3Vyc29yUgZjdXJzb3I=');
 
 @$core.Deprecated('Use listRetentionPoliciesResponseDescriptor instead')
 const ListRetentionPoliciesResponse$json = {
   '1': 'ListRetentionPoliciesResponse',
   '2': [
-    {'1': 'policies', '3': 1, '4': 3, '5': 11, '6': '.files.v1.RetentionPolicy', '10': 'policies'},
-    {'1': 'next_cursor', '3': 2, '4': 1, '5': 11, '6': '.common.v1.PageCursor', '10': 'nextCursor'},
+    {
+      '1': 'policies',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.files.v1.RetentionPolicy',
+      '10': 'policies'
+    },
+    {
+      '1': 'next_cursor',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.common.v1.PageCursor',
+      '10': 'nextCursor'
+    },
   ],
 };
 
 /// Descriptor for `ListRetentionPoliciesResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List listRetentionPoliciesResponseDescriptor = $convert.base64Decode(
-    'Ch1MaXN0UmV0ZW50aW9uUG9saWNpZXNSZXNwb25zZRI1Cghwb2xpY2llcxgBIAMoCzIZLmZpbG'
-    'VzLnYxLlJldGVudGlvblBvbGljeVIIcG9saWNpZXMSNgoLbmV4dF9jdXJzb3IYAiABKAsyFS5j'
-    'b21tb24udjEuUGFnZUN1cnNvclIKbmV4dEN1cnNvcg==');
+final $typed_data.Uint8List listRetentionPoliciesResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1MaXN0UmV0ZW50aW9uUG9saWNpZXNSZXNwb25zZRI1Cghwb2xpY2llcxgBIAMoCzIZLmZpbG'
+        'VzLnYxLlJldGVudGlvblBvbGljeVIIcG9saWNpZXMSNgoLbmV4dF9jdXJzb3IYAiABKAsyFS5j'
+        'b21tb24udjEuUGFnZUN1cnNvclIKbmV4dEN1cnNvcg==');
 
 @$core.Deprecated('Use usageStatsDescriptor instead')
 const UsageStats$json = {
@@ -1518,16 +2184,38 @@ const GetUserUsageRequest$json = {
 };
 
 /// Descriptor for `GetUserUsageRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getUserUsageRequestDescriptor = $convert.base64Decode(
-    'ChNHZXRVc2VyVXNhZ2VSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZA==');
+final $typed_data.Uint8List getUserUsageRequestDescriptor =
+    $convert.base64Decode(
+        'ChNHZXRVc2VyVXNhZ2VSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZA==');
 
 @$core.Deprecated('Use getUserUsageResponseDescriptor instead')
 const GetUserUsageResponse$json = {
   '1': 'GetUserUsageResponse',
   '2': [
-    {'1': 'usage', '3': 1, '4': 1, '5': 11, '6': '.files.v1.UsageStats', '10': 'usage'},
-    {'1': 'period_start', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'periodStart'},
-    {'1': 'period_end', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'periodEnd'},
+    {
+      '1': 'usage',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.files.v1.UsageStats',
+      '10': 'usage'
+    },
+    {
+      '1': 'period_start',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'periodStart'
+    },
+    {
+      '1': 'period_end',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'periodEnd'
+    },
   ],
 };
 
@@ -1544,8 +2232,8 @@ const GetStorageStatsRequest$json = {
 };
 
 /// Descriptor for `GetStorageStatsRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getStorageStatsRequestDescriptor = $convert.base64Decode(
-    'ChZHZXRTdG9yYWdlU3RhdHNSZXF1ZXN0');
+final $typed_data.Uint8List getStorageStatsRequestDescriptor =
+    $convert.base64Decode('ChZHZXRTdG9yYWdlU3RhdHNSZXF1ZXN0');
 
 @$core.Deprecated('Use getStorageStatsResponseDescriptor instead')
 const GetStorageStatsResponse$json = {
@@ -1566,18 +2254,49 @@ final $typed_data.Uint8List getStorageStatsResponseDescriptor = $convert.base64D
 const $core.Map<$core.String, $core.dynamic> FilesServiceBase$json = {
   '1': 'FilesService',
   '2': [
-    {'1': 'UploadContent', '2': '.files.v1.UploadContentRequest', '3': '.files.v1.UploadContentResponse', '4': {}, '5': true},
-    {'1': 'CreateContent', '2': '.files.v1.CreateContentRequest', '3': '.files.v1.CreateContentResponse', '4': {}},
-    {'1': 'CreateMultipartUpload', '2': '.files.v1.CreateMultipartUploadRequest', '3': '.files.v1.CreateMultipartUploadResponse', '4': {}},
+    {
+      '1': 'UploadContent',
+      '2': '.files.v1.UploadContentRequest',
+      '3': '.files.v1.UploadContentResponse',
+      '4': {},
+      '5': true
+    },
+    {
+      '1': 'CreateContent',
+      '2': '.files.v1.CreateContentRequest',
+      '3': '.files.v1.CreateContentResponse',
+      '4': {}
+    },
+    {
+      '1': 'CreateMultipartUpload',
+      '2': '.files.v1.CreateMultipartUploadRequest',
+      '3': '.files.v1.CreateMultipartUploadResponse',
+      '4': {}
+    },
     {
       '1': 'GetMultipartUpload',
       '2': '.files.v1.GetMultipartUploadRequest',
       '3': '.files.v1.GetMultipartUploadResponse',
       '4': {'34': 1},
     },
-    {'1': 'UploadMultipartPart', '2': '.files.v1.UploadMultipartPartRequest', '3': '.files.v1.UploadMultipartPartResponse', '4': {}},
-    {'1': 'CompleteMultipartUpload', '2': '.files.v1.CompleteMultipartUploadRequest', '3': '.files.v1.CompleteMultipartUploadResponse', '4': {}},
-    {'1': 'AbortMultipartUpload', '2': '.files.v1.AbortMultipartUploadRequest', '3': '.files.v1.AbortMultipartUploadResponse', '4': {}},
+    {
+      '1': 'UploadMultipartPart',
+      '2': '.files.v1.UploadMultipartPartRequest',
+      '3': '.files.v1.UploadMultipartPartResponse',
+      '4': {}
+    },
+    {
+      '1': 'CompleteMultipartUpload',
+      '2': '.files.v1.CompleteMultipartUploadRequest',
+      '3': '.files.v1.CompleteMultipartUploadResponse',
+      '4': {}
+    },
+    {
+      '1': 'AbortMultipartUpload',
+      '2': '.files.v1.AbortMultipartUploadRequest',
+      '3': '.files.v1.AbortMultipartUploadResponse',
+      '4': {}
+    },
     {
       '1': 'ListMultipartParts',
       '2': '.files.v1.ListMultipartPartsRequest',
@@ -1590,16 +2309,36 @@ const $core.Map<$core.String, $core.dynamic> FilesServiceBase$json = {
       '3': '.files.v1.HeadContentResponse',
       '4': {'34': 1},
     },
-    {'1': 'PatchContent', '2': '.files.v1.PatchContentRequest', '3': '.files.v1.PatchContentResponse', '4': {}},
-    {'1': 'GetSignedUploadUrl', '2': '.files.v1.GetSignedUploadUrlRequest', '3': '.files.v1.GetSignedUploadUrlResponse', '4': {}},
-    {'1': 'FinalizeSignedUpload', '2': '.files.v1.FinalizeSignedUploadRequest', '3': '.files.v1.FinalizeSignedUploadResponse', '4': {}},
+    {
+      '1': 'PatchContent',
+      '2': '.files.v1.PatchContentRequest',
+      '3': '.files.v1.PatchContentResponse',
+      '4': {}
+    },
+    {
+      '1': 'GetSignedUploadUrl',
+      '2': '.files.v1.GetSignedUploadUrlRequest',
+      '3': '.files.v1.GetSignedUploadUrlResponse',
+      '4': {}
+    },
+    {
+      '1': 'FinalizeSignedUpload',
+      '2': '.files.v1.FinalizeSignedUploadRequest',
+      '3': '.files.v1.FinalizeSignedUploadResponse',
+      '4': {}
+    },
     {
       '1': 'GetSignedDownloadUrl',
       '2': '.files.v1.GetSignedDownloadUrlRequest',
       '3': '.files.v1.GetSignedDownloadUrlResponse',
       '4': {'34': 1},
     },
-    {'1': 'DeleteContent', '2': '.files.v1.DeleteContentRequest', '3': '.files.v1.DeleteContentResponse', '4': {}},
+    {
+      '1': 'DeleteContent',
+      '2': '.files.v1.DeleteContentRequest',
+      '3': '.files.v1.DeleteContentResponse',
+      '4': {}
+    },
     {
       '1': 'GetContent',
       '2': '.files.v1.GetContentRequest',
@@ -1656,9 +2395,24 @@ const $core.Map<$core.String, $core.dynamic> FilesServiceBase$json = {
       '3': '.files.v1.BatchGetContentResponse',
       '4': {'34': 1},
     },
-    {'1': 'BatchDeleteContent', '2': '.files.v1.BatchDeleteContentRequest', '3': '.files.v1.BatchDeleteContentResponse', '4': {}},
-    {'1': 'GrantAccess', '2': '.files.v1.GrantAccessRequest', '3': '.files.v1.GrantAccessResponse', '4': {}},
-    {'1': 'RevokeAccess', '2': '.files.v1.RevokeAccessRequest', '3': '.files.v1.RevokeAccessResponse', '4': {}},
+    {
+      '1': 'BatchDeleteContent',
+      '2': '.files.v1.BatchDeleteContentRequest',
+      '3': '.files.v1.BatchDeleteContentResponse',
+      '4': {}
+    },
+    {
+      '1': 'GrantAccess',
+      '2': '.files.v1.GrantAccessRequest',
+      '3': '.files.v1.GrantAccessResponse',
+      '4': {}
+    },
+    {
+      '1': 'RevokeAccess',
+      '2': '.files.v1.RevokeAccessRequest',
+      '3': '.files.v1.RevokeAccessResponse',
+      '4': {}
+    },
     {
       '1': 'ListAccess',
       '2': '.files.v1.ListAccessRequest',
@@ -1671,8 +2425,18 @@ const $core.Map<$core.String, $core.dynamic> FilesServiceBase$json = {
       '3': '.files.v1.GetVersionsResponse',
       '4': {'34': 1},
     },
-    {'1': 'RestoreVersion', '2': '.files.v1.RestoreVersionRequest', '3': '.files.v1.RestoreVersionResponse', '4': {}},
-    {'1': 'SetRetentionPolicy', '2': '.files.v1.SetRetentionPolicyRequest', '3': '.files.v1.SetRetentionPolicyResponse', '4': {}},
+    {
+      '1': 'RestoreVersion',
+      '2': '.files.v1.RestoreVersionRequest',
+      '3': '.files.v1.RestoreVersionResponse',
+      '4': {}
+    },
+    {
+      '1': 'SetRetentionPolicy',
+      '2': '.files.v1.SetRetentionPolicyRequest',
+      '3': '.files.v1.SetRetentionPolicyResponse',
+      '4': {}
+    },
     {
       '1': 'GetRetentionPolicy',
       '2': '.files.v1.GetRetentionPolicyRequest',
@@ -1702,42 +2466,51 @@ const $core.Map<$core.String, $core.dynamic> FilesServiceBase$json = {
 };
 
 @$core.Deprecated('Use filesServiceDescriptor instead')
-const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> FilesServiceBase$messageJson = {
+const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+    FilesServiceBase$messageJson = {
   '.files.v1.UploadContentRequest': UploadContentRequest$json,
   '.files.v1.UploadMetadata': UploadMetadata$json,
-  '.google.protobuf.Struct': $6.Struct$json,
-  '.google.protobuf.Struct.FieldsEntry': $6.Struct_FieldsEntry$json,
-  '.google.protobuf.Value': $6.Value$json,
-  '.google.protobuf.ListValue': $6.ListValue$json,
-  '.google.protobuf.Timestamp': $2.Timestamp$json,
+  '.google.protobuf.Struct': $1.Struct$json,
+  '.google.protobuf.Struct.FieldsEntry': $1.Struct_FieldsEntry$json,
+  '.google.protobuf.Value': $1.Value$json,
+  '.google.protobuf.ListValue': $1.ListValue$json,
+  '.google.protobuf.Timestamp': $0.Timestamp$json,
   '.files.v1.UploadMetadata.LabelsEntry': UploadMetadata_LabelsEntry$json,
   '.files.v1.UploadContentResponse': UploadContentResponse$json,
   '.files.v1.MediaMetadata': MediaMetadata$json,
   '.files.v1.MediaMetadata.LabelsEntry': MediaMetadata_LabelsEntry$json,
   '.files.v1.CreateContentRequest': CreateContentRequest$json,
-  '.files.v1.CreateContentRequest.LabelsEntry': CreateContentRequest_LabelsEntry$json,
+  '.files.v1.CreateContentRequest.LabelsEntry':
+      CreateContentRequest_LabelsEntry$json,
   '.files.v1.CreateContentResponse': CreateContentResponse$json,
   '.files.v1.CreateMultipartUploadRequest': CreateMultipartUploadRequest$json,
-  '.files.v1.CreateMultipartUploadRequest.LabelsEntry': CreateMultipartUploadRequest_LabelsEntry$json,
+  '.files.v1.CreateMultipartUploadRequest.LabelsEntry':
+      CreateMultipartUploadRequest_LabelsEntry$json,
   '.files.v1.CreateMultipartUploadResponse': CreateMultipartUploadResponse$json,
   '.files.v1.GetMultipartUploadRequest': GetMultipartUploadRequest$json,
   '.files.v1.GetMultipartUploadResponse': GetMultipartUploadResponse$json,
-  '.files.v1.GetMultipartUploadResponse.LabelsEntry': GetMultipartUploadResponse_LabelsEntry$json,
+  '.files.v1.GetMultipartUploadResponse.LabelsEntry':
+      GetMultipartUploadResponse_LabelsEntry$json,
   '.files.v1.UploadMultipartPartRequest': UploadMultipartPartRequest$json,
   '.files.v1.UploadMultipartPartResponse': UploadMultipartPartResponse$json,
-  '.files.v1.CompleteMultipartUploadRequest': CompleteMultipartUploadRequest$json,
-  '.files.v1.CompleteMultipartUploadRequest.Part': CompleteMultipartUploadRequest_Part$json,
-  '.files.v1.CompleteMultipartUploadResponse': CompleteMultipartUploadResponse$json,
+  '.files.v1.CompleteMultipartUploadRequest':
+      CompleteMultipartUploadRequest$json,
+  '.files.v1.CompleteMultipartUploadRequest.Part':
+      CompleteMultipartUploadRequest_Part$json,
+  '.files.v1.CompleteMultipartUploadResponse':
+      CompleteMultipartUploadResponse$json,
   '.files.v1.AbortMultipartUploadRequest': AbortMultipartUploadRequest$json,
   '.files.v1.AbortMultipartUploadResponse': AbortMultipartUploadResponse$json,
   '.files.v1.ListMultipartPartsRequest': ListMultipartPartsRequest$json,
-  '.common.v1.PageCursor': $7.PageCursor$json,
+  '.common.v1.PageCursor': $2.PageCursor$json,
   '.files.v1.ListMultipartPartsResponse': ListMultipartPartsResponse$json,
-  '.files.v1.ListMultipartPartsResponse.Part': ListMultipartPartsResponse_Part$json,
+  '.files.v1.ListMultipartPartsResponse.Part':
+      ListMultipartPartsResponse_Part$json,
   '.files.v1.HeadContentRequest': HeadContentRequest$json,
   '.files.v1.HeadContentResponse': HeadContentResponse$json,
   '.files.v1.PatchContentRequest': PatchContentRequest$json,
-  '.files.v1.PatchContentRequest.SetLabelsEntry': PatchContentRequest_SetLabelsEntry$json,
+  '.files.v1.PatchContentRequest.SetLabelsEntry':
+      PatchContentRequest_SetLabelsEntry$json,
   '.files.v1.PatchContentResponse': PatchContentResponse$json,
   '.files.v1.GetSignedUploadUrlRequest': GetSignedUploadUrlRequest$json,
   '.files.v1.GetSignedUploadUrlResponse': GetSignedUploadUrlResponse$json,
@@ -1750,7 +2523,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> FilesServi
   '.files.v1.GetContentRequest': GetContentRequest$json,
   '.files.v1.GetContentResponse': GetContentResponse$json,
   '.files.v1.GetContentOverrideNameRequest': GetContentOverrideNameRequest$json,
-  '.files.v1.GetContentOverrideNameResponse': GetContentOverrideNameResponse$json,
+  '.files.v1.GetContentOverrideNameResponse':
+      GetContentOverrideNameResponse$json,
   '.files.v1.DownloadContentRequest': DownloadContentRequest$json,
   '.files.v1.DownloadContentResponse': DownloadContentResponse$json,
   '.files.v1.DownloadContentRangeRequest': DownloadContentRangeRequest$json,
@@ -1762,14 +2536,17 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> FilesServi
   '.files.v1.GetConfigRequest': GetConfigRequest$json,
   '.files.v1.GetConfigResponse': GetConfigResponse$json,
   '.files.v1.SearchMediaRequest': SearchMediaRequest$json,
-  '.files.v1.SearchMediaRequest.LabelsEntry': SearchMediaRequest_LabelsEntry$json,
+  '.files.v1.SearchMediaRequest.LabelsEntry':
+      SearchMediaRequest_LabelsEntry$json,
   '.files.v1.SearchMediaResponse': SearchMediaResponse$json,
   '.files.v1.BatchGetContentRequest': BatchGetContentRequest$json,
   '.files.v1.BatchGetContentResponse': BatchGetContentResponse$json,
-  '.files.v1.BatchGetContentResponse.ContentResult': BatchGetContentResponse_ContentResult$json,
+  '.files.v1.BatchGetContentResponse.ContentResult':
+      BatchGetContentResponse_ContentResult$json,
   '.files.v1.BatchDeleteContentRequest': BatchDeleteContentRequest$json,
   '.files.v1.BatchDeleteContentResponse': BatchDeleteContentResponse$json,
-  '.files.v1.BatchDeleteContentResponse.DeleteResult': BatchDeleteContentResponse_DeleteResult$json,
+  '.files.v1.BatchDeleteContentResponse.DeleteResult':
+      BatchDeleteContentResponse_DeleteResult$json,
   '.files.v1.GrantAccessRequest': GrantAccessRequest$json,
   '.files.v1.AccessGrant': AccessGrant$json,
   '.files.v1.GrantAccessResponse': GrantAccessResponse$json,
@@ -1946,15 +2723,15 @@ final $typed_data.Uint8List filesServiceDescriptor = $convert.base64Decode(
     'oBCg9HZXRTdG9yYWdlU3RhdHMSIC5maWxlcy52MS5HZXRTdG9yYWdlU3RhdHNSZXF1ZXN0GiEu'
     'ZmlsZXMudjEuR2V0U3RvcmFnZVN0YXRzUmVzcG9uc2UicpACAbpHWgoJQW5hbHl0aWNzEhZHZX'
     'Qgc3RvcmFnZSBzdGF0aXN0aWNzGiRSZXRyaWV2ZXMgZ2xvYmFsIHN0b3JhZ2Ugc3RhdGlzdGlj'
-    'cy4qD2dldFN0b3JhZ2VTdGF0c4K1GA4KDGNvbnRlbnRfdmlldxqqBIK1GKUECg1zZXJ2aWNlX2'
-    'ZpbGVzEgxjb250ZW50X3ZpZXcSDmNvbnRlbnRfdXBsb2FkEg5jb250ZW50X21hbmFnZRIOY29u'
-    'dGVudF9kZWxldGUSEGZpbGVfYWNjZXNzX3ZpZXcSEmZpbGVfYWNjZXNzX21hbmFnZRpmCAESDG'
-    'NvbnRlbnRfdmlldxIOY29udGVudF91cGxvYWQSDmNvbnRlbnRfbWFuYWdlEg5jb250ZW50X2Rl'
-    'bGV0ZRIQZmlsZV9hY2Nlc3NfdmlldxISZmlsZV9hY2Nlc3NfbWFuYWdlGmYIAhIMY29udGVudF'
-    '92aWV3Eg5jb250ZW50X3VwbG9hZBIOY29udGVudF9tYW5hZ2USDmNvbnRlbnRfZGVsZXRlEhBm'
-    'aWxlX2FjY2Vzc192aWV3EhJmaWxlX2FjY2Vzc19tYW5hZ2UaQggDEgxjb250ZW50X3ZpZXcSDm'
-    'NvbnRlbnRfdXBsb2FkEg5jb250ZW50X21hbmFnZRIQZmlsZV9hY2Nlc3NfdmlldxoiCAQSDGNv'
-    'bnRlbnRfdmlldxIQZmlsZV9hY2Nlc3NfdmlldxoQCAUSDGNvbnRlbnRfdmlldxpmCAYSDGNvbn'
-    'RlbnRfdmlldxIOY29udGVudF91cGxvYWQSDmNvbnRlbnRfbWFuYWdlEg5jb250ZW50X2RlbGV0'
-    'ZRIQZmlsZV9hY2Nlc3NfdmlldxISZmlsZV9hY2Nlc3NfbWFuYWdl');
-
+    'cy4qD2dldFN0b3JhZ2VTdGF0c4K1GA4KDGNvbnRlbnRfdmlldxrLBIK1GMYECgxzZXJ2aWNlX2'
+    'ZpbGUSDGNvbnRlbnRfdmlldxIOY29udGVudF91cGxvYWQSDmNvbnRlbnRfbWFuYWdlEg5jb250'
+    'ZW50X2RlbGV0ZRIQZmlsZV9hY2Nlc3NfdmlldxISZmlsZV9hY2Nlc3NfbWFuYWdlGmYIARIMY2'
+    '9udGVudF92aWV3Eg5jb250ZW50X3VwbG9hZBIOY29udGVudF9tYW5hZ2USDmNvbnRlbnRfZGVs'
+    'ZXRlEhBmaWxlX2FjY2Vzc192aWV3EhJmaWxlX2FjY2Vzc19tYW5hZ2UaZggCEgxjb250ZW50X3'
+    'ZpZXcSDmNvbnRlbnRfdXBsb2FkEg5jb250ZW50X21hbmFnZRIOY29udGVudF9kZWxldGUSEGZp'
+    'bGVfYWNjZXNzX3ZpZXcSEmZpbGVfYWNjZXNzX21hbmFnZRpCCAMSDGNvbnRlbnRfdmlldxIOY2'
+    '9udGVudF91cGxvYWQSDmNvbnRlbnRfbWFuYWdlEhBmaWxlX2FjY2Vzc192aWV3GiIIBBIMY29u'
+    'dGVudF92aWV3EhBmaWxlX2FjY2Vzc192aWV3GjIIBRIMY29udGVudF92aWV3Eg5jb250ZW50X3'
+    'VwbG9hZBIQZmlsZV9hY2Nlc3NfdmlldxpmCAYSDGNvbnRlbnRfdmlldxIOY29udGVudF91cGxv'
+    'YWQSDmNvbnRlbnRfbWFuYWdlEg5jb250ZW50X2RlbGV0ZRIQZmlsZV9hY2Nlc3NfdmlldxISZm'
+    'lsZV9hY2Nlc3NfbWFuYWdl');

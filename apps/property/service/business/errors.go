@@ -1,13 +1,13 @@
 package business
 
 import (
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 )
 
 var (
-	ErrorUnspecifiedID      = connect.NewError(connect.CodeInvalidArgument, nil)
-	ErrorEmptyValueSupplied = connect.NewError(connect.CodeInvalidArgument, nil)
-	ErrorItemExist          = connect.NewError(connect.CodeAlreadyExists, nil)
-	ErrorItemDoesNotExist   = connect.NewError(connect.CodeNotFound, nil)
-	ErrorInitializationFail = connect.NewError(connect.CodeInternal, nil)
+	ErrorUnspecifiedID      = connect.NewError(connect.CodeInvalidArgument, "")
+	ErrorEmptyValueSupplied = connect.NewError(connect.CodeInvalidArgument, "")
+	ErrorItemExist          = connect.NewError(connect.CodeAlreadyExists, "")
+	ErrorItemDoesNotExist   = connect.NewError(connect.CodeNotFound, "")
+	ErrorInitializationFail = connect.NewError(connect.CodeInternal, "")
 )

@@ -4,9 +4,9 @@ import (
 	"context"
 
 	commonv1 "buf.build/gen/go/antinvestor/common/protocolbuffers/go/common/v1"
-	"buf.build/gen/go/antinvestor/ocr/connectrpc/go/ocr/v1/ocrv1connect"
+	"buf.build/gen/go/antinvestor/ocr/connectrpc/go/v2/ocr/v1/ocrv1connect"
 	ocrv1 "buf.build/gen/go/antinvestor/ocr/protocolbuffers/go/ocr/v1"
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/antinvestor/service-files/apps/ocr/service/business"
 )
 
@@ -21,18 +21,18 @@ func NewOCRServer(ocrBusiness business.OCRBusiness) *OCRServer {
 	}
 }
 
-func (os *OCRServer) Recognize(ctx context.Context, request *connect.Request[ocrv1.RecognizeRequest]) (*connect.Response[ocrv1.RecognizeResponse], error) { //nolint:misspell
-	response, err := os.ocrBusiness.Recognise(ctx, request.Msg)
+func (os *OCRServer) Recognize(ctx context.Context, request *ocrv1.RecognizeRequest) (*ocrv1.RecognizeResponse, error) { //nolint:misspell
+	response, err := os.ocrBusiness.Recognise(ctx, request)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (os *OCRServer) Status(ctx context.Context, request *connect.Request[commonv1.StatusRequest]) (*connect.Response[ocrv1.StatusResponse], error) {
-	response, err := os.ocrBusiness.CheckProgress(ctx, request.Msg)
+func (os *OCRServer) Status(ctx context.Context, request *commonv1.StatusRequest) (*ocrv1.StatusResponse, error) {
+	response, err := os.ocrBusiness.CheckProgress(ctx, request)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-	return connect.NewResponse(response), nil
+	return response, nil
 }

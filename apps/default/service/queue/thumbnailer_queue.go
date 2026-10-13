@@ -9,7 +9,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/queue/thumbnailer"
 	storage2 "github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/frame/v2"
+	"github.com/pitabwire/frame/v3"
 )
 
 type ThumbnailQueueHandler struct {
