@@ -27,6 +27,7 @@ RUN go mod download
 
 # Copy project files
 COPY ./apps/ocr ./apps/ocr
+COPY ./internal ./internal
 
 # Build binary with CGO enabled for Tesseract integration
 RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \

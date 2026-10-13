@@ -18,6 +18,7 @@ RUN go mod download
 # service lives entirely under apps/redirect/ and shares nothing
 # outside that tree.
 COPY ./apps/redirect ./apps/redirect
+COPY ./internal ./internal
 
 # Build static binary for target platform
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
