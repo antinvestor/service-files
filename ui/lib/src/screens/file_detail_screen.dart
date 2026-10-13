@@ -104,14 +104,17 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
                 height: 56,
                 decoration: BoxDecoration(
                   color: FilePreviewCard.colorForContentType(
-                          media.contentType, theme.colorScheme)
-                      .withAlpha(25),
+                    media.contentType,
+                    theme.colorScheme,
+                  ).withAlpha(25),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   FilePreviewCard.iconForContentType(media.contentType),
                   color: FilePreviewCard.colorForContentType(
-                      media.contentType, theme.colorScheme),
+                    media.contentType,
+                    theme.colorScheme,
+                  ),
                   size: 28,
                 ),
               ),
@@ -153,8 +156,10 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
                     value: 'delete',
                     child: ListTile(
                       leading: Icon(Icons.delete, color: Colors.red),
-                      title:
-                          Text('Delete', style: TextStyle(color: Colors.red)),
+                      title: Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
                       dense: true,
                     ),
                   ),
@@ -193,8 +198,10 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
 
   Widget _buildPreviewTab(ThemeData theme, MediaMetadata media) {
     final icon = FilePreviewCard.iconForContentType(media.contentType);
-    final iconColor =
-        FilePreviewCard.colorForContentType(media.contentType, theme.colorScheme);
+    final iconColor = FilePreviewCard.colorForContentType(
+      media.contentType,
+      theme.colorScheme,
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -259,9 +266,7 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
               isRequired: true,
               child: TextField(
                 controller: _filenameController,
-                decoration: const InputDecoration(
-                  hintText: 'Enter filename',
-                ),
+                decoration: const InputDecoration(hintText: 'Enter filename'),
               ),
             ),
             FormFieldCard(
@@ -298,8 +303,10 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
       MapEntry('Media ID', media.mediaId),
       MapEntry('Filename', media.filename),
       MapEntry('Content Type', media.contentType),
-      MapEntry('File Size',
-          FilePreviewCard.formatFileSize(media.fileSizeBytes.toInt())),
+      MapEntry(
+        'File Size',
+        FilePreviewCard.formatFileSize(media.fileSizeBytes.toInt()),
+      ),
       MapEntry('State', media.state.name),
       MapEntry('Scan Status', media.scanStatus.name),
       MapEntry('Visibility', media.visibility.name),
@@ -368,9 +375,11 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline,
-                    size: 48,
-                    color: theme.colorScheme.onSurfaceVariant.withAlpha(120)),
+                Icon(
+                  Icons.lock_outline,
+                  size: 48,
+                  color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                ),
                 const SizedBox(height: 12),
                 Text(
                   'No access grants',
@@ -453,29 +462,33 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
       data: (versions) {
         return VersionHistoryTimeline(
           versions: versions,
-          currentVersion: versions.isNotEmpty ? versions.first.version.toInt() : null,
+          currentVersion: versions.isNotEmpty
+              ? versions.first.version.toInt()
+              : null,
           onRestore: (versionNumber) async {
             final confirmed = await _confirmRestore(theme, versionNumber);
             if (confirmed && mounted) {
               try {
-                await ref.read(versionNotifierProvider.notifier).restoreVersion(
+                await ref
+                    .read(versionNotifierProvider.notifier)
+                    .restoreVersion(
                       mediaId: widget.contentId,
                       versionNumber: versionNumber,
                     );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content:
-                            Text('Restored to version $versionNumber')),
+                      content: Text('Restored to version $versionNumber'),
+                    ),
                   );
                   ref.invalidate(getContentProvider(widget.contentId));
                   ref.invalidate(getVersionsProvider(widget.contentId));
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(friendlyError(e))),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                 }
               }
             }
@@ -490,8 +503,9 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Restore Version'),
-            content:
-                Text('Restore to version $versionNumber? This will create a new version.'),
+            content: Text(
+              'Restore to version $versionNumber? This will create a new version.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -543,16 +557,16 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
             .read(contentNotifierProvider.notifier)
             .deleteContent(media.mediaId);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('File deleted')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('File deleted')));
           context.go('/files');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(friendlyError(e))),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
         }
       }
     }
@@ -560,22 +574,24 @@ class _FileDetailScreenState extends ConsumerState<FileDetailScreen>
 
   Future<void> _saveMetadata(MediaMetadata media) async {
     try {
-      await ref.read(contentNotifierProvider.notifier).patchContent(
+      await ref
+          .read(contentNotifierProvider.notifier)
+          .patchContent(
             mediaId: media.mediaId,
             filename: _filenameController.text.trim(),
           );
       if (mounted) {
         setState(() => _isEditing = false);
         ref.invalidate(getContentProvider(widget.contentId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Metadata updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Metadata updated')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }

@@ -105,10 +105,10 @@ class VersionHistoryTimeline extends StatelessWidget {
                                   children: [
                                     Text(
                                       'Version ${version.version}',
-                                      style:
-                                          theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                     if (isCurrent) ...[
                                       const SizedBox(width: 8),
@@ -119,17 +119,18 @@ class VersionHistoryTimeline extends StatelessWidget {
                                         ),
                                         decoration: BoxDecoration(
                                           color: theme.colorScheme.primary,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Text(
                                           'Current',
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
-                                            color:
-                                                theme.colorScheme.onPrimary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                                color:
+                                                    theme.colorScheme.onPrimary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -139,8 +140,7 @@ class VersionHistoryTimeline extends StatelessWidget {
                                 Text(
                                   _formatTimestamp(version.createdAt),
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onSurfaceVariant,
+                                    color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],

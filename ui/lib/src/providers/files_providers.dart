@@ -5,10 +5,7 @@ import 'files_transport_provider.dart';
 
 /// Parameters for searching media content.
 class MediaSearchParams {
-  const MediaSearchParams({
-    this.query = '',
-    this.state,
-  });
+  const MediaSearchParams({this.query = '', this.state});
 
   final String query;
   final MediaState? state;
@@ -26,20 +23,24 @@ class MediaSearchParams {
 
 /// Search media with optional filters.
 final searchMediaProvider =
-    FutureProvider.family<List<MediaMetadata>, MediaSearchParams>(
-        (ref, params) async {
-  final client = ref.watch(filesServiceClientProvider);
-  final request = SearchMediaRequest()..query = params.query;
-  if (params.state != null) {
-    request.state = params.state!;
-  }
-  final response = await client.searchMedia(request);
-  return response.results;
-});
+    FutureProvider.family<List<MediaMetadata>, MediaSearchParams>((
+      ref,
+      params,
+    ) async {
+      final client = ref.watch(filesServiceClientProvider);
+      final request = SearchMediaRequest()..query = params.query;
+      if (params.state != null) {
+        request.state = params.state!;
+      }
+      final response = await client.searchMedia(request);
+      return response.results;
+    });
 
 /// Get content metadata by ID.
-final getContentProvider =
-    FutureProvider.family<MediaMetadata, String>((ref, contentId) async {
+final getContentProvider = FutureProvider.family<MediaMetadata, String>((
+  ref,
+  contentId,
+) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = GetContentRequest()..mediaId = contentId;
   final response = await client.getContent(request);
@@ -47,8 +48,10 @@ final getContentProvider =
 });
 
 /// Head content (metadata without body) by ID.
-final headContentProvider =
-    FutureProvider.family<MediaMetadata, String>((ref, contentId) async {
+final headContentProvider = FutureProvider.family<MediaMetadata, String>((
+  ref,
+  contentId,
+) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = HeadContentRequest()..mediaId = contentId;
   final response = await client.headContent(request);
@@ -56,8 +59,9 @@ final headContentProvider =
 });
 
 /// Get storage stats.
-final getStorageStatsProvider =
-    FutureProvider<GetStorageStatsResponse>((ref) async {
+final getStorageStatsProvider = FutureProvider<GetStorageStatsResponse>((
+  ref,
+) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = GetStorageStatsRequest();
   return client.getStorageStats(request);
@@ -66,10 +70,10 @@ final getStorageStatsProvider =
 /// Get user usage stats.
 final getUserUsageProvider =
     FutureProvider.family<GetUserUsageResponse, String>((ref, userId) async {
-  final client = ref.watch(filesServiceClientProvider);
-  final request = GetUserUsageRequest()..userId = userId;
-  return client.getUserUsage(request);
-});
+      final client = ref.watch(filesServiceClientProvider);
+      final request = GetUserUsageRequest()..userId = userId;
+      return client.getUserUsage(request);
+    });
 
 /// Notifier for content mutations (delete, patch).
 class ContentNotifier extends Notifier<AsyncValue<void>> {
@@ -110,5 +114,4 @@ class ContentNotifier extends Notifier<AsyncValue<void>> {
 }
 
 final contentNotifierProvider =
-    NotifierProvider<ContentNotifier, AsyncValue<void>>(
-        ContentNotifier.new);
+    NotifierProvider<ContentNotifier, AsyncValue<void>>(ContentNotifier.new);

@@ -9,10 +9,7 @@ import '../widgets/file_access_chip.dart';
 
 /// Screen for managing access grants on a specific content item.
 class FileAccessScreen extends ConsumerStatefulWidget {
-  const FileAccessScreen({
-    super.key,
-    required this.contentId,
-  });
+  const FileAccessScreen({super.key, required this.contentId});
 
   final String contentId;
 
@@ -45,8 +42,11 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
           child: Row(
             children: [
-              Icon(Icons.lock_outline,
-                  size: 28, color: theme.colorScheme.primary),
+              Icon(
+                Icons.lock_outline,
+                size: 28,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -58,7 +58,8 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
                 ),
               ),
               FilledButton.icon(
-                onPressed: () => setState(() => _showGrantForm = !_showGrantForm),
+                onPressed: () =>
+                    setState(() => _showGrantForm = !_showGrantForm),
                 icon: Icon(
                   _showGrantForm ? Icons.close : Icons.person_add,
                   size: 18,
@@ -105,17 +106,21 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
                         initialValue: _principalType,
                         items: const [
                           DropdownMenuItem(
-                              value: PrincipalType.PRINCIPAL_TYPE_USER,
-                              child: Text('User')),
+                            value: PrincipalType.PRINCIPAL_TYPE_USER,
+                            child: Text('User'),
+                          ),
                           DropdownMenuItem(
-                              value: PrincipalType.PRINCIPAL_TYPE_ORGANIZATION,
-                              child: Text('Organization')),
+                            value: PrincipalType.PRINCIPAL_TYPE_ORGANIZATION,
+                            child: Text('Organization'),
+                          ),
                           DropdownMenuItem(
-                              value: PrincipalType.PRINCIPAL_TYPE_SERVICE,
-                              child: Text('Service')),
+                            value: PrincipalType.PRINCIPAL_TYPE_SERVICE,
+                            child: Text('Service'),
+                          ),
                           DropdownMenuItem(
-                              value: PrincipalType.PRINCIPAL_TYPE_CHAT_GROUP,
-                              child: Text('Chat Group')),
+                            value: PrincipalType.PRINCIPAL_TYPE_CHAT_GROUP,
+                            child: Text('Chat Group'),
+                          ),
                         ],
                         onChanged: (v) {
                           if (v != null) setState(() => _principalType = v);
@@ -129,14 +134,17 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
                         initialValue: _selectedRole,
                         items: const [
                           DropdownMenuItem(
-                              value: AccessRole.ACCESS_ROLE_READER,
-                              child: Text('Reader')),
+                            value: AccessRole.ACCESS_ROLE_READER,
+                            child: Text('Reader'),
+                          ),
                           DropdownMenuItem(
-                              value: AccessRole.ACCESS_ROLE_WRITER,
-                              child: Text('Writer')),
+                            value: AccessRole.ACCESS_ROLE_WRITER,
+                            child: Text('Writer'),
+                          ),
                           DropdownMenuItem(
-                              value: AccessRole.ACCESS_ROLE_OWNER,
-                              child: Text('Owner')),
+                            value: AccessRole.ACCESS_ROLE_OWNER,
+                            child: Text('Owner'),
+                          ),
                         ],
                         onChanged: (v) {
                           if (v != null) setState(() => _selectedRole = v);
@@ -172,14 +180,17 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: theme.colorScheme.error),
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: theme.colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(friendlyError(error)),
                   const SizedBox(height: 16),
                   FilledButton.tonal(
-                    onPressed: () => ref
-                        .invalidate(listAccessProvider(widget.contentId)),
+                    onPressed: () =>
+                        ref.invalidate(listAccessProvider(widget.contentId)),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -191,10 +202,13 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.people_outline,
-                          size: 48,
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withAlpha(120)),
+                      Icon(
+                        Icons.people_outline,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant.withAlpha(
+                          120,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No access grants yet',
@@ -208,7 +222,10 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 itemCount: grants.length,
                 itemBuilder: (context, index) {
                   final grant = grants[index];
@@ -231,14 +248,16 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
   Future<void> _grantAccess() async {
     final principalId = _principalIdController.text.trim();
     if (principalId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Principal ID is required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Principal ID is required')));
       return;
     }
 
     try {
-      await ref.read(accessNotifierProvider.notifier).grantAccess(
+      await ref
+          .read(accessNotifierProvider.notifier)
+          .grantAccess(
             mediaId: widget.contentId,
             principalId: principalId,
             principalType: _principalType,
@@ -248,15 +267,15 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
         _principalIdController.clear();
         setState(() => _showGrantForm = false);
         ref.invalidate(listAccessProvider(widget.contentId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access granted')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Access granted')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }
@@ -267,7 +286,8 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Revoke Access'),
         content: Text(
-            'Revoke access for ${grant.principalId} (${grant.principalType.name})?'),
+          'Revoke access for ${grant.principalId} (${grant.principalType.name})?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -284,21 +304,23 @@ class _FileAccessScreenState extends ConsumerState<FileAccessScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await ref.read(accessNotifierProvider.notifier).revokeAccess(
+        await ref
+            .read(accessNotifierProvider.notifier)
+            .revokeAccess(
               mediaId: widget.contentId,
               principalId: grant.principalId,
             );
         if (mounted) {
           ref.invalidate(listAccessProvider(widget.contentId));
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Access revoked')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Access revoked')));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(friendlyError(e))),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
         }
       }
     }

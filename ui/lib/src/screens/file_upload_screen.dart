@@ -18,7 +18,9 @@ class FileUploadScreen extends ConsumerStatefulWidget {
 class _FileUploadScreenState extends ConsumerState<FileUploadScreen> {
   final _formKey = GlobalKey<FormState>();
   final _filenameController = TextEditingController();
-  final _contentTypeController = TextEditingController(text: 'application/octet-stream');
+  final _contentTypeController = TextEditingController(
+    text: 'application/octet-stream',
+  );
 
   final bool _fileSelected = false;
   String? _selectedFileName;
@@ -58,7 +60,11 @@ class _FileUploadScreenState extends ConsumerState<FileUploadScreen> {
           // Header
           Row(
             children: [
-              Icon(Icons.upload_file, size: 28, color: theme.colorScheme.primary),
+              Icon(
+                Icons.upload_file,
+                size: 28,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 12),
               Text(
                 'Upload File',
@@ -177,8 +183,9 @@ class _FileUploadScreenState extends ConsumerState<FileUploadScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed:
-                          uploadState.isUploading ? null : () => context.go('/files'),
+                      onPressed: uploadState.isUploading
+                          ? null
+                          : () => context.go('/files'),
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 12),
@@ -216,15 +223,17 @@ class _FileUploadScreenState extends ConsumerState<FileUploadScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      await ref.read(uploadNotifierProvider.notifier).createContent(
+      await ref
+          .read(uploadNotifierProvider.notifier)
+          .createContent(
             filename: _filenameController.text.trim(),
             contentType: _contentTypeController.text.trim(),
           );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }

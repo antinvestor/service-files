@@ -13,9 +13,17 @@ class AccessRoleBadge extends StatelessWidget {
     return StatusBadge.fromEnum(
       value: role,
       mapper: (r) => switch (r) {
-        AccessRole.ACCESS_ROLE_READER => ('Reader', Colors.blue, Icons.visibility),
+        AccessRole.ACCESS_ROLE_READER => (
+          'Reader',
+          Colors.blue,
+          Icons.visibility,
+        ),
         AccessRole.ACCESS_ROLE_WRITER => ('Writer', Colors.amber, Icons.edit),
-        AccessRole.ACCESS_ROLE_OWNER => ('Owner', Colors.green, Icons.admin_panel_settings),
+        AccessRole.ACCESS_ROLE_OWNER => (
+          'Owner',
+          Colors.green,
+          Icons.admin_panel_settings,
+        ),
         _ => ('Unknown', Colors.grey, null),
       },
     );

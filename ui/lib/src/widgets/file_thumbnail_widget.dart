@@ -78,8 +78,11 @@ class FileThumbnailWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlaceholder(ThemeData theme,
-      {bool isLoading = false, bool isError = false}) {
+  Widget _buildPlaceholder(
+    ThemeData theme, {
+    bool isLoading = false,
+    bool isError = false,
+  }) {
     return Container(
       width: size,
       height: size,

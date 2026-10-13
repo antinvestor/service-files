@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'files_transport_provider.dart';
 
 /// Get version history for a content item.
-final getVersionsProvider =
-    FutureProvider.family<List<FileVersion>, String>(
-        (ref, contentId) async {
+final getVersionsProvider = FutureProvider.family<List<FileVersion>, String>((
+  ref,
+  contentId,
+) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = GetVersionsRequest()..mediaId = contentId;
   final response = await client.getVersions(request);
@@ -41,5 +42,4 @@ class VersionNotifier extends Notifier<AsyncValue<void>> {
 }
 
 final versionNotifierProvider =
-    NotifierProvider<VersionNotifier, AsyncValue<void>>(
-        VersionNotifier.new);
+    NotifierProvider<VersionNotifier, AsyncValue<void>>(VersionNotifier.new);

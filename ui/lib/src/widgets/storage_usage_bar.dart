@@ -65,10 +65,7 @@ class StorageUsageBar extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      _barColor(pct).withAlpha(180),
-                      _barColor(pct),
-                    ],
+                    colors: [_barColor(pct).withAlpha(180), _barColor(pct)],
                   ),
                   borderRadius: BorderRadius.circular(6),
                 ),

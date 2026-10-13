@@ -1,3 +1,7 @@
+## 0.3.1
+
+- Release of the analytics spec work from 0.3.0 (no code changes).
+
 ## 0.3.0
 
 - `StorageDashboardScreen` keeps inventory totals on the `GetStorageStats`

@@ -98,10 +98,7 @@ class UploadNotifier extends Notifier<UploadState> {
         contentUri: response.contentUri,
       );
     } catch (e) {
-      state = state.copyWith(
-        isUploading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isUploading: false, error: e.toString());
       rethrow;
     }
   }
@@ -119,6 +116,6 @@ class UploadNotifier extends Notifier<UploadState> {
   }
 }
 
-final uploadNotifierProvider =
-    NotifierProvider<UploadNotifier, UploadState>(
-        UploadNotifier.new);
+final uploadNotifierProvider = NotifierProvider<UploadNotifier, UploadState>(
+  UploadNotifier.new,
+);
