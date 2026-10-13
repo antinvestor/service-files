@@ -6,11 +6,7 @@ import 'scan_status_badge.dart';
 
 /// A card showing a file preview with icon, filename, size, and status badges.
 class FilePreviewCard extends StatelessWidget {
-  const FilePreviewCard({
-    super.key,
-    required this.media,
-    this.onTap,
-  });
+  const FilePreviewCard({super.key, required this.media, this.onTap});
 
   final MediaMetadata media;
   final VoidCallback? onTap;

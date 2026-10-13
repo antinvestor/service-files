@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'files_transport_provider.dart';
 
 /// List access grants for a content item.
-final listAccessProvider =
-    FutureProvider.family<List<AccessGrant>, String>((ref, contentId) async {
+final listAccessProvider = FutureProvider.family<List<AccessGrant>, String>((
+  ref,
+  contentId,
+) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = ListAccessRequest()..mediaId = contentId;
   final response = await client.listAccess(request);
@@ -62,5 +64,4 @@ class AccessNotifier extends Notifier<AsyncValue<void>> {
 }
 
 final accessNotifierProvider =
-    NotifierProvider<AccessNotifier, AsyncValue<void>>(
-        AccessNotifier.new);
+    NotifierProvider<AccessNotifier, AsyncValue<void>>(AccessNotifier.new);

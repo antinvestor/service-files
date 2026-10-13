@@ -50,10 +50,7 @@ class FilesRouteModule extends RouteModule {
               final id = state.pathParameters['contentId'] ?? '';
               final extra = state.extra;
               final media = extra is MediaMetadata ? extra : null;
-              return FileDetailScreen(
-                contentId: id,
-                initialMedia: media,
-              );
+              return FileDetailScreen(contentId: id, initialMedia: media);
             },
             routes: [
               GoRoute(
@@ -116,48 +113,48 @@ class FilesRouteModule extends RouteModule {
 
   @override
   Map<String, Set<String>> get routePermissions => {
-        '/files': {'file_view'},
-        '/files/upload': {'file_upload'},
-        '/files/storage': {'file_view'},
-        '/files/retention': {'file_retention_manage'},
-        '/files/:contentId': {'file_view'},
-        '/files/:contentId/access': {'file_access_manage'},
-      };
+    '/files': {'file_view'},
+    '/files/upload': {'file_upload'},
+    '/files/storage': {'file_view'},
+    '/files/retention': {'file_retention_manage'},
+    '/files/:contentId': {'file_view'},
+    '/files/:contentId/access': {'file_access_manage'},
+  };
 
   @override
   PermissionManifest get permissionManifest => const PermissionManifest(
-        namespace: 'service_files',
-        permissions: [
-          PermissionEntry(
-            key: 'file_view',
-            label: 'View Files',
-            scope: PermissionScope.service,
-          ),
-          PermissionEntry(
-            key: 'file_upload',
-            label: 'Upload Files',
-            scope: PermissionScope.action,
-          ),
-          PermissionEntry(
-            key: 'file_delete',
-            label: 'Delete Files',
-            scope: PermissionScope.action,
-          ),
-          PermissionEntry(
-            key: 'file_access_manage',
-            label: 'Manage File Access',
-            scope: PermissionScope.feature,
-          ),
-          PermissionEntry(
-            key: 'file_version_manage',
-            label: 'Manage File Versions',
-            scope: PermissionScope.feature,
-          ),
-          PermissionEntry(
-            key: 'file_retention_manage',
-            label: 'Manage Retention Policies',
-            scope: PermissionScope.feature,
-          ),
-        ],
-      );
+    namespace: 'service_files',
+    permissions: [
+      PermissionEntry(
+        key: 'file_view',
+        label: 'View Files',
+        scope: PermissionScope.service,
+      ),
+      PermissionEntry(
+        key: 'file_upload',
+        label: 'Upload Files',
+        scope: PermissionScope.action,
+      ),
+      PermissionEntry(
+        key: 'file_delete',
+        label: 'Delete Files',
+        scope: PermissionScope.action,
+      ),
+      PermissionEntry(
+        key: 'file_access_manage',
+        label: 'Manage File Access',
+        scope: PermissionScope.feature,
+      ),
+      PermissionEntry(
+        key: 'file_version_manage',
+        label: 'Manage File Versions',
+        scope: PermissionScope.feature,
+      ),
+      PermissionEntry(
+        key: 'file_retention_manage',
+        label: 'Manage Retention Policies',
+        scope: PermissionScope.feature,
+      ),
+    ],
+  );
 }

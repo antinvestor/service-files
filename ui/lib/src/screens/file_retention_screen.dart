@@ -53,10 +53,7 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
               ),
               FilledButton.icon(
                 onPressed: () => setState(() => _showForm = !_showForm),
-                icon: Icon(
-                  _showForm ? Icons.close : Icons.add,
-                  size: 18,
-                ),
+                icon: Icon(_showForm ? Icons.close : Icons.add, size: 18),
                 label: Text(_showForm ? 'Cancel' : 'Apply Policy'),
               ),
             ],
@@ -102,11 +99,14 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                             : _policyIdController.text,
                         items: asyncPolicies.whenOrNull(
                           data: (policies) => policies
-                              .map((p) => DropdownMenuItem(
-                                    value: p.policyId,
-                                    child: Text(
-                                        '${p.name} (${p.retentionDays}d)'),
-                                  ))
+                              .map(
+                                (p) => DropdownMenuItem(
+                                  value: p.policyId,
+                                  child: Text(
+                                    '${p.name} (${p.retentionDays}d)',
+                                  ),
+                                ),
+                              )
                               .toList(),
                         ),
                         onChanged: (v) {
@@ -144,8 +144,11 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: theme.colorScheme.error),
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: theme.colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(friendlyError(error)),
                   const SizedBox(height: 16),
@@ -163,10 +166,13 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.schedule,
-                          size: 48,
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withAlpha(120)),
+                      Icon(
+                        Icons.schedule,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant.withAlpha(
+                          120,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No retention policies configured',
@@ -180,8 +186,10 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
               }
 
               return ListView.separated(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 itemCount: policies.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
@@ -200,17 +208,16 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
     final mediaId = _mediaIdController.text.trim();
     final policyId = _policyIdController.text.trim();
     if (mediaId.isEmpty || policyId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All fields are required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('All fields are required')));
       return;
     }
 
     try {
-      await ref.read(retentionNotifierProvider.notifier).setRetentionPolicy(
-            mediaId: mediaId,
-            policyId: policyId,
-          );
+      await ref
+          .read(retentionNotifierProvider.notifier)
+          .setRetentionPolicy(mediaId: mediaId, policyId: policyId);
       if (mounted) {
         _mediaIdController.clear();
         _policyIdController.clear();
@@ -222,9 +229,9 @@ class _FileRetentionScreenState extends ConsumerState<FileRetentionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }
@@ -276,7 +283,9 @@ class _RetentionPolicyCard extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: (isDelete ? Colors.red : Colors.blue)
                               .withAlpha(25),

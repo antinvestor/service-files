@@ -5,11 +5,7 @@ import 'access_role_badge.dart';
 
 /// Displays an access grant as a chip with principal type icon, name, and role badge.
 class FileAccessChip extends StatelessWidget {
-  const FileAccessChip({
-    super.key,
-    required this.grant,
-    this.onRevoke,
-  });
+  const FileAccessChip({super.key, required this.grant, this.onRevoke});
 
   final AccessGrant grant;
   final VoidCallback? onRevoke;

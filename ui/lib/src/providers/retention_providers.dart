@@ -6,15 +6,16 @@ import 'files_transport_provider.dart';
 /// Get retention policy for a content item.
 final getRetentionPolicyProvider =
     FutureProvider.family<RetentionPolicy, String>((ref, mediaId) async {
-  final client = ref.watch(filesServiceClientProvider);
-  final request = GetRetentionPolicyRequest()..mediaId = mediaId;
-  final response = await client.getRetentionPolicy(request);
-  return response.policy;
-});
+      final client = ref.watch(filesServiceClientProvider);
+      final request = GetRetentionPolicyRequest()..mediaId = mediaId;
+      final response = await client.getRetentionPolicy(request);
+      return response.policy;
+    });
 
 /// List all retention policies.
-final listRetentionPoliciesProvider =
-    FutureProvider<List<RetentionPolicy>>((ref) async {
+final listRetentionPoliciesProvider = FutureProvider<List<RetentionPolicy>>((
+  ref,
+) async {
   final client = ref.watch(filesServiceClientProvider);
   final request = ListRetentionPoliciesRequest();
   final response = await client.listRetentionPolicies(request);
@@ -49,4 +50,5 @@ class RetentionNotifier extends Notifier<AsyncValue<void>> {
 
 final retentionNotifierProvider =
     NotifierProvider<RetentionNotifier, AsyncValue<void>>(
-        RetentionNotifier.new);
+      RetentionNotifier.new,
+    );

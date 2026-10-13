@@ -16,18 +16,15 @@ class FilesBrowserScreen extends ConsumerStatefulWidget {
   const FilesBrowserScreen({super.key});
 
   @override
-  ConsumerState<FilesBrowserScreen> createState() =>
-      _FilesBrowserScreenState();
+  ConsumerState<FilesBrowserScreen> createState() => _FilesBrowserScreenState();
 }
 
 class _FilesBrowserScreenState extends ConsumerState<FilesBrowserScreen> {
   String _searchQuery = '';
   MediaState? _stateFilter;
 
-  MediaSearchParams get _searchParams => MediaSearchParams(
-        query: _searchQuery,
-        state: _stateFilter,
-      );
+  MediaSearchParams get _searchParams =>
+      MediaSearchParams(query: _searchQuery, state: _stateFilter);
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +57,11 @@ class _FilesBrowserScreenState extends ConsumerState<FilesBrowserScreen> {
               children: [
                 _filterChip(theme, null, 'All'),
                 const SizedBox(width: 8),
-                _filterChip(theme, MediaState.MEDIA_STATE_AVAILABLE, 'Available'),
+                _filterChip(
+                  theme,
+                  MediaState.MEDIA_STATE_AVAILABLE,
+                  'Available',
+                ),
                 const SizedBox(width: 8),
                 _filterChip(theme, MediaState.MEDIA_STATE_CREATING, 'Creating'),
                 const SizedBox(width: 8),
@@ -81,8 +82,11 @@ class _FilesBrowserScreenState extends ConsumerState<FilesBrowserScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: theme.colorScheme.error),
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: theme.colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text('$error', style: theme.textTheme.bodyLarge),
                   const SizedBox(height: 16),
@@ -120,13 +124,13 @@ class _FilesBrowserScreenState extends ConsumerState<FilesBrowserScreen> {
                   selected: selected,
                   onSelectChanged: (_) => onSelect(),
                   cells: [
-                    DataCell(Text(
-                      m.filename,
-                      overflow: TextOverflow.ellipsis,
-                    )),
+                    DataCell(Text(m.filename, overflow: TextOverflow.ellipsis)),
                     DataCell(Text(m.contentType)),
-                    DataCell(Text(
-                        FilePreviewCard.formatFileSize(m.fileSizeBytes.toInt()))),
+                    DataCell(
+                      Text(
+                        FilePreviewCard.formatFileSize(m.fileSizeBytes.toInt()),
+                      ),
+                    ),
                     DataCell(MediaStateBadge(state: m.state)),
                     DataCell(ScanStatusBadge(status: m.scanStatus)),
                     DataCell(Text(m.createdAt.toDateTime().toIso8601String())),
