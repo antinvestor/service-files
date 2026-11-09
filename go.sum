@@ -4,10 +4,10 @@ buf.build/gen/go/antinvestor/files/connectrpc/go/v2 v2.0.2-20260831171628-44ac94
 buf.build/gen/go/antinvestor/files/connectrpc/go/v2 v2.0.2-20260831171628-44ac946cc1ed.1/go.mod h1:gZYz5af+z2i3QpFZkOCYbo3LmK8Sdj79CVc7eclWdk4=
 buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.12-20260831171628-44ac946cc1ed.2 h1:qi0gxAqjoJ/uNQh/V1sGenoKTpzlgZv6KRNSR6aJMHc=
 buf.build/gen/go/antinvestor/files/protocolbuffers/go v1.36.12-20260831171628-44ac946cc1ed.2/go.mod h1:SBTRWEDRNjIEtp73vkstgPAngZ2ReBAgV1eUbsaF6ok=
-buf.build/gen/go/antinvestor/ocr/connectrpc/go/v2 v2.0.2-20261010180548-e6a51a2ebf15.1 h1:c3sXfqcrlYmYqHzyCESqnVIzOj3vpkHC7LaivJwK4bg=
-buf.build/gen/go/antinvestor/ocr/connectrpc/go/v2 v2.0.2-20261010180548-e6a51a2ebf15.1/go.mod h1:S9NfvhBL7HHU/29YP28CVIZa6Pr12rs9JL4XTk3FuZc=
-buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20261010180548-e6a51a2ebf15.2 h1:s/4/xkhwYwxs/ZFQ8nVnoQVBu55KPfIs0RuGiCY9j9Q=
-buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20261010180548-e6a51a2ebf15.2/go.mod h1:7i1JZ9XndSs6ETMOkB/5JlmW19SHv4t1g3/IXwxA3q8=
+buf.build/gen/go/antinvestor/ocr/connectrpc/go/v2 v2.0.2-20261103174907-626906f91ed7.1 h1:BNaPSBIlzpHBRBNlEwxZYshsuEqSukZv1GD56WUzz58=
+buf.build/gen/go/antinvestor/ocr/connectrpc/go/v2 v2.0.2-20261103174907-626906f91ed7.1/go.mod h1:0+HdS3uyKv+LkPmoEzZ8b7wJZ3s/m/3r6/r1SJwUj2Q=
+buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20261103174907-626906f91ed7.2 h1:qBsqUhfBHyRTuSw74dmqtuvY9FUbEJqpI01bDkkFkVw=
+buf.build/gen/go/antinvestor/ocr/protocolbuffers/go v1.36.12-20261103174907-626906f91ed7.2/go.mod h1:7i1JZ9XndSs6ETMOkB/5JlmW19SHv4t1g3/IXwxA3q8=
 buf.build/gen/go/antinvestor/property/connectrpc/go/v2 v2.0.2-20260831163205-52530d1094cd.1 h1:XLCYyHw80yCFTNTf1OWgoyOMVAXRLpUBNpmosYKybyE=
 buf.build/gen/go/antinvestor/property/connectrpc/go/v2 v2.0.2-20260831163205-52530d1094cd.1/go.mod h1:nix6Ik3zGWu7YVne7Q0TsKVdtYxJXw/xZf+qDRWLM38=
 buf.build/gen/go/antinvestor/property/protocolbuffers/go v1.36.12-20260831163205-52530d1094cd.2 h1:7Xrue0viIeY2qbR1G+nwAYSbegslkMquNuizbysmt9g=
