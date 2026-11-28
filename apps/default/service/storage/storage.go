@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/v3/data"
@@ -32,6 +33,15 @@ type MediaRepository interface {
 	GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error)
 	GetMediaMetadataByHash(ctx context.Context, ownerID types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error)
 	Search(ctx context.Context, query *data.SearchQuery) (workerpool.JobResultPipe[*types.MediaMetadata], error)
+	DeleteMedia(ctx context.Context, mediaID types.MediaID) error
+	// StoreMediaMetadataWithObjectLock inserts the row while holding the
+	// advisory lock of the object it references (bucket/key); ensureObject
+	// runs under the lock before the insert.
+	StoreMediaMetadataWithObjectLock(ctx context.Context, mediaMetadata *types.MediaMetadata, bucket, key string, ensureObject func(context.Context) error) error
+	// ReleaseMediaObject, under the same lock, deletes the row (deleteRow)
+	// and calls removeObject when no other live row in any tenant or
+	// partition still references the object.
+	ReleaseMediaObject(ctx context.Context, mediaMetadata *types.MediaMetadata, bucket, key string, deleteRow bool, removeObject func(context.Context) error) error
 }
 
 type ThumbnailsRepository interface {
@@ -39,3 +49,8 @@ type ThumbnailsRepository interface {
 	GetThumbnail(ctx context.Context, mediaID types.MediaID, width, height int, resizeMethod string) (*types.ThumbnailMetadata, error)
 	GetThumbnails(ctx context.Context, mediaID types.MediaID) ([]*types.ThumbnailMetadata, error)
 }
+
+// ErrVersionRestoreUnsupported is returned when restoring a file version:
+// versions record only a content hash, not the storage location and
+// encryption parameters a media row needs to read its content.
+var ErrVersionRestoreUnsupported = errors.New("restoring a file version is not supported")

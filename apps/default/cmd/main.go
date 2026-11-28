@@ -53,7 +53,13 @@ func main() {
 		util.Log(ctx).WithError(err).Fatal("invalid files configuration")
 	}
 
-	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg), frame.WithDatastore())
+	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithConfig(&cfg),
+		// Deleting media counts an object's references across every tenant as
+		// a match-all SystemPrincipal; secure tenancy modes refuse that
+		// elevation unless the service is allowlisted. Must precede
+		// WithDatastore, which configures the tenancy provider.
+		frame.WithSystemPrincipalAllowGlobal(repository.ObjectReleaseServiceName),
+		frame.WithDatastore())
 
 	svc.Setup().RegisterFunc(setup.NameMigrate, func(ctx context.Context) error {
 		return repository.Migrate(ctx, svc.DatastoreManager(), cfg.GetDatabaseMigrationPath())
@@ -148,7 +154,6 @@ func main() {
 	// Permission registration stays setup-only; runtime does not re-POST manifests.
 	serviceOptions := []frame.Option{defaultServer, frame.WithRegisterEvents(
 		events.NewAuditSaveHandler(auditRepo),
-		events.NewMetadataSaveHandler(mediaRepo),
 	)}
 
 	thumbnailQueueHandler := queue.NewThumbnailQueueHandler(svc, metadataStore, storageProvider)

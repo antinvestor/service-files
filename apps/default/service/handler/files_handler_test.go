@@ -33,9 +33,11 @@ import (
 	"github.com/pitabwire/frame/v3"
 	"github.com/pitabwire/frame/v3/frametests/definition"
 	"github.com/pitabwire/frame/v3/security"
+	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"gocloud.dev/gcerrors"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -1606,6 +1608,66 @@ func (suite *FileServerTestSuite) Test_FileServer_DeleteContent() {
 				})
 			}
 		})
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_DeleteContent_RemovesStoredObject() {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
+		const owner = "@delete-owner:example.com"
+		content := []byte("delete me " + util.IDString())
+
+		uploadRes, err := mediaService.UploadFile(ctx, &business.UploadRequest{
+			OwnerID:       owner,
+			UploadName:    "delete.txt",
+			ContentType:   "text/plain",
+			FileSizeBytes: types.FileSizeBytes(len(content)),
+			FileData:      bytes.NewReader(content),
+			Config:        cfg,
+		})
+		require.NoError(t, err)
+
+		meta, err := handler.db.GetMediaMetadata(ctx, uploadRes.MediaID)
+		require.NoError(t, err)
+		require.NotNil(t, meta)
+		require.NotEmpty(t, meta.ObjectKey)
+		_, finish, err := handler.provider.DownloadFile(ctx, meta.BucketName, types.Path(meta.ObjectKey))
+		require.NoError(t, err, "precondition: object is stored")
+		finish()
+
+		caseCtx := claimsCtx(ctx, owner)
+		resp, err := handler.DeleteContent(caseCtx, &filesv1.DeleteContentRequest{MediaId: string(uploadRes.MediaID)})
+		require.NoError(t, err)
+		require.True(t, resp.GetSuccess())
+
+		_, _, err = handler.provider.DownloadFile(ctx, meta.BucketName, types.Path(meta.ObjectKey))
+		require.Equal(t, gcerrors.NotFound, gcerrors.Code(err), "DeleteContent must remove the stored object")
+		gone, err := handler.db.GetMediaMetadata(ctx, uploadRes.MediaID)
+		require.NoError(t, err)
+		require.Nil(t, gone, "DeleteContent must remove the row")
+	})
+}
+
+func (suite *FileServerTestSuite) Test_FileServer_RestoreVersion_IsUnimplemented() {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
+		const owner = "@restore-owner:example.com"
+		content := []byte("restore " + util.IDString())
+		uploadRes, err := mediaService.UploadFile(ctx, &business.UploadRequest{
+			OwnerID:       owner,
+			UploadName:    "restore.txt",
+			ContentType:   "text/plain",
+			FileSizeBytes: types.FileSizeBytes(len(content)),
+			FileData:      bytes.NewReader(content),
+			Config:        cfg,
+		})
+		require.NoError(t, err)
+
+		_, err = handler.RestoreVersion(claimsCtx(ctx, owner), &filesv1.RestoreVersionRequest{
+			MediaId: string(uploadRes.MediaID),
+			Version: 1,
+		})
+		require.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
 	})
 }
 

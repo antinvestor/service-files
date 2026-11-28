@@ -27,6 +27,9 @@ type ServiceResources struct {
 	RetentionPolicyRepo     repository.RetentionPolicyRepository
 	FileRetentionRepo       repository.FileRetentionRepository
 	StorageStatsRepo        repository.StorageStatsRepository
+	// Tenancy is the RLS provider the service runs with, so tests can switch
+	// its security mode once the service is up.
+	Tenancy *rlstest.Provider
 }
 
 type BaseTestSuite struct {
@@ -52,8 +55,47 @@ func (bs *BaseTestSuite) SetupSuite() {
 }
 
 func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.DependencyOption) (context.Context, *frame.Service, ServiceResources) {
-
 	ctx := t.Context()
+	primary := bs.randomisedDS(t, depOpts, depOpts.Prefix())
+	return bs.newService(t, ctx, primary, nil)
+}
+
+// CreateServiceWithOptions is CreateService with extra frame options applied
+// before the datastore is configured, e.g. a tenancy security mode or a
+// global-access allowlist.
+func (bs *BaseTestSuite) CreateServiceWithOptions(t *testing.T, depOpts *definition.DependencyOption, opts ...frame.Option) (context.Context, *frame.Service, ServiceResources) {
+	ctx := t.Context()
+	primary := bs.randomisedDS(t, depOpts, depOpts.Prefix())
+	return bs.newService(t, ctx, primary, nil, opts...)
+}
+
+// CreateServiceWithReplica is CreateService with reads routed to a separate,
+// independently migrated database that receives no writes from the service.
+// It models a lagging read replica: tests seed it explicitly through the
+// returned replica resources, so a read that should have gone to the primary
+// observes stale data.
+func (bs *BaseTestSuite) CreateServiceWithReplica(t *testing.T, depOpts *definition.DependencyOption) (context.Context, *frame.Service, ServiceResources, ServiceResources) {
+	ctx := t.Context()
+	primary := bs.randomisedDS(t, depOpts, depOpts.Prefix())
+	replica := bs.randomisedDS(t, depOpts, depOpts.Prefix()+"_replica")
+
+	_, _, replicaRes := bs.newService(t, ctx, replica, nil)
+	svcCtx, svc, res := bs.newService(t, ctx, primary, []string{replica})
+	return svcCtx, svc, res, replicaRes
+}
+
+func (bs *BaseTestSuite) randomisedDS(t *testing.T, depOpts *definition.DependencyOption, name string) string {
+	ctx := t.Context()
+	res := depOpts.ByIsDatabase(ctx)
+	testDS, cleanup, err := res.GetRandomisedDS(ctx, name)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		cleanup(ctx)
+	})
+	return testDS.String()
+}
+
+func (bs *BaseTestSuite) newService(t *testing.T, ctx context.Context, primaryDS string, replicaDS []string, extraOpts ...frame.Option) (context.Context, *frame.Service, ServiceResources) {
 	profileConfig, err := config.FromEnv[aconfig.FilesConfig]()
 	require.NoError(t, err)
 
@@ -79,29 +121,26 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 	err = profileConfig.Normalise()
 	require.NoError(t, err)
 
-	res := depOpts.ByIsDatabase(ctx)
-	testDS, cleanup, err0 := res.GetRandomisedDS(ctx, depOpts.Prefix())
-	require.NoError(t, err0)
-
-	t.Cleanup(func() {
-		cleanup(ctx)
-	})
-
-	profileConfig.DatabasePrimaryURL = []string{testDS.String()}
-	profileConfig.DatabaseReplicaURL = []string{}
+	profileConfig.DatabasePrimaryURL = []string{primaryDS}
+	profileConfig.DatabaseReplicaURL = replicaDS
+	if profileConfig.DatabaseReplicaURL == nil {
+		profileConfig.DatabaseReplicaURL = []string{}
+	}
 
 	// The postgres testcontainer user is a SUPERUSER which bypasses RLS even
 	// with FORCE ROW LEVEL SECURITY, so tenancy isolation would never be
 	// exercised. rlstest drops application connections to an unprivileged
 	// role after migration so the suite runs with RLS actually enforced.
-	require.NoError(t, rlstest.CreateRole(ctx, testDS.String()))
+	require.NoError(t, rlstest.CreateRole(ctx, primaryDS))
 	rlsProv := rlstest.New()
 
-	ctx, svc := frame.NewServiceWithContext(ctx, frame.WithName("profile tests"),
+	opts := append([]frame.Option{
+		frame.WithName("profile tests"),
 		frame.WithConfig(&profileConfig),
 		frame.WithTenancyProvider(rlsProv),
-		frame.WithDatastore(),
-		frametests.WithNoopDriver())
+	}, extraOpts...)
+	opts = append(opts, frame.WithDatastore(), frametests.WithNoopDriver())
+	ctx, svc := frame.NewServiceWithContext(ctx, opts...)
 
 	workMan := svc.WorkManager()
 	dbManager := svc.DatastoreManager()
@@ -116,18 +155,18 @@ func (bs *BaseTestSuite) CreateService(t *testing.T, depOpts *definition.Depende
 		RetentionPolicyRepo:     repository.NewRetentionPolicyRepository(ctx, dbPool, workMan),
 		FileRetentionRepo:       repository.NewFileRetentionRepository(ctx, dbPool, workMan),
 		StorageStatsRepo:        repository.NewStorageStatsRepository(ctx, dbPool, workMan),
+		Tenancy:                 rlsProv,
 	}
 
 	svc.Init(ctx, frame.WithRegisterEvents(
-		events2.NewAuditSaveHandler(deps.AuditRepository),
-		events2.NewMetadataSaveHandler(deps.MediaRepository)))
+		events2.NewAuditSaveHandler(deps.AuditRepository)))
 
 	err = repository.Migrate(ctx, dbManager, "../../migrations/0001")
 	require.NoError(t, err)
 
 	// Migration ran as superuser; grant the restricted role access to the
 	// migrated tables, then switch all application queries to it.
-	require.NoError(t, rlstest.GrantAll(ctx, testDS.String()))
+	require.NoError(t, rlstest.GrantAll(ctx, primaryDS))
 	rlsProv.Enable()
 
 	err = svc.Run(ctx, "")

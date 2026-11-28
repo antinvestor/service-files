@@ -563,10 +563,6 @@ type storageStatsStore interface {
 	GetLatestStats(ctx context.Context) (latestStorageStats, error)
 }
 
-type deleteStore interface {
-	DeleteMedia(ctx context.Context, mediaID types.MediaID) error
-}
-
 type multipartStore interface {
 	StoreUpload(ctx context.Context, upload interface {
 		GetID() string
@@ -1153,11 +1149,11 @@ func (s *FileServer) DeleteContent(ctx context.Context, req *filesv1.DeleteConte
 	if err = s.authz.CanDeleteFile(ctx, sub, mediaID); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	}
-	deleter, ok := s.db.(deleteStore)
-	if !ok {
-		return nil, connect.Errorf(connect.CodeInternal, "delete operation unavailable")
-	}
-	if err = deleter.DeleteMedia(ctx, types.MediaID(mediaID)); err != nil {
+	cfg := s.Service.Config().(*config.FilesConfig)
+	if err = s.mediaService.DeleteMedia(ctx, types.MediaID(mediaID), cfg); err != nil {
+		if errors.Is(err, business.ErrMediaNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
+		}
 		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 	return &filesv1.DeleteContentResponse{Success: true}, nil
@@ -1321,6 +1317,9 @@ func (s *FileServer) RestoreVersion(ctx context.Context, req *filesv1.RestoreVer
 		return nil, connect.Errorf(connect.CodeInternal, "version storage is unavailable")
 	}
 	metadata, err := versionsDB.RestoreMediaToVersion(ctx, req.GetMediaId(), int(req.GetVersion()), sub)
+	if errors.Is(err, storage.ErrVersionRestoreUnsupported) {
+		return nil, connect.NewError(connect.CodeUnimplemented, err.Error()).WithCause(err)
+	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}

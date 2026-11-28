@@ -13,7 +13,6 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/business"
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/apps/default/service/utils"
 	"github.com/pitabwire/frame/v3"
 	"github.com/pitabwire/util"
 )
@@ -175,14 +174,14 @@ func (h *publicMediaHandler) serveContent(w http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	key, err := utils.GetPathFromBase64Hash(meta.Base64Hash, h.cfg.AbsBasePath)
+	bucket, key, err := storage.ResolveObjectLocation(h.provider, meta, h.cfg.AbsBasePath)
 	if err != nil {
 		logger.WithError(err).Error("public media: could not derive object path")
 		publicError(w, http.StatusInternalServerError)
 		return
 	}
 
-	rs, err := storage.NewBlobReadSeeker(ctx, h.provider, h.provider.GetBucket(meta.IsPublic), types.Path(key), int64(meta.FileSizeBytes))
+	rs, err := storage.NewBlobReadSeeker(ctx, h.provider, bucket, types.Path(key), int64(meta.FileSizeBytes))
 	if err != nil {
 		logger.WithError(err).Error("public media: could not open object")
 		publicError(w, http.StatusInternalServerError)

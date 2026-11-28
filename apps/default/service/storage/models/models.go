@@ -37,6 +37,9 @@ type MediaMetadata struct {
 	Hash       string `gorm:"type:TEXT"`
 	BucketName string `gorm:"type:TEXT"`
 	Provider   string `gorm:"type:TEXT"`
+	// ObjectKey is the bucket-relative key the content was written under.
+	// Empty on rows written before keys were persisted (legacy layout).
+	ObjectKey string `gorm:"type:TEXT"`
 
 	Properties data.JSONMap
 }
@@ -53,6 +56,9 @@ func (mm *MediaMetadata) ToApi() *types.MediaMetadata {
 		OwnerID:           types.OwnerID(mm.OwnerID),
 		ServerName:        mm.ServerName,
 		IsPublic:          mm.Public,
+		BucketName:        mm.BucketName,
+		ObjectKey:         mm.ObjectKey,
+		StorageProvider:   mm.Provider,
 		TenantID:          mm.TenantID,
 		PartitionID:       mm.PartitionID,
 	}
@@ -100,6 +106,9 @@ func (mm *MediaMetadata) Fill(tmm *types.MediaMetadata) {
 	mm.OriginTs = int64(tmm.CreationTimestamp)
 	mm.Public = tmm.IsPublic
 	mm.ServerName = tmm.ServerName
+	mm.BucketName = tmm.BucketName
+	mm.ObjectKey = tmm.ObjectKey
+	mm.Provider = tmm.StorageProvider
 
 	if tmm.ThumbnailSize != nil {
 		if mm.Properties == nil {

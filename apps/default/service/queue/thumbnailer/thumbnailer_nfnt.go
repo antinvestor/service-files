@@ -108,13 +108,12 @@ func GenerateThumbnail(
 
 func readFile(ctx context.Context, provider storage2.Provider, absBasePath config.Path, mediaMetadata *types.MediaMetadata) (image.Image, error) {
 
-	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
+	downloadBucket, key, err := storage2.ResolveObjectLocation(provider, mediaMetadata, absBasePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file path from metadata: %w", err)
 	}
 
-	downloadBucket := provider.GetBucket(mediaMetadata.IsPublic)
-	downloader, finalizer, err := provider.DownloadFile(ctx, downloadBucket, types.Path(finalPath))
+	downloader, finalizer, err := provider.DownloadFile(ctx, downloadBucket, types.Path(key))
 	if err != nil {
 		return nil, err
 	}
@@ -252,21 +251,16 @@ func createThumbnail(
 		sourcePath = encryptedPath
 	}
 
-	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata, absBasePath, logger)
-	if err != nil {
-		return err
-	}
-	if duplicate {
-		logger.With("dst", finalPath).Debug("file already stored, discarding duplicate")
-	}
-
-	err = db.StoreThumbnail(ctx, thumbnailMetadata)
+	duplicate, err := storage2.StoreMediaObject(ctx, provider, db, sourcePath, thumbnailMetadata.MediaMetadata)
 	if err != nil {
 		logger.WithError(err).With(
 			"actual_width", width,
 			"actual_height", height,
-		).Error("failed to store thumbnail metadata")
+		).Error("failed to store thumbnail")
 		return err
+	}
+	if duplicate {
+		logger.With("key", thumbnailMetadata.ObjectKey).Debug("thumbnail already stored, discarding duplicate")
 	}
 
 	return nil

@@ -10,6 +10,7 @@ import (
 
 	"github.com/antinvestor/service-files/apps/default/service/storage"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/s3"
+	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -22,12 +23,6 @@ import (
 )
 
 const (
-	// MinIO stopped publishing images to Docker Hub and Quay; Chainguard
-	// ships a maintained build whose entrypoint is the minio binary. Its free
-	// tier only publishes floating tags, so pin the multi-arch index digest
-	// for reproducible runs. This digest is minio RELEASE.2026-11-23T00-10-37Z.
-	minioImage     = "cgr.dev/chainguard/minio@sha256:b288eaa709ba2f799a39e9a8ceda71a08fabf90109b12c90badba9afff29485c"
-	minioRegion    = "us-east-1"
 	privateBucket  = "files-private"
 	publicBucket   = "files-public"
 	providerS3Name = "S3"
@@ -51,7 +46,7 @@ func TestS3MinioTestSuite(t *testing.T) {
 func (s *S3MinioTestSuite) SetupSuite() {
 	ctx := context.Background()
 
-	container, err := tcminio.Run(ctx, minioImage)
+	container, err := tcminio.Run(ctx, tests.MinioImage)
 	s.Require().NoError(err, "start minio container")
 	s.container = container
 
@@ -62,7 +57,7 @@ func (s *S3MinioTestSuite) SetupSuite() {
 	s.rawClient = awss3.NewFromConfig(aws.Config{
 		Credentials:  credentials.NewStaticCredentialsProvider(container.Username, container.Password, ""),
 		BaseEndpoint: aws.String(s.endpoint),
-		Region:       minioRegion,
+		Region:       tests.MinioRegion,
 	}, func(o *awss3.Options) { o.UsePathStyle = true })
 
 	for _, b := range []string{privateBucket, publicBucket} {
@@ -80,7 +75,7 @@ func (s *S3MinioTestSuite) TearDownSuite() {
 func (s *S3MinioTestSuite) newProvider(t *testing.T) storage.Provider {
 	t.Helper()
 	p := s3.NewProvider(providerS3Name, privateBucket, publicBucket,
-		s.endpoint, minioRegion, s.container.Password, "", s.container.Username)
+		s.endpoint, tests.MinioRegion, s.container.Password, "", s.container.Username)
 	require.NoError(t, p.Setup(t.Context()))
 	return p
 }
@@ -172,27 +167,41 @@ func (s *S3MinioTestSuite) TestDownloadFile_MissingObjectIsNotFound() {
 	require.Equal(t, gcerrors.NotFound, gcerrors.Code(err))
 }
 
-func (s *S3MinioTestSuite) TestDelete_RemovesObjectFromS3() {
-	t := s.T()
-	ctx := t.Context()
-	p := s.newProvider(t)
-	key := "delete/" + util.IDString()
-	content := []byte("to be deleted")
+func (s *S3MinioTestSuite) TestDeleteFile_RemovesObjectFromS3() {
+	testCases := []struct {
+		name   string
+		bucket string
+		// legacy keys are the absolute paths objects were uploaded under
+		// before keys became bucket-relative; they must stay deletable.
+		key string
+	}{
+		{name: "relative_key", bucket: privateBucket, key: "de/l/" + util.IDString() + "/file"},
+		{name: "legacy_absolute_key", bucket: publicBucket, key: "/tmp/media_store/d/e/" + util.IDString() + "/file"},
+	}
 
-	_, err := p.UploadFile(ctx, privateBucket, writeTempFile(t, content), types.Path(key))
-	require.NoError(t, err)
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			t := s.T()
+			ctx := t.Context()
+			p := s.newProvider(t)
 
-	bucket, err := p.Init(ctx, privateBucket)
-	require.NoError(t, err)
-	defer util.CloseAndLogOnError(ctx, bucket)
+			_, err := p.UploadFile(ctx, tc.bucket, writeTempFile(t, []byte("to be deleted")), types.Path(tc.key))
+			require.NoError(t, err)
+			_, err = s.objectBody(ctx, tc.bucket, tc.key)
+			require.NoError(t, err, "precondition: object stored in S3")
 
-	require.NoError(t, bucket.Delete(ctx, key))
+			require.NoError(t, p.DeleteFile(ctx, tc.bucket, types.Path(tc.key)))
 
-	_, err = s.objectBody(ctx, privateBucket, key)
-	require.Error(t, err, "object must be gone from S3 after delete")
+			_, err = s.objectBody(ctx, tc.bucket, tc.key)
+			require.Error(t, err, "object must be gone from S3 after delete")
 
-	_, _, err = p.DownloadFile(ctx, privateBucket, types.Path(key))
-	require.Equal(t, gcerrors.NotFound, gcerrors.Code(err))
+			_, _, err = p.DownloadFile(ctx, tc.bucket, types.Path(tc.key))
+			require.Equal(t, gcerrors.NotFound, gcerrors.Code(err))
+
+			require.NoError(t, p.DeleteFile(ctx, tc.bucket, types.Path(tc.key)),
+				"deleting an already-deleted object is a no-op so retries succeed")
+		})
+	}
 }
 
 func (s *S3MinioTestSuite) TestUploadFile_UnknownBucketFails() {

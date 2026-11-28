@@ -136,3 +136,42 @@ func TestProvider_ErrorsPropagate(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, exists, "failed upload must not leave an object behind")
 }
+
+func TestProvider_DeleteFile(t *testing.T) {
+	ctx := t.Context()
+	dir := t.TempDir()
+	mem := inspect(t, dir)
+	op := &recordingOpener{dirs: map[string]string{"bkt": dir}}
+	p := blobprovider.New("MEM", "bkt", "bkt", op.open)
+
+	testCases := []struct {
+		name    string
+		bucket  string
+		seed    bool
+		wantErr bool
+	}{
+		{name: "removes_existing_object", bucket: "bkt", seed: true},
+		{name: "missing_object_is_already_deleted", bucket: "bkt"},
+		{name: "unknown_bucket_fails", bucket: "missing", wantErr: true},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			key := "a/b/" + tc.name + "/file"
+			if tc.seed {
+				_, err := p.UploadFile(ctx, tc.bucket, writeSource(t, []byte("x")), types.Path(key))
+				require.NoError(t, err)
+			}
+
+			err := p.DeleteFile(ctx, tc.bucket, types.Path(key))
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			exists, err := mem.Exists(ctx, key)
+			require.NoError(t, err)
+			require.False(t, exists, "object must be gone after DeleteFile")
+		})
+	}
+}
