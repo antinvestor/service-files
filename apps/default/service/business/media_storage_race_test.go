@@ -12,9 +12,12 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/storage/connection"
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/s3"
+	"github.com/antinvestor/service-files/apps/default/service/storage/repository"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
+	"github.com/pitabwire/frame/v3"
 	"github.com/pitabwire/frame/v3/frametests/definition"
+	"github.com/pitabwire/frame/v3/tenancy"
 	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/require"
 )
@@ -189,4 +192,56 @@ func (s *MediaStorageS3TestSuite) TestDeleteMedia_ConcurrentDeletesRemoveSharedO
 			s.requireObject(t, ctx, meta.BucketName, meta.ObjectKey, false)
 		}
 	})
+}
+
+// Under a secure tenancy mode a match-all elevation is refused unless the
+// service is allowlisted, so the cross-tenant reference count depends on the
+// service being registered with WithSystemPrincipalAllowGlobal (as main does).
+// The service starts fail-open (frame's own pool initialisation acquires
+// without claims) and is switched to Hybrid before any media operation.
+func (s *MediaStorageS3TestSuite) TestDeleteMedia_SecureTenancyModeRequiresAllowlist() {
+	testCases := []struct {
+		name        string
+		allowlisted bool
+	}{
+		{name: "allowlisted_service_deletes", allowlisted: true},
+		{name: "unlisted_service_is_refused", allowlisted: false},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			s.WithTestDependancies(s.T(), func(t *testing.T, dep *definition.DependencyOption) {
+				var opts []frame.Option
+				if tc.allowlisted {
+					opts = append(opts, frame.WithSystemPrincipalAllowGlobal(repository.ObjectReleaseServiceName))
+				}
+				ctx, svc, res := s.CreateServiceWithOptions(t, dep, opts...)
+				res.Tenancy.SetSecurityMode(tenancy.ModeHybrid)
+				cfg := svc.Config().(*config.FilesConfig)
+				prov := s.s3Provider(t, ctx)
+				db := &connection.Database{WorkManager: svc.WorkManager(), MediaRepository: res.MediaRepository}
+				env := &s3Env{ctx: ctx, cfg: cfg, db: db, service: NewMediaService(db, prov), prov: prov}
+
+				ctxA := partitionCtx(ctx, "tenant-sec-a", "partition-sec-a")
+				ctxB := partitionCtx(ctx, "tenant-sec-b", "partition-sec-b")
+				content := []byte("secure-mode shared content " + util.IDString())
+				idA := env.upload(t, ctxA, "@a:example.com", content, true)
+				idB := env.upload(t, ctxB, "@b:example.com", content, true)
+				metaB := env.metadata(t, ctxB, idB)
+
+				err := env.service.DeleteMedia(ctxA, idA, cfg)
+				if !tc.allowlisted {
+					require.Error(t, err, "match-all elevation must be refused for an unlisted service")
+					s.requireObject(t, ctx, metaB.BucketName, metaB.ObjectKey, true)
+					env.metadata(t, ctxA, idA) // the row survives the refused delete
+					return
+				}
+				require.NoError(t, err)
+				s.requireObject(t, ctx, metaB.BucketName, metaB.ObjectKey, true)
+
+				require.NoError(t, env.service.DeleteMedia(ctxB, idB, cfg))
+				s.requireObject(t, ctx, metaB.BucketName, metaB.ObjectKey, false)
+			})
+		})
+	}
 }

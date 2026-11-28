@@ -32,6 +32,12 @@ type MediaRepository interface {
 	// then calls removeObject when no other live row in any tenant or
 	// partition references the object. A removeObject error rolls the row
 	// delete back.
+	//
+	// The object store is not part of the transaction. If COMMIT fails after
+	// removeObject succeeded, the row survives while its object is gone:
+	// reads of that row fail with not-found until the delete is retried.
+	// A retry converges, because it finds the row again, counts the same
+	// references, and treats the missing object as already deleted.
 	ReleaseObject(ctx context.Context, ref ObjectRef, deleteID string, removeObject func(context.Context) error) error
 }
 
@@ -137,13 +143,35 @@ func (mr *mediaRepository) GetByOwnerID(ctx context.Context, ownerId types.Owner
 // object locks apart from any other advisory lock user of the database.
 const objectLockNamespace = "service-files/media-object"
 
+// ObjectReleaseServiceName is the SystemPrincipal service name the release
+// transaction elevates as. Under a secure tenancy mode the service must be
+// allowlisted for global access under this name
+// (frame.WithSystemPrincipalAllowGlobal), or deletes are refused.
+const ObjectReleaseServiceName = "service-files"
+
 // lockObject takes the transaction-scoped advisory lock serialising every
-// reference change to one stored object. It is released at commit/rollback,
-// so it is correct behind a transaction-pooling PgBouncer as long as it is
-// taken inside the same transaction as the statements it protects.
+// reference change to one stored object. The lock is held until the
+// transaction ends and is taken inside the same transaction as the
+// statements it protects, so it never outlives or escapes that transaction.
 func lockObject(tx *gorm.DB, ref ObjectRef) error {
 	return tx.Exec("SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))",
 		objectLockNamespace, ref.Bucket+"/"+ref.Key).Error
+}
+
+// lockObjectGlobally locks the object and clears the RLS scope for the rest
+// of the transaction, so the reference count sees every tenant's rows.
+//
+// The release transaction is already opened as a match-all SystemPrincipal,
+// but frame binds the scope with session-level set_config when a connection
+// is acquired. Behind a transaction-mode pooler the server connection, and
+// so its session GUCs, may still carry another client's scope. Clearing the
+// GUCs with is_local=true makes the count global whatever connection the
+// transaction lands on, and the reset ends with the transaction.
+func lockObjectGlobally(tx *gorm.DB, ref ObjectRef) error {
+	if err := lockObject(tx, ref); err != nil {
+		return err
+	}
+	return tx.Exec("SELECT set_config('app.tenant_id', '', true), set_config('app.partition_id', '', true)").Error
 }
 
 func (mr *mediaRepository) CreateWithObjectLock(ctx context.Context, media *models.MediaMetadata, ref ObjectRef, ensureObject func(context.Context) error) error {
@@ -169,7 +197,7 @@ func (mr *mediaRepository) CreateWithObjectLock(ctx context.Context, media *mode
 // been authorised to delete; the count returns a number, never rows.
 func releaseCtx(ctx context.Context) context.Context {
 	return tenancy.WithSystemPrincipal(ctx, tenancy.SystemPrincipal{
-		ServiceName: "service-files",
+		ServiceName: ObjectReleaseServiceName,
 		Reason:      "media object reference release",
 		AllowGlobal: true,
 	})
@@ -177,7 +205,7 @@ func releaseCtx(ctx context.Context) context.Context {
 
 func (mr *mediaRepository) ReleaseObject(ctx context.Context, ref ObjectRef, deleteID string, removeObject func(context.Context) error) error {
 	return mr.Pool().DB(releaseCtx(ctx), false).Transaction(func(tx *gorm.DB) error {
-		if err := lockObject(tx, ref); err != nil {
+		if err := lockObjectGlobally(tx, ref); err != nil {
 			return fmt.Errorf("lock object: %w", err)
 		}
 

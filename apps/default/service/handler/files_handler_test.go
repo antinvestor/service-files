@@ -1648,6 +1648,29 @@ func (suite *FileServerTestSuite) Test_FileServer_DeleteContent_RemovesStoredObj
 	})
 }
 
+func (suite *FileServerTestSuite) Test_FileServer_RestoreVersion_IsUnimplemented() {
+	suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {
+		ctx, cfg, mediaService, handler := suite.setupFileServer(t, dep)
+		const owner = "@restore-owner:example.com"
+		content := []byte("restore " + util.IDString())
+		uploadRes, err := mediaService.UploadFile(ctx, &business.UploadRequest{
+			OwnerID:       owner,
+			UploadName:    "restore.txt",
+			ContentType:   "text/plain",
+			FileSizeBytes: types.FileSizeBytes(len(content)),
+			FileData:      bytes.NewReader(content),
+			Config:        cfg,
+		})
+		require.NoError(t, err)
+
+		_, err = handler.RestoreVersion(claimsCtx(ctx, owner), &filesv1.RestoreVersionRequest{
+			MediaId: string(uploadRes.MediaID),
+			Version: 1,
+		})
+		require.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
+	})
+}
+
 func (suite *FileServerTestSuite) Test_FileServer_GetSignedUploadUrl() {
 	suite.Run("default", func() {
 		suite.WithTestDependancies(suite.T(), func(t *testing.T, dep *definition.DependencyOption) {

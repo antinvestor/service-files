@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/v3/data"
@@ -48,3 +49,8 @@ type ThumbnailsRepository interface {
 	GetThumbnail(ctx context.Context, mediaID types.MediaID, width, height int, resizeMethod string) (*types.ThumbnailMetadata, error)
 	GetThumbnails(ctx context.Context, mediaID types.MediaID) ([]*types.ThumbnailMetadata, error)
 }
+
+// ErrVersionRestoreUnsupported is returned when restoring a file version:
+// versions record only a content hash, not the storage location and
+// encryption parameters a media row needs to read its content.
+var ErrVersionRestoreUnsupported = errors.New("restoring a file version is not supported")

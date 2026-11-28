@@ -1317,6 +1317,9 @@ func (s *FileServer) RestoreVersion(ctx context.Context, req *filesv1.RestoreVer
 		return nil, connect.Errorf(connect.CodeInternal, "version storage is unavailable")
 	}
 	metadata, err := versionsDB.RestoreMediaToVersion(ctx, req.GetMediaId(), int(req.GetVersion()), sub)
+	if errors.Is(err, storage.ErrVersionRestoreUnsupported) {
+		return nil, connect.NewError(connect.CodeUnimplemented, err.Error()).WithCause(err)
+	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}

@@ -88,10 +88,26 @@ Each `media_metadata` row records where its content lives: `bucket_name`, `provi
 | Private (encrypted with a per-upload data key) | `<h0>/<h1>/<h2..>/<media_id>`. Each upload has its own object. |
 
 Deleting media removes its thumbnails, its row and its object. A shared public object is only
-removed when no other live row references it, in any tenant or partition. Each row and object
-change takes a transaction-scoped Postgres advisory lock on the object, so a delete and an upload
-that dedups against the same object cannot interleave. This stays correct behind a
-transaction-pooling PgBouncer.
+removed when no other live row references it, in any tenant or partition.
+
+- **Locking:** every reference change takes a Postgres advisory lock on the object, inside the
+  same transaction as its statements. A delete and an upload that dedups against the same object
+  therefore cannot interleave.
+- **Counting across tenants:** the reference count runs as a match-all `SystemPrincipal` named
+  `service-files`. Secure tenancy modes (`FRAME_TENANCY_SECURITY_MODE=hybrid|fail_closed`) only
+  allow that because `main` registers `frame.WithSystemPrincipalAllowGlobal("service-files")`.
+- **Pooling:** the release transaction also clears the RLS session settings with transaction-local
+  `set_config(..., true)`. The count stays global even if a transaction-mode pooler hands it a
+  connection still bound to another client's scope.
+  - Frame itself binds those settings per session when it acquires a connection, which is not
+    safe behind PgBouncer transaction mode in general. That is being fixed in frame separately.
+- **Partial failure:** the object store is not part of the transaction. If the database commit
+  fails after the object was removed, the row stays, and reads of it return not-found until the
+  delete is retried. A retry converges: it finds the row, removes the already-missing object as
+  a no-op, and deletes the row.
+- **Versions:** `RestoreVersion` returns `Unimplemented`. File versions record only a content
+  hash, not the bucket, key and encryption parameters needed to read their content. Nothing
+  writes versions today.
 
 ### Rows written before `object_key` (releases up to v1.12.1)
 
