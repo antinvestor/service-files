@@ -8,6 +8,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/v3/datastore"
 	"github.com/pitabwire/frame/v3/datastore/pool"
+	"github.com/pitabwire/frame/v3/security"
 	"github.com/pitabwire/frame/v3/workerpool"
 )
 
@@ -34,8 +35,19 @@ type mediaRepository struct {
 }
 
 func (mr *mediaRepository) GetByHash(ctx context.Context, ownerId types.OwnerID, hash types.Base64Hash) (*models.MediaMetadata, error) {
+	// Scope dedupe to the partition the new upload would land in (the
+	// caller's claims, as GenID uses). Internal callers bypass row-level
+	// tenancy, so without this a hash match could return another
+	// partition's media.
+	var tenantID, partitionID string
+	if claims := security.ClaimsFromContext(ctx); claims != nil {
+		tenantID, partitionID = claims.GetTenantID(), claims.GetPartitionID()
+	}
+
 	file := &models.MediaMetadata{}
-	err := mr.Pool().DB(ctx, true).First(file, "owner_id = ? AND hash = ?", string(ownerId), string(hash)).Error
+	err := mr.Pool().DB(ctx, true).First(file,
+		"owner_id = ? AND hash = ? AND tenant_id = ? AND partition_id = ?",
+		string(ownerId), string(hash), tenantID, partitionID).Error
 	if err != nil {
 		return nil, err
 	}

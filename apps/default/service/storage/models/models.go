@@ -53,6 +53,8 @@ func (mm *MediaMetadata) ToApi() *types.MediaMetadata {
 		OwnerID:           types.OwnerID(mm.OwnerID),
 		ServerName:        mm.ServerName,
 		IsPublic:          mm.Public,
+		TenantID:          mm.TenantID,
+		PartitionID:       mm.PartitionID,
 	}
 
 	if mm.ParentID != "" {

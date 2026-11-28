@@ -13,6 +13,12 @@ type ServicePermission struct {
 }
 
 // ServicePolicy maps service names (from JWT ServiceName claim) to permissions.
+//
+// The policy only ever adds access: a scope listed here is granted without a
+// Keto check and across tenants. It is never a deny-list. A service that is
+// not listed, or lacks the scope for an operation, is authorised by its
+// explicit service_file grants like every other service account (see
+// middleware.checkServiceGrant).
 type ServicePolicy map[string]ServicePermission
 
 // DefaultServicePolicy returns the built-in policy for known internal services.
@@ -62,6 +68,23 @@ func permissionToScope(permission string) string {
 		return ServiceScopeWrite
 	case PermissionDelete:
 		return ServiceScopeWrite
+	default:
+		return ""
+	}
+}
+
+// permissionToServicePermission maps a per-file permission to the functional
+// permission a service account needs in NamespaceServiceFile.
+func permissionToServicePermission(permission string) string {
+	switch permission {
+	case PermissionView:
+		return PermissionContentView
+	case PermissionUpload:
+		return PermissionContentUpload
+	case PermissionEdit:
+		return PermissionContentManage
+	case PermissionDelete:
+		return PermissionContentDelete
 	default:
 		return ""
 	}

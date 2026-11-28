@@ -58,6 +58,10 @@ type MediaMetadata struct {
 	ServerName        string
 	IsPublic          bool
 	Encryption        *EncryptionInfo
+	// TenantID and PartitionID record where the media is stored. Read-only:
+	// populated from the stored record, never written back from this struct.
+	TenantID    string
+	PartitionID string
 }
 
 // RemoteRequestResult is used for broadcasting the result of a request for a remote file to routines waiting on the condition

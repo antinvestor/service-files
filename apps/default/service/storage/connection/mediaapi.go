@@ -52,10 +52,13 @@ func (d *Database) StoreMediaMetadata(ctx context.Context, mediaMetadata *types.
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error) {
 	mediaMetadata, err := d.MediaRepository.GetByID(ctx, string(mediaID))
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return mediaMetadata.ToApi(), err
+	return mediaMetadata.ToApi(), nil
 }
 
 // UpdateMediaMetadata updates specific fields on a media record and returns the updated metadata.
@@ -72,10 +75,13 @@ func (d *Database) UpdateMediaMetadata(ctx context.Context, mediaID types.MediaI
 // Returns nil metadata if there is no metadata associated with this media.
 func (d *Database) GetMediaMetadataByHash(ctx context.Context, ownerId types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error) {
 	mediaMetadata, err := d.MediaRepository.GetByHash(ctx, ownerId, mediaHash)
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return mediaMetadata.ToApi(), err
+	return mediaMetadata.ToApi(), nil
 }
 
 func (d *Database) Search(ctx context.Context, query *data.SearchQuery) (workerpool.JobResultPipe[*types.MediaMetadata], error) {

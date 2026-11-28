@@ -6,6 +6,14 @@ const (
 	NamespaceTenancyAccess = "tenancy_access"
 )
 
+// Functional (Plane-2) permissions in NamespaceServiceFile.
+const (
+	PermissionContentView   = "content_view"
+	PermissionContentUpload = "content_upload"
+	PermissionContentManage = "content_manage"
+	PermissionContentDelete = "content_delete"
+)
+
 const (
 	PermissionView   = "view"
 	PermissionUpload = "upload"
