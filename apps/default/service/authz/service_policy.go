@@ -13,6 +13,12 @@ type ServicePermission struct {
 }
 
 // ServicePolicy maps service names (from JWT ServiceName claim) to permissions.
+//
+// The policy only ever adds access: a scope listed here is granted without a
+// Keto check and across tenants. It is never a deny-list. A service that is
+// not listed, or lacks the scope for an operation, is authorised by its
+// explicit service_file grants like every other service account (see
+// middleware.checkServiceGrant).
 type ServicePolicy map[string]ServicePermission
 
 // DefaultServicePolicy returns the built-in policy for known internal services.

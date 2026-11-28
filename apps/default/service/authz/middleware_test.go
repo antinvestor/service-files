@@ -614,6 +614,33 @@ func (s *AuthzMiddlewareTestSuite) TestServiceAccountFunctionalGrants() {
 		require.Error(s.T(), s.middleware.CanViewFile(svcCtx, "sa-match-view-a", string(userFileB.MediaID)))
 	})
 
+	s.Run("view_grant_on_claims_partition_does_not_reach_file_in_other_partition", func() {
+		// Claims and grant both name partition A; the file lives in B. Only
+		// checking the file's own partition denies this.
+		s.grantServicePermission(s.T(), PermissionContentView, "sa-claims-a-file-b")
+		svcCtx := serviceAccountCtx(ctx, "opportunities_matching", "sa-claims-a-file-b", tenantA, partitionA)
+		err := s.middleware.CanViewFile(svcCtx, "sa-claims-a-file-b", string(userFileB.MediaID))
+		require.ErrorIs(s.T(), err, authorizer.ErrPermissionDenied)
+		require.NotErrorIs(s.T(), err, ErrNotFound)
+	})
+
+	s.Run("privileged_policy_scope_gap_falls_back_to_grants", func() {
+		// service_property's built-in policy is read-only. Write operations
+		// are not hard-denied: like any service they need an explicit grant.
+		denyCtx := serviceAccountCtx(ctx, "service_property", "sa-property-nogrant", tenantA, partitionA)
+		require.ErrorIs(s.T(), s.middleware.CanEditFile(denyCtx, "sa-property-nogrant", string(userFileA.MediaID)),
+			authorizer.ErrPermissionDenied)
+		require.ErrorIs(s.T(), s.middleware.CanUploadFile(denyCtx, "sa-property-nogrant"), authorizer.ErrPermissionDenied)
+
+		s.grantServicePermission(s.T(), PermissionContentManage, "sa-property-manage")
+		s.grantServicePermission(s.T(), PermissionContentUpload, "sa-property-manage")
+		allowCtx := serviceAccountCtx(ctx, "service_property", "sa-property-manage", tenantA, partitionA)
+		require.NoError(s.T(), s.middleware.CanEditFile(allowCtx, "sa-property-manage", string(userFileA.MediaID)))
+		require.NoError(s.T(), s.middleware.CanUploadFile(allowCtx, "sa-property-manage"))
+		// Its built-in read access is unchanged and needs no grant.
+		require.NoError(s.T(), s.middleware.CanViewFile(denyCtx, "sa-property-nogrant", string(userFileB.MediaID)))
+	})
+
 	s.Run("view_grant_does_not_imply_edit_or_delete", func() {
 		s.grantServicePermission(s.T(), PermissionContentView, "sa-view-noedit")
 		svcCtx := serviceAccountCtx(ctx, "service_identity", "sa-view-noedit", tenantA, partitionA)
