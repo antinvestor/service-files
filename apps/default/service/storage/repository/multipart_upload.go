@@ -2,12 +2,14 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/antinvestor/service-files/apps/default/service/storage/models"
 	"github.com/pitabwire/frame/v3/datastore"
 	"github.com/pitabwire/frame/v3/datastore/pool"
 	"github.com/pitabwire/frame/v3/workerpool"
+	"gorm.io/gorm"
 )
 
 // MultipartUploadRepository defines the interface for multipart upload operations
@@ -53,11 +55,27 @@ func (r *multipartUploadRepository) GetByMediaID(ctx context.Context, mediaID st
 	return upload, nil
 }
 
-// UpdateState updates the state of a multipart upload
+// UpdateState updates the state of a multipart upload.
+//
+// UpdateColumns skips GORM hooks: BaseModel.BeforeSave would otherwise assign a
+// fresh ID to the empty model and GORM would add it to the WHERE clause, so the
+// update would never match the upload. modified_at and version are set here
+// instead so optimistic locking still sees the transition.
 func (r *multipartUploadRepository) UpdateState(ctx context.Context, uploadID string, state string) error {
-	return r.Pool().DB(ctx, false).Model(&models.MultipartUpload{}).
+	result := r.Pool().DB(ctx, false).Model(&models.MultipartUpload{}).
 		Where("id = ?", uploadID).
-		Update("upload_state", state).Error
+		UpdateColumns(map[string]any{
+			"upload_state": state,
+			"modified_at":  time.Now().UTC(),
+			"version":      gorm.Expr("version + 1"),
+		})
+	if result.Error != nil {
+		return fmt.Errorf("update multipart upload state: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetExpiredUploads retrieves all uploads that have expired before the given time
