@@ -11,6 +11,13 @@ import (
 	"github.com/pitabwire/util"
 )
 
+// Every backend must satisfy the full interface through its own bucket opener.
+var (
+	_ storage.Provider = (*local.ProviderLocal)(nil)
+	_ storage.Provider = (*s3.ProviderS3)(nil)
+	_ storage.Provider = (*gcs.ProviderGCS)(nil)
+)
+
 func GetStorageProvider(ctx context.Context, config *config.FilesConfig) (storage.Provider, error) {
 	var provider storage.Provider
 	switch config.StorageProvider {
