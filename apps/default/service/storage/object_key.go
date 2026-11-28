@@ -8,6 +8,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/antinvestor/service-files/apps/default/service/utils"
+	"github.com/pitabwire/util"
 )
 
 const (
@@ -18,15 +19,17 @@ const (
 	plainObjectName = "file"
 )
 
-// ContentObjectKey returns the bucket-relative key meta's content is stored
-// under. The key depends only on the content hash (and, for encrypted
-// content, the media ID), never on the pod's filesystem layout, so it is the
-// same on every replica and across BASE_PATH changes.
+// ContentObjectKey returns the bucket-relative key to store meta's content
+// under. Keys never depend on the pod's filesystem layout; the key chosen at
+// upload is recorded on the row and used for every later read and delete.
 //
-// Unencrypted content is content-addressed (<h0>/<h1>/<h2..>/file) so
-// identical uploads share one object. Encrypted content is sealed with a
-// per-upload data key, so the ciphertext of two uploads with the same
-// plaintext differs and each needs its own object (<h0>/<h1>/<h2..>/<mediaID>).
+// Unencrypted content is content-addressed (<h0>/<h1>/<h2..>/file): the key
+// is deterministic, so identical uploads share one object. Encrypted content
+// is sealed with a per-upload data key, so its ciphertext is unique to that
+// upload and must never be shared or overwritten; it gets a fresh key under
+// the same hash prefix (<h0>/<h1>/<h2..>/<unique id>) on every call. That
+// also keeps a reused media ID or a stale object from an earlier upload from
+// ever being mistaken for this upload's ciphertext.
 func ContentObjectKey(meta *types.MediaMetadata) (string, error) {
 	if meta == nil {
 		return "", errors.New("object key: nil media metadata")
@@ -38,9 +41,9 @@ func ContentObjectKey(meta *types.MediaMetadata) (string, error) {
 
 	name := plainObjectName
 	if meta.Encryption != nil {
-		name = string(meta.MediaID)
+		name = util.IDString()
 		if err := validateKeySegment(name, 1, maxHashLen); err != nil {
-			return "", fmt.Errorf("object key: invalid media id %q: %w", name, err)
+			return "", fmt.Errorf("object key: invalid object id %q: %w", name, err)
 		}
 	}
 
@@ -80,8 +83,8 @@ func ResolveObjectLocation(provider BucketSelector, meta *types.MediaMetadata, l
 	return bucket, key, nil
 }
 
-// validateKeySegment accepts only the characters hashes (base64url) and media
-// IDs (base64url plus '=') are made of, so a segment can never introduce a
+// validateKeySegment accepts only the base64url alphabet (plus '='), what
+// hashes and generated IDs are made of, so a segment can never introduce a
 // path separator or a dot segment into an object key.
 func validateKeySegment(s string, minLen, maxLen int) error {
 	if len(s) < minLen || len(s) > maxLen {

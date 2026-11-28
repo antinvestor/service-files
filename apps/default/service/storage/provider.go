@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/antinvestor/service-files/apps/default/service/types"
+	"github.com/pitabwire/util"
 	"gocloud.dev/blob"
 )
 
@@ -43,4 +44,39 @@ func UploadFileWithHashCheck(ctx context.Context, provider Provider, sourcePath 
 	mediaMetadata.ObjectKey = key
 	mediaMetadata.StorageProvider = provider.Name()
 	return types.Path(key), duplicate, nil
+}
+
+// StoreMediaObject uploads sourcePath under mediaMetadata's object key and
+// inserts its row. The insert runs under the object's advisory lock after
+// re-checking the object is still present, so it cannot interleave with a
+// ReleaseMediaObject that has decided the object is unreferenced: either the
+// release sees this row and keeps the object, or it finishes first and the
+// re-check writes the object again. If the insert fails, an object this call
+// created is released again unless another row has come to reference it.
+func StoreMediaObject(ctx context.Context, provider Provider, db MediaRepository, sourcePath types.Path, mediaMetadata *types.MediaMetadata) (bool, error) {
+	key, duplicate, err := UploadFileWithHashCheck(ctx, provider, sourcePath, mediaMetadata)
+	if err != nil {
+		return duplicate, err
+	}
+	bucket := mediaMetadata.BucketName
+
+	err = db.StoreMediaMetadataWithObjectLock(ctx, mediaMetadata, bucket, string(key), func(lockCtx context.Context) error {
+		if _, upErr := provider.UploadFile(lockCtx, bucket, sourcePath, key); upErr != nil {
+			return fmt.Errorf("re-check object %q: %w", key, upErr)
+		}
+		return nil
+	})
+	if err == nil {
+		return duplicate, nil
+	}
+
+	if !duplicate {
+		relErr := db.ReleaseMediaObject(ctx, mediaMetadata, bucket, string(key), false, func(relCtx context.Context) error {
+			return provider.DeleteFile(relCtx, bucket, key)
+		})
+		if relErr != nil {
+			util.Log(ctx).WithError(relErr).With("bucket", bucket, "key", key).Warn("failed to release object after metadata insert failed")
+		}
+	}
+	return duplicate, fmt.Errorf("store media metadata: %w", err)
 }

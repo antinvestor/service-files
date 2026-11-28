@@ -151,15 +151,16 @@ func (s *MediaStorageS3TestSuite) TestUploadFile_PersistsBucketAndRelativeKey() 
 				meta := env.metadata(t, ctx, id)
 				require.Equal(t, tc.wantBucket, meta.BucketName, "bucket_name must record the bucket written to")
 				require.Equal(t, "S3", meta.StorageProvider)
-				wantKey, err := storage.ContentObjectKey(meta)
-				require.NoError(t, err)
-				require.Equal(t, wantKey, meta.ObjectKey, "object_key must record the key written to")
+				h := string(meta.Base64Hash)
+				hashPrefix := h[0:1] + "/" + h[1:2] + "/" + h[2:] + "/"
+				require.True(t, strings.HasPrefix(meta.ObjectKey, hashPrefix),
+					"object_key must record the hash-prefixed key written to: %q", meta.ObjectKey)
 				require.False(t, strings.HasPrefix(meta.ObjectKey, "/"), "key must be bucket-relative: %q", meta.ObjectKey)
 				require.NotContains(t, meta.ObjectKey, string(env.cfg.AbsBasePath), "key must not embed the pod-local base path")
 				if tc.wantSuffix != "" {
 					require.True(t, strings.HasSuffix(meta.ObjectKey, tc.wantSuffix))
 				} else {
-					require.True(t, strings.HasSuffix(meta.ObjectKey, "/"+string(id)), "encrypted objects are keyed per media")
+					require.NotEqual(t, hashPrefix+"file", meta.ObjectKey, "encrypted objects are keyed per upload, not by content")
 				}
 
 				s.requireObject(t, ctx, tc.wantBucket, meta.ObjectKey, true)

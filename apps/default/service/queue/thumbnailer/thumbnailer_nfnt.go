@@ -251,21 +251,16 @@ func createThumbnail(
 		sourcePath = encryptedPath
 	}
 
-	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata)
-	if err != nil {
-		return err
-	}
-	if duplicate {
-		logger.With("dst", finalPath).Debug("file already stored, discarding duplicate")
-	}
-
-	err = db.StoreThumbnail(ctx, thumbnailMetadata)
+	duplicate, err := storage2.StoreMediaObject(ctx, provider, db, sourcePath, thumbnailMetadata.MediaMetadata)
 	if err != nil {
 		logger.WithError(err).With(
 			"actual_width", width,
 			"actual_height", height,
-		).Error("failed to store thumbnail metadata")
+		).Error("failed to store thumbnail")
 		return err
+	}
+	if duplicate {
+		logger.With("key", thumbnailMetadata.ObjectKey).Debug("thumbnail already stored, discarding duplicate")
 	}
 
 	return nil

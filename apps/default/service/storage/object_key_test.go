@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/antinvestor/service-files/apps/default/config"
@@ -31,26 +32,10 @@ func (s *ObjectKeyTestSuite) TestContentObjectKey_IsStableAndRelative() {
 			meta:    &types.MediaMetadata{MediaID: "m1", Base64Hash: hash},
 			wantKey: "A/b/3-_xyzQ/file",
 		},
-		{
-			// Each encrypted upload carries its own data key, so two rows with
-			// the same plaintext hash cannot share one ciphertext object.
-			name:    "encrypted_content_is_keyed_per_media",
-			meta:    &types.MediaMetadata{MediaID: "m1", Base64Hash: hash, Encryption: &types.EncryptionInfo{Version: 1}},
-			wantKey: "A/b/3-_xyzQ/m1",
-		},
 		{name: "hash_too_short", meta: &types.MediaMetadata{MediaID: "m1", Base64Hash: "ab"}, wantErr: true},
 		{name: "hash_with_path_separator", meta: &types.MediaMetadata{MediaID: "m1", Base64Hash: "ab/../../etc"}, wantErr: true},
 		{name: "hash_with_dot_segments", meta: &types.MediaMetadata{MediaID: "m1", Base64Hash: "a..b"}, wantErr: true},
-		{
-			name:    "encrypted_without_media_id",
-			meta:    &types.MediaMetadata{Base64Hash: hash, Encryption: &types.EncryptionInfo{Version: 1}},
-			wantErr: true,
-		},
-		{
-			name:    "encrypted_with_unsafe_media_id",
-			meta:    &types.MediaMetadata{MediaID: "../x", Base64Hash: hash, Encryption: &types.EncryptionInfo{Version: 1}},
-			wantErr: true,
-		},
+		{name: "nil_metadata", meta: nil, wantErr: true},
 	}
 
 	for _, tc := range testCases {
@@ -67,8 +52,27 @@ func (s *ObjectKeyTestSuite) TestContentObjectKey_IsStableAndRelative() {
 
 			again, err := ContentObjectKey(tc.meta)
 			s.Require().NoError(err)
-			s.Equal(key, again, "key derivation must be deterministic")
+			s.Equal(key, again, "plain keys must be deterministic so identical content dedups")
 		})
+	}
+}
+
+// Each encrypted upload is sealed with its own data key, so its ciphertext
+// must never be shared or overwritten: not by another owner's identical
+// plaintext, a reused media ID, or a stale object left under an old key.
+func (s *ObjectKeyTestSuite) TestContentObjectKey_EncryptedContentIsKeyedPerUpload() {
+	meta := &types.MediaMetadata{MediaID: "m1", Base64Hash: "Ab3-_xyzQ", Encryption: &types.EncryptionInfo{Version: 1}}
+
+	first, err := ContentObjectKey(meta)
+	s.Require().NoError(err)
+	second, err := ContentObjectKey(meta)
+	s.Require().NoError(err)
+
+	s.NotEqual(first, second, "every encrypted upload gets its own object")
+	for _, key := range []string{first, second} {
+		s.True(strings.HasPrefix(key, "A/b/3-_xyzQ/"), "encrypted keys stay under the content's hash prefix: %q", key)
+		s.NotEqual("A/b/3-_xyzQ/file", key)
+		s.NotContains(key, "..")
 	}
 }
 

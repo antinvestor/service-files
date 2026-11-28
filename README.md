@@ -76,3 +76,39 @@ so private media cannot be enumerated. Authenticated access remains under `/v1/m
 | `DYNAMIC_THUMBNAILS` | `false` | Generate thumbnails on demand for sizes not listed in `THUMBNAIL_SIZES`. |
 | `ENCRYPTION_PHRASE` | – | 32-byte AES-256-GCM key for private files (required). |
 | `STORAGE_PROVIDER` | `LOCAL` | `LOCAL`, `GCS` or `S3`; see `apps/default/config/config.go` for bucket variables. |
+
+## Object storage layout
+
+Each `media_metadata` row records where its content lives: `bucket_name`, `provider` and
+`object_key`. Keys are relative to the bucket and never contain a local path:
+
+| Content | Key |
+|---------|-----|
+| Public (stored unencrypted) | `<h0>/<h1>/<h2..>/file`, where `h` is the content's base64url SHA-256. Identical content shares one object. |
+| Private (encrypted with a per-upload data key) | `<h0>/<h1>/<h2..>/<media_id>`. Each upload has its own object. |
+
+Deleting media removes its thumbnails, its row and its object. A shared public object is only
+removed when no other live row references it, in any tenant or partition. Each row and object
+change takes a transaction-scoped Postgres advisory lock on the object, so a delete and an upload
+that dedups against the same object cannot interleave. This stays correct behind a
+transaction-pooling PgBouncer.
+
+### Rows written before `object_key` (releases up to v1.12.1)
+
+Older rows have empty `bucket_name`/`object_key`. Their objects were uploaded under the absolute
+hash path `<base_path>/<h0>/<h1>/<h2..>/file` (default base path `/tmp/media_store`, so keys like
+`/tmp/media_store/a/b/cdef/file`) in the bucket chosen by visibility. They are read and deleted
+from that key, which is derived from the configured `base_path`. **Do not change `base_path`
+while such rows exist.** It is a YAML-only setting, defaulting to `/tmp/media_store`, and it has
+no environment variable. Nothing has to be migrated: those objects stay where they are.
+
+### Upgrading to and rolling back from this layout
+
+Releases before this layout ignore `object_key` and always derive the legacy absolute key, so
+they cannot find objects that newer pods write under relative keys:
+
+- **During a rolling update**, a request that reaches an old pod for media uploaded by a new pod
+  fails, until the rollout completes. Old pods still read existing media.
+- **After a rollback** past this release, media uploaded since the upgrade cannot be read, and
+  `DeleteContent` on the old release removes only its row. Nothing is lost: rolling forward makes
+  that media readable again. Prefer rolling forward with a fix over rolling back.

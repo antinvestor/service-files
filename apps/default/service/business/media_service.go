@@ -2,6 +2,7 @@ package business
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/pitabwire/frame/v3/data"
 	"github.com/pitabwire/util"
 	"golang.org/x/sync/singleflight"
+	"gorm.io/gorm"
 )
 
 // mediaService implements the MediaService interface
@@ -525,24 +527,13 @@ func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Pa
 		sourcePath = encryptedPath
 	}
 
-	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, s.provider, sourcePath, mediaMetadata)
+	duplicate, err := storage.StoreMediaObject(ctx, s.provider, s.db, sourcePath, mediaMetadata)
 	if err != nil {
+		logger.WithError(err).Warn("failed to store media")
 		return err
 	}
-
 	if duplicate {
-		logger.With("dst", finalPath).Debug("file already stored, discarding duplicate")
-	}
-
-	if err = s.db.StoreMediaMetadata(ctx, mediaMetadata); err != nil {
-		logger.WithError(err).Warn("failed to store metadata")
-		// Remove the object this call wrote; a duplicate belongs to other rows.
-		if !duplicate {
-			if delErr := s.provider.DeleteFile(ctx, mediaMetadata.BucketName, finalPath); delErr != nil {
-				logger.WithError(delErr).With("key", finalPath).Warn("failed to remove orphaned object")
-			}
-		}
-		return err
+		logger.With("key", mediaMetadata.ObjectKey).Debug("file already stored, discarding duplicate")
 	}
 
 	return nil
@@ -576,26 +567,28 @@ func (s *mediaService) DeleteMedia(ctx context.Context, mediaID types.MediaID, c
 	return s.deleteStoredMedia(ctx, mediaMetadata, cfg)
 }
 
-// deleteStoredMedia removes one row and, unless another live row (in any
-// tenant or partition) shares it, the object that row's content is stored in.
+// deleteStoredMedia deletes one row and, unless another live row (in any
+// tenant or partition) shares it, the object its content is stored in. Both
+// happen in one transaction under the object's lock: the row delete rolls
+// back if the object cannot be removed, and no concurrent upload can start
+// referencing the object between the reference count and its removal.
 func (s *mediaService) deleteStoredMedia(ctx context.Context, mediaMetadata *types.MediaMetadata, cfg *config.FilesConfig) error {
-	refs, err := s.db.CountObjectReferences(ctx, mediaMetadata)
+	bucket, key, err := storage.ResolveObjectLocation(s.provider, mediaMetadata, cfg.AbsBasePath)
 	if err != nil {
-		return fmt.Errorf("count object references: %w", err)
+		return err
 	}
 
-	if refs == 0 {
-		bucket, key, locErr := storage.ResolveObjectLocation(s.provider, mediaMetadata, cfg.AbsBasePath)
-		if locErr != nil {
-			return locErr
+	err = s.db.ReleaseMediaObject(ctx, mediaMetadata, bucket, key, true, func(relCtx context.Context) error {
+		if delErr := s.provider.DeleteFile(relCtx, bucket, types.Path(key)); delErr != nil {
+			return fmt.Errorf("delete object: %w", delErr)
 		}
-		if err = s.provider.DeleteFile(ctx, bucket, types.Path(key)); err != nil {
-			return fmt.Errorf("delete object: %w", err)
-		}
+		return nil
+	})
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrMediaNotFound
 	}
-
-	if err = s.db.DeleteMedia(ctx, mediaMetadata.MediaID); err != nil {
-		return fmt.Errorf("delete media row: %w", err)
+	if err != nil {
+		return fmt.Errorf("delete media %s: %w", mediaMetadata.MediaID, err)
 	}
 	return nil
 }

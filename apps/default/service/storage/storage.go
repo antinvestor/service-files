@@ -33,9 +33,14 @@ type MediaRepository interface {
 	GetMediaMetadataByHash(ctx context.Context, ownerID types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error)
 	Search(ctx context.Context, query *data.SearchQuery) (workerpool.JobResultPipe[*types.MediaMetadata], error)
 	DeleteMedia(ctx context.Context, mediaID types.MediaID) error
-	// CountObjectReferences counts the other live rows sharing mediaMetadata's
-	// stored object, regardless of tenant or partition.
-	CountObjectReferences(ctx context.Context, mediaMetadata *types.MediaMetadata) (int64, error)
+	// StoreMediaMetadataWithObjectLock inserts the row while holding the
+	// advisory lock of the object it references (bucket/key); ensureObject
+	// runs under the lock before the insert.
+	StoreMediaMetadataWithObjectLock(ctx context.Context, mediaMetadata *types.MediaMetadata, bucket, key string, ensureObject func(context.Context) error) error
+	// ReleaseMediaObject, under the same lock, deletes the row (deleteRow)
+	// and calls removeObject when no other live row in any tenant or
+	// partition still references the object.
+	ReleaseMediaObject(ctx context.Context, mediaMetadata *types.MediaMetadata, bucket, key string, deleteRow bool, removeObject func(context.Context) error) error
 }
 
 type ThumbnailsRepository interface {

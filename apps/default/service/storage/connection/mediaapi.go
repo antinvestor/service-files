@@ -127,15 +127,36 @@ func (d *Database) DeleteMedia(ctx context.Context, mediaID types.MediaID) error
 	return d.MediaRepository.Delete(ctx, string(mediaID))
 }
 
-// CountObjectReferences counts the other live rows whose content resolves to
-// the same stored object as mediaMetadata.
-func (d *Database) CountObjectReferences(ctx context.Context, mediaMetadata *types.MediaMetadata) (int64, error) {
-	if mediaMetadata.ObjectKey == "" {
-		return d.MediaRepository.CountLegacyObjectReferences(ctx,
-			string(mediaMetadata.MediaID), mediaMetadata.Base64Hash, mediaMetadata.IsPublic)
+// StoreMediaMetadataWithObjectLock inserts mediaMetadata while holding the
+// lock on the object at bucket/key; ensureObject runs under the lock first.
+func (d *Database) StoreMediaMetadataWithObjectLock(ctx context.Context, mediaMetadata *types.MediaMetadata, bucket, key string, ensureObject func(context.Context) error) error {
+	media := models.MediaMetadata{}
+	media.Fill(mediaMetadata)
+	return d.MediaRepository.CreateWithObjectLock(ctx, &media,
+		objectRef(mediaMetadata, bucket, key), ensureObject)
+}
+
+// ReleaseMediaObject releases mediaMetadata's reference to the object at
+// bucket/key: it deletes the row when deleteRow is set and calls
+// removeObject when no other live row references the object. A missing row
+// yields gorm.ErrRecordNotFound.
+func (d *Database) ReleaseMediaObject(ctx context.Context, mediaMetadata *types.MediaMetadata, bucket, key string, deleteRow bool, removeObject func(context.Context) error) error {
+	deleteID := ""
+	if deleteRow {
+		deleteID = string(mediaMetadata.MediaID)
 	}
-	return d.MediaRepository.CountObjectReferences(ctx,
-		string(mediaMetadata.MediaID), mediaMetadata.BucketName, mediaMetadata.ObjectKey)
+	return d.MediaRepository.ReleaseObject(ctx, objectRef(mediaMetadata, bucket, key), deleteID, removeObject)
+}
+
+func objectRef(mediaMetadata *types.MediaMetadata, bucket, key string) repository.ObjectRef {
+	return repository.ObjectRef{
+		Bucket:    bucket,
+		Key:       key,
+		ExcludeID: string(mediaMetadata.MediaID),
+		Legacy:    mediaMetadata.ObjectKey == "",
+		Hash:      mediaMetadata.Base64Hash,
+		Public:    mediaMetadata.IsPublic,
+	}
 }
 
 // GetUserUsage returns the total storage used by a user and file count
