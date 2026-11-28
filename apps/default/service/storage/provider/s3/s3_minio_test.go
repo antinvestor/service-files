@@ -23,8 +23,10 @@ import (
 
 const (
 	// MinIO stopped publishing images to Docker Hub and Quay; Chainguard
-	// ships a maintained build whose entrypoint is the minio binary.
-	minioImage     = "cgr.dev/chainguard/minio:latest"
+	// ships a maintained build whose entrypoint is the minio binary. Its free
+	// tier only publishes floating tags, so pin the multi-arch index digest
+	// for reproducible runs. This digest is minio RELEASE.2026-11-23T00-10-37Z.
+	minioImage     = "cgr.dev/chainguard/minio@sha256:b288eaa709ba2f799a39e9a8ceda71a08fabf90109b12c90badba9afff29485c"
 	minioRegion    = "us-east-1"
 	privateBucket  = "files-private"
 	publicBucket   = "files-public"
