@@ -66,3 +66,20 @@ func permissionToScope(permission string) string {
 		return ""
 	}
 }
+
+// permissionToServicePermission maps a per-file permission to the functional
+// permission a service account needs in NamespaceServiceFile.
+func permissionToServicePermission(permission string) string {
+	switch permission {
+	case PermissionView:
+		return PermissionContentView
+	case PermissionUpload:
+		return PermissionContentUpload
+	case PermissionEdit:
+		return PermissionContentManage
+	case PermissionDelete:
+		return PermissionContentDelete
+	default:
+		return ""
+	}
+}

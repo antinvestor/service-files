@@ -73,18 +73,20 @@ func (m *middleware) CanUploadFile(ctx context.Context, profileID string) error 
 		return authorizer.ErrInvalidSubject
 	}
 
-	if svcName := internalServiceName(ctx); svcName != "" {
-		if !m.servicePolicy.HasScope(svcName, ServiceScopeWrite) {
-			return authorizer.NewPermissionDeniedError(
-				security.ObjectRef{Namespace: NamespaceFile},
-				PermissionUpload,
-				security.SubjectRef{Namespace: NamespaceProfile, ID: profileID},
-				"service lacks write scope",
-			)
-		}
+	svcName := internalServiceName(ctx)
+	if svcName == "" {
+		return nil
 	}
 
-	return nil
+	if m.servicePolicy.HasScope(svcName, ServiceScopeWrite) {
+		return nil
+	}
+
+	// Service callers outside the built-in policy are authorised by their
+	// own content_upload grant on the partition the upload lands in.
+	claims := security.ClaimsFromContext(ctx)
+	return m.checkServiceGrant(ctx, svcName, profileID,
+		claims.GetTenantID(), claims.GetPartitionID(), PermissionContentUpload)
 }
 
 func (m *middleware) checkFilePermission(ctx context.Context, profileID, fileID, permission string) error {
@@ -98,23 +100,22 @@ func (m *middleware) checkFilePermission(ctx context.Context, profileID, fileID,
 		"permission": permission,
 	})
 
-	// Check if caller is an authorized internal service
-	if svcName := internalServiceName(ctx); svcName != "" {
-		requiredScope := permissionToScope(permission)
-		if m.servicePolicy.HasScope(svcName, requiredScope) {
-			log.WithField("service_name", svcName).Debug("internal service granted access")
-			return nil
-		}
-		// Unknown service or insufficient scope — fall through to normal auth
+	svcName := internalServiceName(ctx)
+	if svcName != "" && m.servicePolicy.HasScope(svcName, permissionToScope(permission)) {
+		log.WithField("service_name", svcName).Debug("internal service granted access")
+		return nil
 	}
 
-	ownerID, err := m.GetFileOwner(ctx, fileID)
+	metadata, err := m.mediaDB.GetMediaMetadata(ctx, types.MediaID(fileID))
 	if err != nil {
 		log.WithError(err).Error("failed to get file owner")
 		return err
 	}
+	if metadata == nil {
+		return ErrNotFound
+	}
 
-	if profileID == ownerID {
+	if profileID == string(metadata.OwnerID) {
 		log.Debug("user is owner, granting access")
 		return nil
 	}
@@ -131,15 +132,47 @@ func (m *middleware) checkFilePermission(ctx context.Context, profileID, fileID,
 		return err
 	}
 
-	if !result.Allowed {
-		return authorizer.NewPermissionDeniedError(
-			req.Object,
-			permission,
-			req.Subject,
-			result.Reason,
-		)
+	if result.Allowed {
+		return nil
 	}
 
+	if svcName != "" {
+		// A service account with the matching functional grant on the
+		// partition the file is stored in may act on it.
+		return m.checkServiceGrant(ctx, svcName, profileID,
+			metadata.TenantID, metadata.PartitionID, permissionToServicePermission(permission))
+	}
+
+	return authorizer.NewPermissionDeniedError(req.Object, permission, req.Subject, result.Reason)
+}
+
+// checkServiceGrant verifies a service account holds the functional
+// permission in NamespaceServiceFile for tenantID/partitionID — the
+// service_file:<tenant>/<partition>#granted_<permission> tuples that tenancy
+// writes from the account's authorization policy.
+func (m *middleware) checkServiceGrant(
+	ctx context.Context,
+	svcName, profileID, tenantID, partitionID, permission string,
+) error {
+	subject := security.SubjectRef{Namespace: NamespaceProfile, ID: profileID}
+	object := security.ObjectRef{Namespace: NamespaceServiceFile, ID: tenantID + "/" + partitionID}
+
+	if permission == "" || tenantID == "" || partitionID == "" {
+		return authorizer.NewPermissionDeniedError(object, permission, subject, "no tenancy to check service grant against")
+	}
+
+	result, err := m.authorizer.Check(ctx, security.CheckRequest{
+		Object:     object,
+		Permission: permission,
+		Subject:    subject,
+	})
+	if err != nil {
+		util.Log(ctx).WithError(err).WithField("service_name", svcName).Error("service grant check failed")
+		return err
+	}
+	if !result.Allowed {
+		return authorizer.NewPermissionDeniedError(object, permission, subject, result.Reason)
+	}
 	return nil
 }
 

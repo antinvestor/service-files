@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	filespb "buf.build/gen/go/antinvestor/files/protocolbuffers/go/files/v1"
+	"github.com/antinvestor/common/v3/permissions"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pitabwire/frame/v3/security"
 	"github.com/stretchr/testify/assert"
@@ -118,4 +120,36 @@ func TestDefaultServicePolicy(t *testing.T) {
 	assert.Len(t, policy, 2)
 	assert.Contains(t, policy, "service_ocr")
 	assert.Contains(t, policy, "service_property")
+}
+
+// The service-caller fallback checks the same namespace and permission names
+// the FunctionAccessInterceptor and tenancy grants use; keep them in lockstep
+// with the proto manifest.
+func TestServiceFileNamespaceMatchesProto(t *testing.T) {
+	sd := filespb.File_files_v1_files_proto.Services().ByName("FilesService")
+	sp := permissions.ForService(sd)
+	assert.Equal(t, sp.Namespace, NamespaceServiceFile)
+	for _, perm := range []string{
+		PermissionContentView, PermissionContentUpload, PermissionContentManage, PermissionContentDelete,
+	} {
+		assert.Contains(t, sp.Permissions, perm)
+	}
+}
+
+func TestPermissionToServicePermission(t *testing.T) {
+	tests := []struct {
+		permission string
+		want       string
+	}{
+		{PermissionView, PermissionContentView},
+		{PermissionUpload, PermissionContentUpload},
+		{PermissionEdit, PermissionContentManage},
+		{PermissionDelete, PermissionContentDelete},
+		{"unknown", ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.permission, func(t *testing.T) {
+			assert.Equal(t, tc.want, permissionToServicePermission(tc.permission))
+		})
+	}
 }

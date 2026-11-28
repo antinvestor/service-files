@@ -19,6 +19,7 @@ import (
 	"github.com/pitabwire/frame/v3/frametests/definition"
 	"github.com/pitabwire/frame/v3/frametests/deps/testpostgres"
 	"github.com/pitabwire/frame/v3/security"
+	"github.com/pitabwire/frame/v3/security/authorizer"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -503,4 +504,150 @@ func (s *AuthzMiddlewareTestSuite) TestInternalServiceAccess() {
 			}
 		})
 	}
+}
+
+func serviceAccountCtx(ctx context.Context, serviceName, profileID, tenantID, partitionID string) context.Context {
+	authClaims := &security.AuthenticationClaims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: profileID},
+		ProfileID:        profileID,
+		TenantID:         tenantID,
+		PartitionID:      partitionID,
+		ServiceName:      serviceName,
+		Roles:            []string{"internal"},
+	}
+	return authClaims.ClaimsToContext(ctx)
+}
+
+func userCtx(ctx context.Context, profileID, tenantID, partitionID string) context.Context {
+	authClaims := &security.AuthenticationClaims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: profileID},
+		ProfileID:        profileID,
+		TenantID:         tenantID,
+		PartitionID:      partitionID,
+		Roles:            []string{"user"},
+	}
+	return authClaims.ClaimsToContext(ctx)
+}
+
+const (
+	tenantA, partitionA = "tenant-sa-a", "partition-sa-a"
+	tenantB, partitionB = "tenant-sa-b", "partition-sa-b"
+)
+
+// grantServicePermission writes the tuple tenancy materialises for a service
+// account grant: service_file:<tenantA>/<partitionA>#granted_<permission>.
+func (s *AuthzMiddlewareTestSuite) grantServicePermission(t *testing.T, permission, profileID string) {
+	t.Helper()
+	require.NoError(t, s.authorizer.WriteTuple(t.Context(), security.RelationTuple{
+		Object:   security.ObjectRef{Namespace: NamespaceServiceFile, ID: tenantA + "/" + partitionA},
+		Relation: "granted_" + permission,
+		Subject:  security.SubjectRef{Namespace: NamespaceProfile, ID: profileID},
+	}))
+}
+
+// TestServiceAccountFunctionalGrants covers service callers that are not in
+// the built-in privileged policy (service_authentication, opportunities_matching,
+// service_identity, ...): they are authorised by their Keto grants on the
+// service_file namespace for the partition concerned, not refused outright.
+func (s *AuthzMiddlewareTestSuite) TestServiceAccountFunctionalGrants() {
+	ctx := s.T().Context()
+
+	// Files owned by an end user, stored in two different partitions.
+	userFileA := &types.MediaMetadata{
+		MediaID: "media-sa-user-a", OwnerID: "end-user-a", UploadName: "cv.pdf",
+		Base64Hash: "hash-sa-a", FileSizeBytes: 10, ServerName: "server",
+	}
+	require.NoError(s.T(), s.mediaDB.StoreMediaMetadata(userCtx(ctx, "end-user-a", tenantA, partitionA), userFileA))
+	userFileB := &types.MediaMetadata{
+		MediaID: "media-sa-user-b", OwnerID: "end-user-b", UploadName: "cv.pdf",
+		Base64Hash: "hash-sa-b", FileSizeBytes: 10, ServerName: "server",
+	}
+	require.NoError(s.T(), s.mediaDB.StoreMediaMetadata(userCtx(ctx, "end-user-b", tenantB, partitionB), userFileB))
+
+	stored, err := s.mediaDB.GetMediaMetadata(ctx, userFileA.MediaID)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), tenantA, stored.TenantID)
+	require.Equal(s.T(), partitionA, stored.PartitionID)
+
+	s.Run("service_without_grant_cannot_upload", func() {
+		svcCtx := serviceAccountCtx(ctx, "service_authentication", "sa-auth-nogrant", tenantA, partitionA)
+		err := s.middleware.CanUploadFile(svcCtx, "sa-auth-nogrant")
+		require.Error(s.T(), err)
+		require.ErrorIs(s.T(), err, authorizer.ErrPermissionDenied)
+	})
+
+	s.Run("service_with_content_upload_grant_can_upload", func() {
+		s.grantServicePermission(s.T(), PermissionContentUpload, "sa-auth-upload")
+		svcCtx := serviceAccountCtx(ctx, "service_authentication", "sa-auth-upload", tenantA, partitionA)
+		require.NoError(s.T(), s.middleware.CanUploadFile(svcCtx, "sa-auth-upload"))
+	})
+
+	s.Run("upload_grant_is_partition_scoped", func() {
+		s.grantServicePermission(s.T(), PermissionContentUpload, "sa-scoped-upload")
+		svcCtx := serviceAccountCtx(ctx, "opportunities_matching", "sa-scoped-upload", tenantB, partitionB)
+		require.Error(s.T(), s.middleware.CanUploadFile(svcCtx, "sa-scoped-upload"))
+	})
+
+	s.Run("view_grant_does_not_imply_upload", func() {
+		s.grantServicePermission(s.T(), PermissionContentView, "sa-view-only")
+		svcCtx := serviceAccountCtx(ctx, "service_identity", "sa-view-only", tenantA, partitionA)
+		require.Error(s.T(), s.middleware.CanUploadFile(svcCtx, "sa-view-only"))
+	})
+
+	s.Run("service_without_grant_cannot_view_user_file", func() {
+		svcCtx := serviceAccountCtx(ctx, "opportunities_matching", "sa-match-nogrant", tenantA, partitionA)
+		err := s.middleware.CanViewFile(svcCtx, "sa-match-nogrant", string(userFileA.MediaID))
+		require.ErrorIs(s.T(), err, authorizer.ErrPermissionDenied)
+	})
+
+	s.Run("service_with_content_view_grant_can_view_file_in_partition", func() {
+		s.grantServicePermission(s.T(), PermissionContentView, "sa-match-view")
+		svcCtx := serviceAccountCtx(ctx, "opportunities_matching", "sa-match-view", tenantA, partitionA)
+		require.NoError(s.T(), s.middleware.CanViewFile(svcCtx, "sa-match-view", string(userFileA.MediaID)))
+	})
+
+	s.Run("view_grant_does_not_reach_other_partitions_files", func() {
+		s.grantServicePermission(s.T(), PermissionContentView, "sa-match-view-a")
+		// Claims name partition B, but the grant only covers A and the
+		// file lives in B: the file's own partition is what is checked.
+		svcCtx := serviceAccountCtx(ctx, "opportunities_matching", "sa-match-view-a", tenantB, partitionB)
+		require.Error(s.T(), s.middleware.CanViewFile(svcCtx, "sa-match-view-a", string(userFileB.MediaID)))
+	})
+
+	s.Run("view_grant_does_not_imply_edit_or_delete", func() {
+		s.grantServicePermission(s.T(), PermissionContentView, "sa-view-noedit")
+		svcCtx := serviceAccountCtx(ctx, "service_identity", "sa-view-noedit", tenantA, partitionA)
+		require.Error(s.T(), s.middleware.CanEditFile(svcCtx, "sa-view-noedit", string(userFileA.MediaID)))
+		require.Error(s.T(), s.middleware.CanDeleteFile(svcCtx, "sa-view-noedit", string(userFileA.MediaID)))
+	})
+
+	s.Run("manage_and_delete_grants_allow_edit_and_delete", func() {
+		s.grantServicePermission(s.T(), PermissionContentManage, "sa-manage")
+		s.grantServicePermission(s.T(), PermissionContentDelete, "sa-manage")
+		svcCtx := serviceAccountCtx(ctx, "service_imports", "sa-manage", tenantA, partitionA)
+		require.NoError(s.T(), s.middleware.CanEditFile(svcCtx, "sa-manage", string(userFileA.MediaID)))
+		require.NoError(s.T(), s.middleware.CanDeleteFile(svcCtx, "sa-manage", string(userFileA.MediaID)))
+	})
+
+	s.Run("service_owning_file_can_view_without_grant", func() {
+		owned := &types.MediaMetadata{
+			MediaID: "media-sa-owned", OwnerID: "sa-avatar-owner", UploadName: "avatar.png",
+			Base64Hash: "hash-sa-owned", FileSizeBytes: 10, ServerName: "server",
+		}
+		svcCtx := serviceAccountCtx(ctx, "service_authentication", "sa-avatar-owner", tenantA, partitionA)
+		require.NoError(s.T(), s.mediaDB.StoreMediaMetadata(svcCtx, owned))
+		require.NoError(s.T(), s.middleware.CanViewFile(svcCtx, "sa-avatar-owner", string(owned.MediaID)))
+	})
+
+	s.Run("regular_user_upload_unchanged", func() {
+		require.NoError(s.T(), s.middleware.CanUploadFile(userCtx(ctx, "plain-user", tenantA, partitionA), "plain-user"))
+	})
+
+	s.Run("regular_user_does_not_get_service_fallback", func() {
+		// A user holding a service_file member/grant tuple must still be
+		// subject to per-file checks for other people's files.
+		s.grantServicePermission(s.T(), PermissionContentView, "plain-user-granted")
+		uCtx := userCtx(ctx, "plain-user-granted", tenantA, partitionA)
+		require.Error(s.T(), s.middleware.CanViewFile(uCtx, "plain-user-granted", string(userFileA.MediaID)))
+	})
 }
