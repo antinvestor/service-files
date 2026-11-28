@@ -79,15 +79,39 @@ func (repo *linkRepository) SearchLinks(ctx context.Context, query string, affil
 }
 
 func (repo *linkRepository) SoftDelete(ctx context.Context, id string) error {
-	result := repo.Pool().DB(ctx, false).Model(&models.Link{}).Where("id = ?", id).
-		Update("state", models.LinkStateDeleted)
+	if err := repo.updateColumnsByID(ctx, id, stateChange(models.LinkStateDeleted)); err != nil {
+		return fmt.Errorf("soft delete link: %w", err)
+	}
+	return nil
+}
+
+// updateColumnsByID applies a partial update to the link with the given id.
+//
+// It uses UpdateColumns so GORM skips the model hooks: BaseModel.BeforeSave
+// calls GenID, which on the empty model passed to Model() assigns a fresh ID
+// that GORM then adds to the WHERE clause, so the statement never matches the
+// intended row. Callers that change the link's meaning set modified_at and
+// bump version explicitly (see stateChange) to keep optimistic locking intact.
+func (repo *linkRepository) updateColumnsByID(ctx context.Context, id string, columns map[string]any) error {
+	result := repo.Pool().DB(ctx, false).Model(&models.Link{}).Where("id = ?", id).UpdateColumns(columns)
 	if result.Error != nil {
-		return fmt.Errorf("soft delete link: %w", result.Error)
+		return result.Error
 	}
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+// stateChange returns the columns for a lifecycle transition. Advancing the
+// version makes a concurrent read-modify-write Update (which matches on
+// version) fail instead of silently reverting the transition.
+func stateChange(state models.LinkState) map[string]any {
+	return map[string]any{
+		"state":       state,
+		"modified_at": time.Now().UTC(),
+		"version":     gorm.Expr("version + 1"),
+	}
 }
 
 func (repo *linkRepository) RecordCheck(ctx context.Context, id string, status int, consecutiveFailures int) error {
@@ -96,21 +120,15 @@ func (repo *linkRepository) RecordCheck(ctx context.Context, id string, status i
 		"last_check_status":          status,
 		"consecutive_check_failures": consecutiveFailures,
 	}
-	result := repo.Pool().DB(ctx, false).Model(&models.Link{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return fmt.Errorf("record link check: %w", result.Error)
+	if err := repo.updateColumnsByID(ctx, id, updates); err != nil {
+		return fmt.Errorf("record link check: %w", err)
 	}
 	return nil
 }
 
 func (repo *linkRepository) ExpireLink(ctx context.Context, id string) error {
-	result := repo.Pool().DB(ctx, false).Model(&models.Link{}).Where("id = ?", id).
-		Update("state", models.LinkStateExpired)
-	if result.Error != nil {
-		return fmt.Errorf("expire link: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+	if err := repo.updateColumnsByID(ctx, id, stateChange(models.LinkStateExpired)); err != nil {
+		return fmt.Errorf("expire link: %w", err)
 	}
 	return nil
 }
@@ -123,9 +141,10 @@ func (repo *linkRepository) IncrementClickCount(ctx context.Context, id string, 
 		updates["unique_click_count"] = gorm.Expr("unique_click_count + ?", uniqueDelta)
 	}
 
-	result := repo.Pool().DB(ctx, false).Model(&models.Link{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return fmt.Errorf("increment click count: %w", result.Error)
+	// Counters deliberately leave version alone so traffic does not make
+	// concurrent admin edits fail their optimistic-lock check.
+	if err := repo.updateColumnsByID(ctx, id, updates); err != nil {
+		return fmt.Errorf("increment click count: %w", err)
 	}
 	return nil
 }

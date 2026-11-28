@@ -572,14 +572,33 @@ func (d *Database) UpdatePolicy(ctx context.Context, policy interface {
 	GetRetentionDays() int
 	GetIsDefault() bool
 }) error {
-	return d.RetentionPolicyRepo.Pool().DB(ctx, true).Model(&models.RetentionPolicy{}).
-		Where("id = ?", policy.GetID()).
-		Updates(map[string]any{
-			"name":           policy.GetName(),
-			"description":    policy.GetDescription(),
-			"retention_days": policy.GetRetentionDays(),
-			"is_default":     policy.GetIsDefault(),
-		}).Error
+	return updateColumns(d.RetentionPolicyRepo.Pool().DB(ctx, false).Model(&models.RetentionPolicy{}).
+		Where("id = ?", policy.GetID()), map[string]any{
+		"name":           policy.GetName(),
+		"description":    policy.GetDescription(),
+		"retention_days": policy.GetRetentionDays(),
+		"is_default":     policy.GetIsDefault(),
+		"modified_at":    time.Now().UTC(),
+		"version":        gorm.Expr("version + 1"),
+	})
+}
+
+// updateColumns runs a partial update without GORM hooks and reports a missed
+// row as gorm.ErrRecordNotFound.
+//
+// Hooks must be skipped for partial updates on an empty model: Frame's
+// BaseModel.BeforeSave calls GenID, which gives the empty model a fresh ID that
+// GORM then adds to the WHERE clause, so the statement matches nothing.
+// Callers set modified_at/version explicitly where the change is meaningful.
+func updateColumns(query *gorm.DB, columns map[string]any) error {
+	result := query.UpdateColumns(columns)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (d *Database) DeletePolicy(ctx context.Context, policyID string) error {
@@ -688,9 +707,12 @@ func (d *Database) GetExpiredRetentions(ctx context.Context, before time.Time) (
 }
 
 func (d *Database) LockRetention(ctx context.Context, mediaID string, locked bool) error {
-	return d.FileRetentionRepo.Pool().DB(ctx, true).Model(&models.FileRetention{}).
-		Where("media_id = ?", mediaID).
-		Update("is_locked", locked).Error
+	return updateColumns(d.FileRetentionRepo.Pool().DB(ctx, false).Model(&models.FileRetention{}).
+		Where("media_id = ?", mediaID), map[string]any{
+		"is_locked":   locked,
+		"modified_at": time.Now().UTC(),
+		"version":     gorm.Expr("version + 1"),
+	})
 }
 
 type dbStorageStatsResult struct {

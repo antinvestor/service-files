@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
 type MultipartUploadRepositoryTestSuite struct {
@@ -67,7 +68,15 @@ func (suite *MultipartUploadRepositoryTestSuite) TestUpdateState() {
 
 		uploadID := testUpload.ID
 		err = repo.UpdateState(ctx, uploadID, "completed")
-		assert.NoError(t, err)
+		require.NoError(t, err)
+
+		got, err := repo.GetByUploadID(ctx, uploadID)
+		require.NoError(t, err)
+		assert.Equal(t, "completed", got.UploadState, "state change must persist on the target row")
+		assert.Equal(t, testUpload.Version+1, got.Version, "state change must advance the version")
+
+		err = repo.UpdateState(ctx, "unknown-upload", "completed")
+		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
 
