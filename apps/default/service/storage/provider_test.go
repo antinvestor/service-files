@@ -6,11 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/storage/provider/local"
 	"github.com/antinvestor/service-files/apps/default/service/tests"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -88,8 +86,6 @@ func (suite *StorageProviderTestSuite) TestUploadFileWithHashCheck() {
 				prov,
 				types.Path(sourcePath),
 				metadata,
-				config.Path(baseDir),
-				util.Log(ctx),
 			)
 			if tc.expectErr {
 				require.Error(t, err)
@@ -103,8 +99,6 @@ func (suite *StorageProviderTestSuite) TestUploadFileWithHashCheck() {
 					prov,
 					types.Path(sourcePath),
 					metadata,
-					config.Path(baseDir),
-					util.Log(ctx),
 				)
 				require.NoError(t, err)
 			}

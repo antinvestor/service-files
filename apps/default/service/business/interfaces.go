@@ -34,6 +34,11 @@ type MediaService interface {
 
 	// SearchMedia handles the business logic for searching media files
 	SearchMedia(ctx context.Context, req *SearchRequest) (*SearchResult, error)
+
+	// DeleteMedia deletes the media row, its thumbnails, and every stored
+	// object no other row still references. Returns ErrMediaNotFound when the
+	// media does not exist.
+	DeleteMedia(ctx context.Context, mediaID types.MediaID, cfg *config.FilesConfig) error
 }
 
 // UploadRequest contains all the data needed for an upload operation

@@ -14,6 +14,7 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/util"
 	"gocloud.dev/blob"
+	"gocloud.dev/gcerrors"
 )
 
 // BucketOpener opens the named bucket on a concrete backend.
@@ -125,4 +126,19 @@ func (p *Provider) DownloadFile(ctx context.Context, bucketName string, inBucket
 		util.CloseAndLogOnError(ctx, r)
 		util.CloseAndLogOnError(ctx, bucket)
 	}, nil
+}
+
+// DeleteFile removes inBucketPath from the bucket. An object that is already
+// gone counts as deleted, so a retried delete succeeds.
+func (p *Provider) DeleteFile(ctx context.Context, bucketName string, inBucketPath types.Path) error {
+	bucket, err := p.Init(ctx, bucketName)
+	if err != nil {
+		return fmt.Errorf("open bucket %q: %w", bucketName, err)
+	}
+	defer util.CloseAndLogOnError(ctx, bucket)
+
+	if err = bucket.Delete(ctx, string(inBucketPath)); err != nil && gcerrors.Code(err) != gcerrors.NotFound {
+		return fmt.Errorf("delete object %q: %w", inBucketPath, err)
+	}
+	return nil
 }

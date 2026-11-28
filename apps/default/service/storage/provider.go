@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/antinvestor/service-files/apps/default/config"
 	"github.com/antinvestor/service-files/apps/default/service/types"
-	"github.com/antinvestor/service-files/apps/default/service/utils"
-	"github.com/pitabwire/util"
 	"gocloud.dev/blob"
 )
 
@@ -21,28 +18,29 @@ type Provider interface {
 	Init(ctx context.Context, bucketName string) (*blob.Bucket, error)
 	UploadFile(ctx context.Context, bucket string, sourcePath types.Path, destinationPath types.Path) (bool, error)
 	DownloadFile(ctx context.Context, bucket string, sourcePath types.Path) (io.Reader, func(), error)
+	// DeleteFile removes the object; a missing object is not an error.
+	DeleteFile(ctx context.Context, bucket string, path types.Path) error
 }
 
-// UploadFileWithHashCheck checks for hash collisions when moving a temporary file to its final path based on metadata
-// The final path is based on the hash of the file.
-// If the final path exists and the file size matches, the file does not need to be moved.
-// In error cases where the file is not a duplicate, the caller may decide to remove the final path.
-// Returns the final path of the file, whether it is a duplicate and an error.
-func UploadFileWithHashCheck(ctx context.Context, provider Provider, sourcePath types.Path, mediaMetadata *types.MediaMetadata, absBasePath config.Path, logger *util.LogEntry) (types.Path, bool, error) {
-	duplicate := false
-	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
+// UploadFileWithHashCheck uploads sourcePath under the content's stable object
+// key (see ContentObjectKey) in the bucket for its visibility, and records
+// that location (bucket, key, provider) on mediaMetadata so it is persisted
+// with the row and every later read and delete targets the same object.
+// It reports whether the object already existed (a content-addressed duplicate).
+func UploadFileWithHashCheck(ctx context.Context, provider Provider, sourcePath types.Path, mediaMetadata *types.MediaMetadata) (types.Path, bool, error) {
+	key, err := ContentObjectKey(mediaMetadata)
 	if err != nil {
-		return "", false, fmt.Errorf("failed to get file path from metadata: %w", err)
+		return "", false, err
 	}
 
-	uploadBucket := provider.GetBucket(mediaMetadata.IsPublic)
-
-	duplicate, err = provider.UploadFile(ctx, uploadBucket,
-		sourcePath,
-		types.Path(finalPath),
-	)
+	bucket := provider.GetBucket(mediaMetadata.IsPublic)
+	duplicate, err := provider.UploadFile(ctx, bucket, sourcePath, types.Path(key))
 	if err != nil {
-		return "", duplicate, fmt.Errorf("failed to move file to final destination (%v): %w", finalPath, err)
+		return "", duplicate, fmt.Errorf("upload object %q to bucket %q: %w", key, bucket, err)
 	}
-	return types.Path(finalPath), duplicate, nil
+
+	mediaMetadata.BucketName = bucket
+	mediaMetadata.ObjectKey = key
+	mediaMetadata.StorageProvider = provider.Name()
+	return types.Path(key), duplicate, nil
 }

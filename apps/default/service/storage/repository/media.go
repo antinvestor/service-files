@@ -9,6 +9,7 @@ import (
 	"github.com/pitabwire/frame/v3/datastore"
 	"github.com/pitabwire/frame/v3/datastore/pool"
 	"github.com/pitabwire/frame/v3/security"
+	"github.com/pitabwire/frame/v3/tenancy"
 	"github.com/pitabwire/frame/v3/workerpool"
 )
 
@@ -18,6 +19,13 @@ type MediaRepository interface {
 	GetByParentID(ctx context.Context, parentId types.MediaID) ([]*models.MediaMetadata, error)
 	GetByParentIDAndThumbnailSize(ctx context.Context, parentId types.MediaID, thumbnailSize *types.ThumbnailSize) (*models.MediaMetadata, error)
 	GetByOwnerID(ctx context.Context, ownerId types.OwnerID, query string, page int32, limit int32) ([]*models.MediaMetadata, error)
+	// CountObjectReferences counts live rows other than excludeID stored
+	// under bucketName/objectKey, across every tenant and partition.
+	CountObjectReferences(ctx context.Context, excludeID, bucketName, objectKey string) (int64, error)
+	// CountLegacyObjectReferences counts live rows other than excludeID that
+	// predate object_key and resolve to the same legacy hash-derived object,
+	// across every tenant and partition.
+	CountLegacyObjectReferences(ctx context.Context, excludeID string, hash types.Base64Hash, public bool) (int64, error)
 }
 
 func NewMediaRepository(ctx context.Context, dbPool pool.Pool, workMan workerpool.Manager) MediaRepository {
@@ -102,4 +110,27 @@ func (mr *mediaRepository) GetByOwnerID(ctx context.Context, ownerId types.Owner
 	}
 
 	return fileList, nil
+}
+
+// Objects are shared by content across tenants and partitions, so a caller's
+// row-level tenancy scope would hide references held elsewhere and let a
+// delete remove an object other tenants still use. The counts therefore run
+// with tenancy enforcement skipped; they return only a number, never rows.
+
+func (mr *mediaRepository) CountObjectReferences(ctx context.Context, excludeID, bucketName, objectKey string) (int64, error) {
+	var n int64
+	err := mr.Pool().DB(tenancy.WithSkipEnforcement(ctx), true).
+		Model(&models.MediaMetadata{}).
+		Where("id <> ? AND bucket_name = ? AND object_key = ?", excludeID, bucketName, objectKey).
+		Count(&n).Error
+	return n, err
+}
+
+func (mr *mediaRepository) CountLegacyObjectReferences(ctx context.Context, excludeID string, hash types.Base64Hash, public bool) (int64, error) {
+	var n int64
+	err := mr.Pool().DB(tenancy.WithSkipEnforcement(ctx), true).
+		Model(&models.MediaMetadata{}).
+		Where("id <> ? AND hash = ? AND public = ? AND COALESCE(object_key, '') = ''", excludeID, string(hash), public).
+		Count(&n).Error
+	return n, err
 }

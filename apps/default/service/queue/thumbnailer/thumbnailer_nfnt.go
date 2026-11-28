@@ -108,13 +108,12 @@ func GenerateThumbnail(
 
 func readFile(ctx context.Context, provider storage2.Provider, absBasePath config.Path, mediaMetadata *types.MediaMetadata) (image.Image, error) {
 
-	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
+	downloadBucket, key, err := storage2.ResolveObjectLocation(provider, mediaMetadata, absBasePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file path from metadata: %w", err)
 	}
 
-	downloadBucket := provider.GetBucket(mediaMetadata.IsPublic)
-	downloader, finalizer, err := provider.DownloadFile(ctx, downloadBucket, types.Path(finalPath))
+	downloader, finalizer, err := provider.DownloadFile(ctx, downloadBucket, types.Path(key))
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +251,7 @@ func createThumbnail(
 		sourcePath = encryptedPath
 	}
 
-	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata, absBasePath, logger)
+	finalPath, duplicate, err := storage2.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata)
 	if err != nil {
 		return err
 	}

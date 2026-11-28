@@ -127,6 +127,17 @@ func (d *Database) DeleteMedia(ctx context.Context, mediaID types.MediaID) error
 	return d.MediaRepository.Delete(ctx, string(mediaID))
 }
 
+// CountObjectReferences counts the other live rows whose content resolves to
+// the same stored object as mediaMetadata.
+func (d *Database) CountObjectReferences(ctx context.Context, mediaMetadata *types.MediaMetadata) (int64, error) {
+	if mediaMetadata.ObjectKey == "" {
+		return d.MediaRepository.CountLegacyObjectReferences(ctx,
+			string(mediaMetadata.MediaID), mediaMetadata.Base64Hash, mediaMetadata.IsPublic)
+	}
+	return d.MediaRepository.CountObjectReferences(ctx,
+		string(mediaMetadata.MediaID), mediaMetadata.BucketName, mediaMetadata.ObjectKey)
+}
+
 // GetUserUsage returns the total storage used by a user and file count
 func (d *Database) GetUserUsage(ctx context.Context, ownerID types.OwnerID) (int64, int, error) {
 	type result struct {

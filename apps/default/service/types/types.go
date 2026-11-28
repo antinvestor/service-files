@@ -58,6 +58,12 @@ type MediaMetadata struct {
 	ServerName        string
 	IsPublic          bool
 	Encryption        *EncryptionInfo
+	// BucketName, ObjectKey and StorageProvider record where the object was
+	// written. Rows written before these were persisted leave them empty;
+	// storage.ResolveObjectLocation derives the legacy location for those.
+	BucketName      string
+	ObjectKey       string
+	StorageProvider string
 	// TenantID and PartitionID record where the media is stored. Read-only:
 	// populated from the stored record, never written back from this struct.
 	TenantID    string

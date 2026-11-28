@@ -351,17 +351,12 @@ func (s *mediaService) validateSearchRequest(req *SearchRequest) error {
 
 // getFileData retrieves the file data for the given media metadata
 func (s *mediaService) getFileData(ctx context.Context, mediaMetadata *types.MediaMetadata, cfg *config.FilesConfig) (io.ReadCloser, int64, string, error) {
-	// Get the file path from media metadata hash
-	filePath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, cfg.AbsBasePath)
+	bucket, key, err := storage.ResolveObjectLocation(s.provider, mediaMetadata, cfg.AbsBasePath)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("failed to get file path from metadata: %w", err)
 	}
 
-	// Determine bucket based on media properties
-	bucket := s.provider.GetBucket(mediaMetadata.IsPublic)
-
-	// Download file from storage
-	reader, cleanup, err := s.provider.DownloadFile(ctx, bucket, types.Path(filePath))
+	reader, cleanup, err := s.provider.DownloadFile(ctx, bucket, types.Path(key))
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("failed to get file from storage: %w", err)
 	}
@@ -530,7 +525,7 @@ func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Pa
 		sourcePath = encryptedPath
 	}
 
-	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, s.provider, sourcePath, mediaMetadata, cfg.AbsBasePath, logger)
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, s.provider, sourcePath, mediaMetadata)
 	if err != nil {
 		return err
 	}
@@ -541,13 +536,67 @@ func (s *mediaService) storeFileAndMetadata(ctx context.Context, tmpDir types.Pa
 
 	if err = s.db.StoreMediaMetadata(ctx, mediaMetadata); err != nil {
 		logger.WithError(err).Warn("failed to store metadata")
-		// Clean up file if it's not a duplicate
+		// Remove the object this call wrote; a duplicate belongs to other rows.
 		if !duplicate {
-			utils.RemoveDir(types.Path(path.Dir(string(finalPath))), logger)
+			if delErr := s.provider.DeleteFile(ctx, mediaMetadata.BucketName, finalPath); delErr != nil {
+				logger.WithError(delErr).With("key", finalPath).Warn("failed to remove orphaned object")
+			}
 		}
 		return err
 	}
 
+	return nil
+}
+
+// DeleteMedia implements MediaService.
+//
+// Thumbnails go first so a failure never leaves thumbnails whose parent is
+// gone. For each row the object is removed before the row: if the row delete
+// then fails, a retry finds the row again and the object delete is a no-op,
+// whereas the reverse order would strand an object no row points at.
+func (s *mediaService) DeleteMedia(ctx context.Context, mediaID types.MediaID, cfg *config.FilesConfig) error {
+	mediaMetadata, err := s.db.GetMediaMetadata(ctx, mediaID)
+	if err != nil {
+		return fmt.Errorf("get media metadata: %w", err)
+	}
+	if mediaMetadata == nil {
+		return ErrMediaNotFound
+	}
+
+	thumbnails, err := s.db.GetThumbnails(ctx, mediaID)
+	if err != nil {
+		return fmt.Errorf("get thumbnails: %w", err)
+	}
+	for _, thumbnail := range thumbnails {
+		if err = s.deleteStoredMedia(ctx, thumbnail.MediaMetadata, cfg); err != nil {
+			return fmt.Errorf("delete thumbnail %s: %w", thumbnail.MediaID, err)
+		}
+	}
+
+	return s.deleteStoredMedia(ctx, mediaMetadata, cfg)
+}
+
+// deleteStoredMedia removes one row and, unless another live row (in any
+// tenant or partition) shares it, the object that row's content is stored in.
+func (s *mediaService) deleteStoredMedia(ctx context.Context, mediaMetadata *types.MediaMetadata, cfg *config.FilesConfig) error {
+	refs, err := s.db.CountObjectReferences(ctx, mediaMetadata)
+	if err != nil {
+		return fmt.Errorf("count object references: %w", err)
+	}
+
+	if refs == 0 {
+		bucket, key, locErr := storage.ResolveObjectLocation(s.provider, mediaMetadata, cfg.AbsBasePath)
+		if locErr != nil {
+			return locErr
+		}
+		if err = s.provider.DeleteFile(ctx, bucket, types.Path(key)); err != nil {
+			return fmt.Errorf("delete object: %w", err)
+		}
+	}
+
+	if err = s.db.DeleteMedia(ctx, mediaMetadata.MediaID); err != nil {
+		return fmt.Errorf("delete media row: %w", err)
+	}
 	return nil
 }
 

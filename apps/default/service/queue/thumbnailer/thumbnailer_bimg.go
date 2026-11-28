@@ -87,13 +87,12 @@ func GenerateThumbnail(
 }
 
 func readFile(ctx context.Context, provider storage.Provider, absBasePath config.Path, mediaMetadata *types.MediaMetadata) (*bimg.Image, error) {
-	finalPath, err := utils.GetPathFromBase64Hash(mediaMetadata.Base64Hash, absBasePath)
+	downloadBucket, key, err := storage.ResolveObjectLocation(provider, mediaMetadata, absBasePath)
 	if err != nil {
 		return nil, err
 	}
 
-	downloadBucket := provider.GetBucket(mediaMetadata.IsPublic)
-	reader, cleanup, err := provider.DownloadFile(ctx, downloadBucket, types.Path(finalPath))
+	reader, cleanup, err := provider.DownloadFile(ctx, downloadBucket, types.Path(key))
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +199,7 @@ func createThumbnail(
 		sourcePath = encryptedPath
 	}
 
-	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata, absBasePath, logger)
+	finalPath, duplicate, err := storage.UploadFileWithHashCheck(ctx, provider, sourcePath, thumbnailMetadata.MediaMetadata)
 	if err != nil {
 		return err
 	}

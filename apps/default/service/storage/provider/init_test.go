@@ -13,7 +13,6 @@ import (
 	"github.com/antinvestor/service-files/apps/default/service/types"
 	"github.com/pitabwire/frame/v3/config"
 	"github.com/pitabwire/frame/v3/frametests/definition"
-	"github.com/pitabwire/util"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -111,8 +110,6 @@ func (suite *ProviderTestSuite) TestUploadFileWithHashCheck() {
 				prov,
 				types.Path(sourceFile),
 				meta,
-				aconfig.Path(baseDir),
-				util.Log(ctx),
 			)
 
 			if tc.expectError {
@@ -127,8 +124,6 @@ func (suite *ProviderTestSuite) TestUploadFileWithHashCheck() {
 					prov,
 					types.Path(sourceFile),
 					meta,
-					aconfig.Path(baseDir),
-					util.Log(ctx),
 				)
 				require.NoError(t, err)
 			}

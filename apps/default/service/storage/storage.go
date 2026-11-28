@@ -32,6 +32,10 @@ type MediaRepository interface {
 	GetMediaMetadata(ctx context.Context, mediaID types.MediaID) (*types.MediaMetadata, error)
 	GetMediaMetadataByHash(ctx context.Context, ownerID types.OwnerID, mediaHash types.Base64Hash) (*types.MediaMetadata, error)
 	Search(ctx context.Context, query *data.SearchQuery) (workerpool.JobResultPipe[*types.MediaMetadata], error)
+	DeleteMedia(ctx context.Context, mediaID types.MediaID) error
+	// CountObjectReferences counts the other live rows sharing mediaMetadata's
+	// stored object, regardless of tenant or partition.
+	CountObjectReferences(ctx context.Context, mediaMetadata *types.MediaMetadata) (int64, error)
 }
 
 type ThumbnailsRepository interface {
